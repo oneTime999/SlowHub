@@ -1,180 +1,59 @@
-local Tab = _G.MainTab
+local Tab = _G.MiscTab
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
 
--- Configurações de NPCs por nível
-local LevelConfig = {
-    {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief"},
-    {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey"},
-    {minLevel = 750, maxLevel = 1499, quest = "QuestNPC5", npc = "DesertBandit"},
-    {minLevel = 1500, maxLevel = 2999, quest = "QuestNPC7", npc = "DesertBandit"},
-    {minLevel = 3000, maxLevel = 99999, quest = "QuestNPC9", npc = "Sorcerer"}
-}
-
--- Função para pegar o nível do player
-local function GetPlayerLevel()
-    local success, level = pcall(function()
-        return Player.Data.Level.Value
-    end)
-    return success and level or 1
-end
-
--- Função para pegar a configuração baseada no nível
-local function GetCurrentConfig()
-    local level = GetPlayerLevel()
-    for _, config in pairs(LevelConfig) do
-        if level >= config.minLevel and level <= config.maxLevel then
-            return config
-        end
-    end
-    return LevelConfig[1]
-end
-
--- Função para equipar arma
-local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return false end
-    
+-- Função para pegar armas da Backpack
+local function GetWeapons()
+    local weapons = {}
     local backpack = Player:FindFirstChild("Backpack")
     local character = Player.Character
     
-    if not character or not character:FindFirstChild("Humanoid") then
-        return false
-    end
-    
-    -- Verificar se a arma já está equipada
-    if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-        return true
-    end
-    
-    -- Equipar da backpack
     if backpack then
-        local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon then
-            character.Humanoid:EquipTool(weapon)
-            wait(0.1)
-            return true
+        for _, item in pairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                table.insert(weapons, item.Name)
+            end
         end
     end
     
-    return false
-end
-
--- Função para aceitar quest
-local function AcceptQuest(questName)
-    pcall(function()
-        ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
-    end)
-end
-
--- Função para abandonar quest
-local function AbandonQuest()
-    pcall(function()
-        ReplicatedStorage.RemoteEvents.QuestAbandon:FireServer()
-    end)
-end
-
--- Função para atacar NPC
-local function AttackNPC(npc)
-    if not npc or not npc:FindFirstChild("Humanoid") or npc.Humanoid.Health <= 0 then
-        return false
-    end
-    
-    local character = Player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then
-        return false
-    end
-    
-    pcall(function()
-        -- Teleportar ACIMA do NPC (para evitar ataques)
-        character.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0)
-        
-        -- Equipar arma
-        EquipWeapon()
-        
-        -- Atacar
-        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-    end)
-    
-    return true
-end
-
--- Função principal do Auto Farm
-local function AutoFarmLoop()
-    -- Equipar arma ao iniciar
-    EquipWeapon()
-    
-    while _G.SlowHub.AutoFarmLevel do
-        wait(0.1)
-        
-        pcall(function()
-            local config = GetCurrentConfig()
-            local npcFolder = workspace.NPCs
-            
-            -- Aceitar quest
-            AcceptQuest(config.quest)
-            
-            -- Garantir que a arma está equipada
-            EquipWeapon()
-            
-            -- Procurar NPCs para matar
-            local foundNPC = false
-            for i = 1, 5 do
-                local npcName = config.npc .. i
-                local npc = npcFolder:FindFirstChild(npcName)
-                
-                if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
-                    foundNPC = true
-                    AttackNPC(npc)
-                    break
-                end
+    if character then
+        for _, item in pairs(character:GetChildren()) do
+            if item:IsA("Tool") then
+                table.insert(weapons, item.Name)
             end
-            
-            -- Se não encontrou nenhum NPC vivo, espera respawn
-            if not foundNPC then
-                wait(2)
-            end
-        end)
+        end
     end
     
-    -- Abandonar quest ao desativar
-    AbandonQuest()
+    return weapons
 end
 
--- Toggle Auto Farm Level
-Tab:CreateToggle({
-    Name = "Auto Farm Level",
-    CurrentValue = false,
+-- Dropdown para selecionar arma
+Tab:CreateDropdown({
+    Name = "Selecionar Arma",
+    Options = GetWeapons(),
+    CurrentOption = "",
+    Flag = "WeaponDropdown",
     Callback = function(Value)
-        _G.SlowHub.AutoFarmLevel = Value
-        
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Por favor, selecione uma arma primeiro!",
-                    Duration = 5,
-                    Image = 4483345998
-                })
-                return
-            end
-            
-            local config = GetCurrentConfig()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm ativado! Farmando: " .. config.npc,
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            spawn(AutoFarmLoop)
-        else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm desativado!",
-                Duration = 3,
-                Image = 4483345998
-            })
-        end
+        _G.SlowHub.SelectedWeapon = Value
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Arma selecionada: " .. Value,
+            Duration = 3,
+            Image = 4483345998
+        })
+    end
+})
+
+-- Botão para atualizar lista de armas
+Tab:CreateButton({
+    Name = "Atualizar Lista de Armas",
+    Callback = function()
+        local weapons = GetWeapons()
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Armas encontradas: " .. #weapons,
+            Duration = 3,
+            Image = 4483345998
+        })
     end
 })
