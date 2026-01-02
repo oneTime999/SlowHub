@@ -1,297 +1,145 @@
-local Tab = _G.BossesTab
+local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
--- Configurações dos Bosses
-local BossConnections = {
-    Ragna = nil,
-    Jinwoo = nil,
-    Sukuna = nil,
-    Gojo = nil
+-- Variáveis de controle
+local autoFarmBossConnection = nil
+local selectedBoss = "RagnaBoss"
+
+-- Lista de bosses disponíveis
+local bossList = {
+    "RagnaBoss",
+    "JinwooBoss",
+    "SukunaBoss",
+    "GojoBoss"
 }
 
--- Função para pegar Boss no workspace
-local function getBoss(bossName)
-    return workspace.Bosses:FindFirstChild(bossName)
-end
-
--- Função para pegar RootPart do Boss
-local function getBossRootPart(boss)
-    if boss and boss:FindFirstChild("HumanoidRootPart") then
-        return boss.HumanoidRootPart
+-- Função para obter o boss atual
+local function getBoss()
+    if not Workspace.NPCs then return nil end
+    
+    local bossModel = Workspace.NPCs:FindFirstChild(selectedBoss)
+    if not bossModel then return nil end
+    
+    -- Verificar se o boss tem Humanoid e está vivo
+    local humanoid = bossModel:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health > 0 then
+        return bossModel
     end
+    
     return nil
 end
 
--- Função para equipar arma
-local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return false end
+-- Função para obter a parte principal do boss
+local function getBossPart(bossModel)
+    -- Tentar encontrar HumanoidRootPart primeiro
+    local hrp = bossModel:FindFirstChild("HumanoidRootPart")
+    if hrp then return hrp end
     
-    local backpack = Player:FindFirstChild("Backpack")
+    -- Se não tiver HumanoidRootPart, tentar Torso
+    local torso = bossModel:FindFirstChild("Torso") or bossModel:FindFirstChild("UpperTorso")
+    if torso then return torso end
+    
+    -- Se não encontrar, pegar a primeira Part do Model
+    for _, child in pairs(bossModel:GetDescendants()) do
+        if child:IsA("BasePart") then
+            return child
+        end
+    end
+    
+    return nil
+end
+
+-- Função para teleportar até o boss
+local function teleportToBoss(bossModel)
     local character = Player.Character
+    if not character then return false end
     
-    if not character or not character:FindFirstChild("Humanoid") then
-        return false
-    end
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return false end
     
-    if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-        return true
-    end
+    local bossPart = getBossPart(bossModel)
+    if not bossPart then return false end
     
-    if backpack then
-        local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon then
-            character.Humanoid:EquipTool(weapon)
-            wait(0.1)
-            return true
-        end
-    end
+    -- Teleportar próximo ao boss (15 studs de distância)
+    humanoidRootPart.CFrame = bossPart.CFrame * CFrame.new(0, 0, 15)
     
-    return false
+    return true
 end
 
--- Função genérica para farmar boss
-local function farmBoss(bossName, flagName)
-    local boss = getBoss(bossName)
+-- Função para atacar o boss
+local function attackBoss()
+    pcall(function()
+        -- Método 1: Usar Remote de ataque
+        ReplicatedStorage.RemoteEvents.Combat:FireServer("Attack")
+    end)
     
-    if boss and boss.Parent then
-        local bossHumanoid = boss:FindFirstChild("Humanoid")
-        
-        -- Boss morto, esperar
-        if bossHumanoid and bossHumanoid.Health <= 0 then
-            if Player.Character then
-                local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                if playerRoot then
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                end
-            end
-            return
-        end
-        
-        -- Farm Boss
-        local bossRoot = getBossRootPart(boss)
-        
-        if bossRoot and bossRoot.Parent and Player.Character then
-            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-            local humanoid = Player.Character:FindFirstChild("Humanoid")
-            
-            if playerRoot and humanoid and humanoid.Health > 0 then
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                
-                local targetCFrame = bossRoot.CFrame
-                local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
-                
-                local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                if distance > 3 or distance < 1 then
-                    playerRoot.CFrame = offsetPosition
-                end
-                
-                EquipWeapon()
-                
-                pcall(function()
-                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                end)
-            end
-        end
-    else
-        -- Boss não encontrado
-        if Player.Character then
-            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-            if playerRoot then
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            end
-        end
-    end
-end
-
--- Função para parar farm de um boss específico
-local function stopBossFarm(bossKey, flagName)
-    if BossConnections[bossKey] then
-        BossConnections[bossKey]:Disconnect()
-        BossConnections[bossKey] = nil
-    end
-    _G.SlowHub[flagName] = false
-    
-    if Player.Character then
-        local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-        if playerRoot then
-            playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            playerRoot.Anchored = false
-        end
-    end
-end
-
--- Função para iniciar farm de um boss específico
-local function startBossFarm(bossKey, bossName, flagName)
-    if BossConnections[bossKey] then
-        stopBossFarm(bossKey, flagName)
-    end
-    
-    _G.SlowHub[flagName] = true
-    EquipWeapon()
-    
-    BossConnections[bossKey] = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub[flagName] then
-            stopBossFarm(bossKey, flagName)
-            return
-        end
-        
-        pcall(function()
-            farmBoss(bossName, flagName)
-        end)
+    pcall(function()
+        -- Método 2: Usar Remote alternativo (caso o jogo use outro)
+        ReplicatedStorage.RemoteEvents.AttackRemote:FireServer()
     end)
 end
 
--- Toggle Auto Farm Ragna
-Tab:CreateToggle({
-    Name = "Auto Farm Ragna",
-    CurrentValue = false,
-    Flag = "AutoFarmRagnaToggle",
-    Callback = function(Value)
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Please select a weapon first!",
-                    Duration = 5,
-                    Image = 4483345998
-                })
-                return
-            end
-            
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Ragna enabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            startBossFarm("Ragna", "RagnaBoss", "AutoFarmRagna")
-        else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Ragna disabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            stopBossFarm("Ragna", "AutoFarmRagna")
+-- Função para parar Auto Farm Boss
+local function stopAutoFarmBoss()
+    if autoFarmBossConnection then
+        autoFarmBossConnection:Disconnect()
+        autoFarmBossConnection = nil
+    end
+    _G.SlowHub.AutoFarmBoss = false
+end
+
+-- Função para iniciar Auto Farm Boss
+local function startAutoFarmBoss()
+    if autoFarmBossConnection then
+        stopAutoFarmBoss()
+    end
+    
+    _G.SlowHub.AutoFarmBoss = true
+    
+    autoFarmBossConnection = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoFarmBoss then
+            stopAutoFarmBoss()
+            return
         end
+        
+        local boss = getBoss()
+        
+        if boss then
+            -- Boss existe e está vivo
+            teleportToBoss(boss)
+            attackBoss()
+        else
+            -- Boss morreu ou não existe, aguardar respawn
+            wait(1)
+        end
+    end)
+end
+
+-- Dropdown para selecionar o boss
+Tab:CreateDropdown({
+    Name = "Selecionar Boss",
+    Options = bossList,
+    CurrentOption = selectedBoss,
+    Flag = "SelectedBoss",
+    Callback = function(Option)
+        selectedBoss = Option
     end
 })
 
--- Toggle Auto Farm Jinwoo
+-- Toggle Auto Farm Boss
 Tab:CreateToggle({
-    Name = "Auto Farm Jinwoo",
+    Name = "Auto Farm Boss",
     CurrentValue = false,
-    Flag = "AutoFarmJinwooToggle",
+    Flag = "AutoFarmBossToggle",
     Callback = function(Value)
         if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Please select a weapon first!",
-                    Duration = 5,
-                    Image = 4483345998
-                })
-                return
-            end
-            
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Jinwoo enabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            startBossFarm("Jinwoo", "JinwooBoss", "AutoFarmJinwoo")
+            startAutoFarmBoss()
         else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Jinwoo disabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            stopBossFarm("Jinwoo", "AutoFarmJinwoo")
-        end
-    end
-})
-
--- Toggle Auto Farm Sukuna
-Tab:CreateToggle({
-    Name = "Auto Farm Sukuna",
-    CurrentValue = false,
-    Flag = "AutoFarmSukunaToggle",
-    Callback = function(Value)
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Please select a weapon first!",
-                    Duration = 5,
-                    Image = 4483345998
-                })
-                return
-            end
-            
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Sukuna enabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            startBossFarm("Sukuna", "SukunaBoss", "AutoFarmSukuna")
-        else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Sukuna disabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            stopBossFarm("Sukuna", "AutoFarmSukuna")
-        end
-    end
-})
-
--- Toggle Auto Farm Gojo
-Tab:CreateToggle({
-    Name = "Auto Farm Gojo",
-    CurrentValue = false,
-    Flag = "AutoFarmGojoToggle",
-    Callback = function(Value)
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Please select a weapon first!",
-                    Duration = 5,
-                    Image = 4483345998
-                })
-                return
-            end
-            
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Gojo enabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            startBossFarm("Gojo", "GojoBoss", "AutoFarmGojo")
-        else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm Gojo disabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
-            stopBossFarm("Gojo", "AutoFarmGojo")
+            stopAutoFarmBoss()
         end
     end
 })
