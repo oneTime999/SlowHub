@@ -2,7 +2,7 @@ local Tab = _G.MainTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 -- Seção: Configurações
-Tab:CreateSection("Configurações")
+Tab:CreateSection("Settings")
 
 -- Carregar Seletor de Armas
 loadstring(game:HttpGet(githubBase .. "WeaponSelector.lua"))()
