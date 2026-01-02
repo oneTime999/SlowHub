@@ -148,12 +148,6 @@ local function startAutoLevel()
         end)
     end)
     
-    local lastDeathTimes = {}
-    for i = 1, config.count do
-        lastDeathTimes[i] = 0
-    end
-    
-    local lastCheck = 0
     local lastNPCFound = nil
     
     autoLevelConnection = RunService.Heartbeat:Connect(function()
@@ -169,25 +163,16 @@ local function startAutoLevel()
         local npc = getNPC(config.npc, currentNPCIndex)
         
         if npc and npc.Parent then
-            lastNPCFound = now
+            local npcHumanoid = npc:FindFirstChild("Humanoid")
             
-            -- Check _DeathTime more frequently (every 0.1 second)
-            if now - lastCheck >= 0.1 then
-                lastCheck = now
-                local deathTimeAttr = npc:GetAttribute("_DeathTime")
-                
-                -- Check if NPC died (_DeathTime appeared or changed)
-                if deathTimeAttr and deathTimeAttr > 0 then
-                    if lastDeathTimes[currentNPCIndex] == 0 then
-                        lastDeathTimes[currentNPCIndex] = deathTimeAttr
-                    elseif deathTimeAttr ~= lastDeathTimes[currentNPCIndex] then
-                        -- NPC died, switch immediately
-                        lastDeathTimes[currentNPCIndex] = deathTimeAttr
-                        currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
-                        return
-                    end
-                end
+            -- Verificar se o NPC está morto (Health <= 0)
+            if npcHumanoid and npcHumanoid.Health <= 0 then
+                -- NPC morto, trocar imediatamente
+                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
+                return
             end
+            
+            lastNPCFound = now
             
             -- Farm current NPC
             local npcRoot = getNPCRootPart(npc)
