@@ -1,4 +1,4 @@
-local Tab = _G.MainTab
+local Tab = _G.MiscTab
 
 Tab:CreateToggle({
     Name = "Auto Haki",
