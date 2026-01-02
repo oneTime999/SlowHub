@@ -63,29 +63,30 @@ end
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     
-    local backpack = Player:FindFirstChild("Backpack")
-    local character = Player.Character
-    
-    if not character or not character:FindFirstChild("Humanoid") then
-        return false
-    end
-    
-    -- Verificar se a arma já está equipada
-    if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-        return true
-    end
-    
-    -- Equipar da backpack
-    if backpack then
-        local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon then
-            character.Humanoid:EquipTool(weapon)
-            wait(0.1)
+    local success = pcall(function()
+        local backpack = Player:FindFirstChild("Backpack")
+        local character = Player.Character
+        
+        if not character or not character:FindFirstChild("Humanoid") then
+            return false
+        end
+        
+        -- Verificar se a arma já está equipada
+        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
             return true
         end
-    end
+        
+        -- Equipar da backpack
+        if backpack then
+            local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
+            if weapon then
+                character.Humanoid:EquipTool(weapon)
+                wait(0.1)
+            end
+        end
+    end)
     
-    return false
+    return success
 end
 
 -- Função para parar Auto Level
@@ -102,13 +103,15 @@ local function stopAutoLevel()
     currentNPCIndex = 1
     
     -- Stop player movement and unanchor
-    if Player.Character then
-        local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-        if playerRoot then
-            playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            playerRoot.Anchored = false
+    pcall(function()
+        if Player.Character then
+            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
+            if playerRoot then
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                playerRoot.Anchored = false
+            end
         end
-    end
+    end)
     
     -- Abandonar quest
     pcall(function()
@@ -165,7 +168,7 @@ local function startAutoLevel()
         if npc and npc.Parent then
             local npcHumanoid = npc:FindFirstChild("Humanoid")
             
-            -- Verificar se o NPC está morto (Health <= 0)
+            -- Verificar se o NPC está morto
             if npcHumanoid and npcHumanoid.Health <= 0 then
                 -- NPC morto, trocar imediatamente
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
@@ -182,39 +185,41 @@ local function startAutoLevel()
                 local humanoid = Player.Character:FindFirstChild("Humanoid")
                 
                 if playerRoot and humanoid and humanoid.Health > 0 then
-                    -- Remove any unwanted velocity
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    
-                    -- Keep player near NPC (5 studs above, 8 studs forward)
-                    local targetCFrame = npcRoot.CFrame
-                    local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
-                    
-                    -- Only teleport if distance is reasonable
-                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                    if distance > 3 or distance < 1 then
-                        playerRoot.CFrame = offsetPosition
-                    end
-                    
-                    -- Equipar arma
-                    EquipWeapon()
-                    
-                    -- Attack NPC
                     pcall(function()
+                        -- Remove any unwanted velocity
+                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        
+                        -- Keep player near NPC (5 studs above, 8 studs forward)
+                        local targetCFrame = npcRoot.CFrame
+                        local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
+                        
+                        -- Only teleport if distance is reasonable
+                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                        if distance > 3 or distance < 1 then
+                            playerRoot.CFrame = offsetPosition
+                        end
+                        
+                        -- Equipar arma
+                        EquipWeapon()
+                        
+                        -- Attack NPC
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     end)
                 end
             end
         else
             -- NPC not found, stay still and wait
-            if Player.Character then
-                local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                if playerRoot then
-                    -- Keep player grounded and still
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            pcall(function()
+                if Player.Character then
+                    local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
+                    if playerRoot then
+                        -- Keep player grounded and still
+                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    end
                 end
-            end
+            end)
             
-            -- Wait 0.3 seconds before switching to next NPC (REDUZIDO DE 2 PARA 0.3)
+            -- Wait 0.3 seconds before switching to next NPC
             if lastNPCFound == nil or (now - lastNPCFound) > 0.3 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCFound = now
@@ -231,31 +236,29 @@ Tab:CreateToggle({
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Please select a weapon first!",
-                    Duration = 5,
-                    Image = 4483345998
-                })
+                pcall(function()
+                    _G.Rayfield:Notify({
+                        Title = "Slow Hub",
+                        Content = "Please select a weapon first!",
+                        Duration = 5,
+                        Image = 4483345998
+                    })
+                end)
                 return
             end
             
             local config = GetCurrentConfig()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm enabled! Farming: " .. config.npc,
-                Duration = 3,
-                Image = 4483345998
-            })
+            pcall(function()
+                _G.Rayfield:Notify({
+                    Title = "Slow Hub",
+                    Content = "Farming: " .. config.npc,
+                    Duration = 3,
+                    Image = 4483345998
+                })
+            end)
             
             startAutoLevel()
         else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Farm disabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
             stopAutoLevel()
         end
     end
