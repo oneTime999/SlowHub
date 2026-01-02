@@ -76,16 +76,26 @@ local function startAutoHaki()
     
     _G.SlowHub.AutoHaki = true
     
+    local lastToggleTime = 0
+    
     autoHakiConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoHaki then
             stopAutoHaki()
             return
         end
         
-        -- Verificar se Haki está ativo
-        if not hasHakiEffect() then
-            -- Haki desativado, ativar
-            toggleHaki()
+        local now = tick()
+        
+        -- Só tentar ativar a cada 0.5 segundos para evitar spam
+        if now - lastToggleTime >= 0.5 then
+            -- Verificar se Haki está ativo
+            local hakiActive = hasHakiEffect()
+            
+            -- Se NÃO tiver efeito, ativar Haki
+            if not hakiActive then
+                toggleHaki()
+                lastToggleTime = now
+            end
         end
     end)
 end
