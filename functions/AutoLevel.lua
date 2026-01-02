@@ -14,7 +14,10 @@ local LevelConfig = {
 
 -- Função para pegar o nível do player
 local function GetPlayerLevel()
-    return Player:FindFirstChild("Level") and Player.Level.Value or 1
+    local success, level = pcall(function()
+        return Player.Data.Level.Value
+    end)
+    return success and level or 1
 end
 
 -- Função para pegar a configuração baseada no nível
@@ -37,7 +40,7 @@ local function EquipWeapon()
     
     if backpack then
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon then
+        if weapon and character and character:FindFirstChild("Humanoid") then
             character.Humanoid:EquipTool(weapon)
         end
     end
@@ -119,39 +122,39 @@ local function AutoFarmLoop()
 end
 
 -- Toggle Auto Farm Level
-Tab:AddToggle({
+Tab:CreateToggle({
     Name = "Auto Farm Level",
-    Default = false,
+    CurrentValue = false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
         
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.OrionLib:MakeNotification({
-                    Name = "Slow Hub",
+                _G.Rayfield:Notify({
+                    Title = "Slow Hub",
                     Content = "Por favor, selecione uma arma primeiro!",
-                    Image = "rbxassetid://4483345998",
-                    Time = 5
+                    Duration = 5,
+                    Image = 4483345998
                 })
                 return
             end
             
             local config = GetCurrentConfig()
-            _G.OrionLib:MakeNotification({
-                Name = "Slow Hub",
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
                 Content = "Auto Farm ativado! Farmando: " .. config.npc,
-                Image = "rbxassetid://4483345998",
-                Time = 3
+                Duration = 3,
+                Image = 4483345998
             })
             
             spawn(AutoFarmLoop)
         else
-            _G.OrionLib:MakeNotification({
-                Name = "Slow Hub",
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
                 Content = "Auto Farm desativado!",
-                Image = "rbxassetid://4483345998",
-                Time = 3
+                Duration = 3,
+                Image = 4483345998
             })
         end
-    end    
+    end
 })
