@@ -6,16 +6,18 @@ local Player = Players.LocalPlayer
 
 -- Configurações dos Bosses
 local BossConfig = {
-    {name = "SukunaBoss", respawnTime = 440, displayName = "Sukuna Boss (440s)"},
-    {name = "GojoBoss", respawnTime = 440, displayName = "Gojo Boss (440s)"},
-    {name = "RagnaBoss", respawnTime = 290, displayName = "Ragna Boss (290s)"},
-    {name = "JinwooBoss", respawnTime = 590, displayName = "Jinwoo Boss (590s)"}
+    {name = "SukunaBoss", respawnTime = 440},
+    {name = "GojoBoss", respawnTime = 440},
+    {name = "RagnaBoss", respawnTime = 290},
+    {name = "JinwooBoss", respawnTime = 590}
 }
 
 -- Variáveis de controle
 local autoBossConnection = nil
+local timerUpdateConnection = nil
 local selectedBoss = nil
-local lastBossKillTime = 0
+local bossDeathTime = nil
+local timerLabel = nil
 
 -- Função para pegar o Boss selecionado
 local function getSelectedBossConfig()
@@ -69,13 +71,61 @@ local function EquipWeapon()
     return false
 end
 
+-- Função para formatar tempo em MM:SS
+local function formatTime(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d", mins, secs)
+end
+
+-- Função para atualizar o timer
+local function updateTimer()
+    if not timerLabel then return end
+    
+    local config = getSelectedBossConfig()
+    if not config then
+        timerLabel:Set("Status: No boss selected")
+        return
+    end
+    
+    local boss = getBoss(selectedBoss)
+    
+    if boss and boss.Parent then
+        local bossHumanoid = boss:FindFirstChild("Humanoid")
+        if bossHumanoid and bossHumanoid.Health > 0 then
+            timerLabel:Set("Status: Boss is alive - Farming...")
+            return
+        end
+    end
+    
+    -- Boss não encontrado ou morto
+    if not bossDeathTime then
+        timerLabel:Set("Status: Calculating respawn time...")
+        return
+    end
+    
+    local elapsed = tick() - bossDeathTime
+    local remaining = config.respawnTime - elapsed
+    
+    if remaining > 0 then
+        timerLabel:Set("Status: Boss respawning in " .. formatTime(remaining))
+    else
+        timerLabel:Set("Status: Boss should spawn soon...")
+    end
+end
+
 -- Função para parar Auto Boss
 local function stopAutoBoss()
     if autoBossConnection then
         autoBossConnection:Disconnect()
         autoBossConnection = nil
     end
+    if timerUpdateConnection then
+        timerUpdateConnection:Disconnect()
+        timerUpdateConnection = nil
+    end
     _G.SlowHub.AutoFarmBoss = false
+    bossDeathTime = nil
     
     -- Stop player movement
     if Player.Character then
@@ -84,6 +134,10 @@ local function stopAutoBoss()
             playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             playerRoot.Anchored = false
         end
+    end
+    
+    if timerLabel then
+        timerLabel:Set("Status: Disabled")
     end
 end
 
@@ -104,14 +158,27 @@ local function startAutoBoss()
     end
     
     _G.SlowHub.AutoFarmBoss = true
+    bossDeathTime = nil
     
     local config = getSelectedBossConfig()
     
     -- Equipar arma ao iniciar
     EquipWeapon()
     
-    local waitingForRespawn = false
-    local respawnStartTime = 0
+    local lastNotificationTime = 0
+    local notificationShown = false
+    
+    -- Timer update loop
+    timerUpdateConnection = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoFarmBoss then
+            if timerUpdateConnection then
+                timerUpdateConnection:Disconnect()
+                timerUpdateConnection = nil
+            end
+            return
+        end
+        updateTimer()
+    end)
     
     autoBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBoss then
@@ -127,18 +194,9 @@ local function startAutoBoss()
             
             -- Verificar se o Boss está morto
             if bossHumanoid and bossHumanoid.Health <= 0 then
-                -- Boss morto, começar contagem de respawn
-                if not waitingForRespawn then
-                    waitingForRespawn = true
-                    respawnStartTime = now
-                    lastBossKillTime = now
-                    
-                    _G.Rayfield:Notify({
-                        Title = "Slow Hub",
-                        Content = "Boss killed! Waiting " .. config.respawnTime .. "s for respawn...",
-                        Duration = 5,
-                        Image = 4483345998
-                    })
+                -- Registrar tempo de morte se ainda não foi registrado
+                if not bossDeathTime then
+                    bossDeathTime = now
                 end
                 
                 -- Ficar parado esperando respawn
@@ -152,8 +210,8 @@ local function startAutoBoss()
                 return
             end
             
-            -- Boss está vivo, resetar flag de espera
-            waitingForRespawn = false
+            -- Boss está vivo, resetar notificação
+            notificationShown = false
             
             -- Farm Boss
             local bossRoot = getBossRootPart(boss)
@@ -194,23 +252,41 @@ local function startAutoBoss()
                 end
             end
             
-            -- Mostrar tempo restante se estiver esperando respawn
-            if waitingForRespawn then
-                local elapsed = now - respawnStartTime
-                local remaining = config.respawnTime - elapsed
+            -- Mostrar notificação a cada 10 segundos
+            if not notificationShown or (now - lastNotificationTime >= 10) then
+                local message = "The Boss Selected Not Spawned - "
                 
-                if remaining <= 0 then
-                    waitingForRespawn = false
+                if not bossDeathTime then
+                    message = message .. "Calculating..."
+                else
+                    local elapsed = now - bossDeathTime
+                    local remaining = config.respawnTime - elapsed
+                    
+                    if remaining > 0 then
+                        message = message .. formatTime(remaining)
+                    else
+                        message = message .. "Should spawn soon..."
+                    end
                 end
+                
+                _G.Rayfield:Notify({
+                    Title = "Slow Hub",
+                    Content = message,
+                    Duration = 5,
+                    Image = 4483345998
+                })
+                
+                notificationShown = true
+                lastNotificationTime = now
             end
         end
     end)
 end
 
--- Dropdown para selecionar Boss
+-- Dropdown para selecionar Boss (SEM tempo)
 local bossOptions = {}
 for _, config in pairs(BossConfig) do
-    table.insert(bossOptions, config.displayName)
+    table.insert(bossOptions, config.name)
 end
 
 Tab:CreateDropdown({
@@ -219,21 +295,22 @@ Tab:CreateDropdown({
     CurrentOption = "",
     Flag = "BossDropdown",
     Callback = function(Value)
-        -- Extrair o nome do boss do display name
-        for _, config in pairs(BossConfig) do
-            if config.displayName == Value then
-                selectedBoss = config.name
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Boss selected: " .. config.name,
-                    Duration = 3,
-                    Image = 4483345998
-                })
-                break
-            end
-        end
+        selectedBoss = Value
+        bossDeathTime = nil -- Reset timer ao trocar de boss
+        
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Boss selected: " .. Value,
+            Duration = 3,
+            Image = 4483345998
+        })
+        
+        updateTimer()
     end
 })
+
+-- Label de timer (atualiza em tempo real)
+timerLabel = Tab:CreateLabel("Status: Disabled")
 
 -- Toggle Auto Farm Boss
 Tab:CreateToggle({
