@@ -5,6 +5,7 @@ _G.SlowHub = {
     AutoFarmLevel = false,
     AutoFarmBoss = false,
     AutoHaki = false,
+    Codes = false,
     SelectedWeapon = nil
 }
 
