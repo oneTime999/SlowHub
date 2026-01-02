@@ -18,14 +18,65 @@ local selectedBoss = "RagnaBoss"
 
 -- Função para pegar o Boss
 local function getBoss()
-    return workspace.NPCs:FindFirstChild(selectedBoss)
+    local boss = workspace.NPCs:FindFirstChild(selectedBoss)
+    
+    -- Debug: verificar se encontrou
+    if not boss then
+        warn("[Auto Farm Boss] Boss não encontrado:", selectedBoss)
+    end
+    
+    return boss
 end
 
--- Função para pegar RootPart do Boss
+-- Função para pegar RootPart do Boss (com fallback)
 local function getBossRootPart(boss)
-    if boss and boss:FindFirstChild("HumanoidRootPart") then
-        return boss.HumanoidRootPart
+    if not boss then return nil end
+    
+    -- Tentar HumanoidRootPart
+    local hrp = boss:FindFirstChild("HumanoidRootPart")
+    if hrp then return hrp end
+    
+    -- Tentar Torso (R6)
+    local torso = boss:FindFirstChild("Torso")
+    if torso then return torso end
+    
+    -- Tentar UpperTorso (R15)
+    local upperTorso = boss:FindFirstChild("UpperTorso")
+    if upperTorso then return upperTorso end
+    
+    -- Tentar LowerTorso
+    local lowerTorso = boss:FindFirstChild("LowerTorso")
+    if lowerTorso then return lowerTorso end
+    
+    -- Tentar Head
+    local head = boss:FindFirstChild("Head")
+    if head then return head end
+    
+    -- Última tentativa: pegar primeira BasePart
+    for _, child in pairs(boss:GetDescendants()) do
+        if child:IsA("BasePart") and child.Name ~= "HumanoidRootPart" then
+            return child
+        end
     end
+    
+    return nil
+end
+
+-- Função para pegar Humanoid do Boss
+local function getBossHumanoid(boss)
+    if not boss then return nil end
+    
+    -- Tentar Humanoid padrão
+    local humanoid = boss:FindFirstChildOfClass("Humanoid")
+    if humanoid then return humanoid end
+    
+    -- Tentar buscar em descendentes
+    for _, child in pairs(boss:GetDescendants()) do
+        if child:IsA("Humanoid") then
+            return child
+        end
+    end
+    
     return nil
 end
 
@@ -99,7 +150,7 @@ local function startAutoFarmBoss()
         local boss = getBoss()
         
         if boss and boss.Parent then
-            local bossHumanoid = boss:FindFirstChild("Humanoid")
+            local bossHumanoid = getBossHumanoid(boss)
             
             -- Verificar se o Boss está morto
             if bossHumanoid and bossHumanoid.Health <= 0 then
@@ -144,6 +195,8 @@ local function startAutoFarmBoss()
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     end)
                 end
+            else
+                warn("[Auto Farm Boss] BossRoot não encontrado para:", selectedBoss)
             end
         else
             -- Boss not found, stay still and wait for respawn
@@ -167,6 +220,22 @@ Tab:CreateDropdown({
     Flag = "SelectedBoss",
     Callback = function(Option)
         selectedBoss = Option
+        
+        -- Se Auto Farm estiver ativo, reiniciar com novo boss
+        if _G.SlowHub.AutoFarmBoss then
+            stopAutoFarmBoss()
+            wait(0.1)
+            startAutoFarmBoss()
+        end
+        
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Boss selecionado: " .. Option,
+                Duration = 3,
+                Image = 4483345998
+            })
+        end)
     end
 })
 
