@@ -3,6 +3,7 @@ local Tab = _G.MainTab
 Tab:CreateToggle({
     Name = "Auto Farm Bosses",
     CurrentValue = false,
+    Flag = "AutoFarmBossToggle",
     Callback = function(Value)
         _G.SlowHub.AutoFarmBoss = Value
         
@@ -11,8 +12,7 @@ Tab:CreateToggle({
                 while _G.SlowHub.AutoFarmBoss do
                     wait()
                     pcall(function()
-                        -- Sua lógica de Auto Farm Boss aqui
-                        print("Auto Farm Boss ativo")
+                        -- Your Auto Farm Boss logic here
                     end)
                 end
             end)
