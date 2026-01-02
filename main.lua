@@ -40,7 +40,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/ma
 -- Notificação
 Rayfield:Notify({
     Title = "Slow Hub",
-    Content = "Carregado com sucesso!",
+    Content = "Successfully loaded!",
     Duration = 5,
     Image = 4483345998
 })
