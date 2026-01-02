@@ -87,10 +87,13 @@ local function AttackNPC(npc)
     
     pcall(function()
         local npcPos = npc.HumanoidRootPart.Position
+        local hrp = character.HumanoidRootPart
         
-        -- Teleportar ACIMA e um pouco afastado do NPC (para evitar ataques)
-        -- Y + 20 studs acima, mantém X e Z na mesma posição
-        character.HumanoidRootPart.CFrame = CFrame.new(npcPos.X, npcPos.Y + 20, npcPos.Z)
+        -- Congelar o player no ar (não cai)
+        hrp.Anchored = true
+        
+        -- Teleportar 10 studs acima do NPC
+        hrp.CFrame = CFrame.new(npcPos.X, npcPos.Y + 10, npcPos.Z)
         
         -- Equipar arma
         EquipWeapon()
@@ -140,6 +143,12 @@ local function AutoFarmLoop()
         end)
     end
     
+    -- Desancorar player ao desativar
+    local character = Player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.Anchored = false
+    end
+    
     -- Abandonar quest ao desativar
     AbandonQuest()
 end
@@ -156,7 +165,7 @@ Tab:CreateToggle({
             if not _G.SlowHub.SelectedWeapon then
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Por favor, selecione uma arma primeiro!",
+                    Content = "Please select a weapon first!",
                     Duration = 5,
                     Image = 4483345998
                 })
@@ -166,7 +175,7 @@ Tab:CreateToggle({
             local config = GetCurrentConfig()
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Auto Farm ativado! Farmando: " .. config.npc,
+                Content = "Auto Farm enabled! Farming: " .. config.npc,
                 Duration = 3,
                 Image = 4483345998
             })
@@ -175,7 +184,7 @@ Tab:CreateToggle({
         else
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Auto Farm desativado!",
+                Content = "Auto Farm disabled!",
                 Duration = 3,
                 Image = 4483345998
             })
