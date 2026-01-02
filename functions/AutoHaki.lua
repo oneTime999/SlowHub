@@ -1,4 +1,6 @@
-_G.MainTab:AddToggle({
+local Tab = _G.MainTab
+
+Tab:AddToggle({
     Name = "Auto Haki",
     Default = false,
     Callback = function(Value)
@@ -10,10 +12,7 @@ _G.MainTab:AddToggle({
                     wait(0.1)
                     pcall(function()
                         -- Sua lógica de Auto Haki aqui
-                        -- Exemplo:
-                        -- game:GetService("VirtualInputManager"):SendKeyEvent(true, "T", false, game)
-                        -- wait(0.1)
-                        -- game:GetService("VirtualInputManager"):SendKeyEvent(false, "T", false, game)
+                        print("Auto Haki ativo")
                     end)
                 end
             end)
