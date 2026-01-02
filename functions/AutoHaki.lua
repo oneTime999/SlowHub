@@ -6,7 +6,8 @@ local Player = Players.LocalPlayer
 
 -- Variáveis de controle
 local autoHakiConnection = nil
-local hakiActivated = false
+local lastToggleTime = 0
+local COOLDOWN_TIME = 3 -- 3 segundos de cooldown após ativar
 
 -- Partes dos braços para verificar
 local armParts = {
@@ -67,7 +68,7 @@ local function stopAutoHaki()
         autoHakiConnection = nil
     end
     _G.SlowHub.AutoHaki = false
-    hakiActivated = false
+    lastToggleTime = 0
 end
 
 -- Função para iniciar Auto Haki
@@ -77,7 +78,7 @@ local function startAutoHaki()
     end
     
     _G.SlowHub.AutoHaki = true
-    hakiActivated = false
+    lastToggleTime = 0
     
     autoHakiConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoHaki then
@@ -85,18 +86,17 @@ local function startAutoHaki()
             return
         end
         
-        -- Verificar se Haki está ativo
-        local hakiActive = hasHakiEffect()
+        local now = tick()
         
-        if hakiActive then
-            -- Haki está ativo, resetar flag
-            hakiActivated = false
-        else
-            -- Haki NÃO está ativo, ativar apenas UMA vez
-            if not hakiActivated then
+        -- Só verificar se passou o cooldown
+        if now - lastToggleTime >= COOLDOWN_TIME then
+            -- Verificar se Haki está ativo
+            local hakiActive = hasHakiEffect()
+            
+            -- Se NÃO tiver efeito, ativar Haki
+            if not hakiActive then
                 toggleHaki()
-                hakiActivated = true
-                wait(1) -- Esperar 1 segundo antes de verificar novamente
+                lastToggleTime = now -- Resetar cooldown
             end
         end
     end)
