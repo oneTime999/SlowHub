@@ -214,8 +214,8 @@ local function startAutoLevel()
                 end
             end
             
-            -- Wait 2 seconds before switching to next NPC
-            if lastNPCFound == nil or (now - lastNPCFound) > 2 then
+            -- Wait 0.3 seconds before switching to next NPC (REDUZIDO DE 2 PARA 0.3)
+            if lastNPCFound == nil or (now - lastNPCFound) > 0.3 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCFound = now
             end
