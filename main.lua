@@ -26,16 +26,18 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
--- Criar Tab Main e salvar globalmente
+-- Criar tabs e salvar globalmente
 _G.MainTab = Window:CreateTab("Main", 4483345998)
+_G.MiscTab = Window:CreateTab("Misc", 4483345998)
 
--- Salvar Rayfield globalmente para notificações
+-- Salvar Rayfield globalmente
 _G.Rayfield = Rayfield
 
--- Carregar Tab Main
+-- Carregar conteúdo das tabs
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
--- Notificação de boas-vindas
+-- Notificação
 Rayfield:Notify({
     Title = "Slow Hub",
     Content = "Carregado com sucesso!",
