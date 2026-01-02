@@ -1,4 +1,6 @@
-_G.MainTab:AddToggle({
+local Tab = _G.MainTab
+
+Tab:AddToggle({
     Name = "Auto Farm Bosses",
     Default = false,
     Callback = function(Value)
@@ -10,13 +12,7 @@ _G.MainTab:AddToggle({
                     wait()
                     pcall(function()
                         -- Sua lógica de Auto Farm Boss aqui
-                        -- Exemplo:
-                        -- local bosses = workspace.Enemies:GetChildren()
-                        -- for _, boss in pairs(bosses) do
-                        --     if boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
-                        --         -- Atacar boss
-                        --     end
-                        -- end
+                        print("Auto Farm Boss ativo")
                     end)
                 end
             end)
