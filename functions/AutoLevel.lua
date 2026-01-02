@@ -1,5 +1,124 @@
 local Tab = _G.MainTab
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Player = Players.LocalPlayer
 
+-- Configurações de NPCs por nível
+local LevelConfig = {
+    {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief"},
+    {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey"},
+    {minLevel = 750, maxLevel = 1499, quest = "QuestNPC5", npc = "DesertBandit"},
+    {minLevel = 1500, maxLevel = 2999, quest = "QuestNPC7", npc = "DesertBandit"},
+    {minLevel = 3000, maxLevel = 99999, quest = "QuestNPC9", npc = "Sorcerer"}
+}
+
+-- Função para pegar o nível do player
+local function GetPlayerLevel()
+    return Player:FindFirstChild("Level") and Player.Level.Value or 1
+end
+
+-- Função para pegar a configuração baseada no nível
+local function GetCurrentConfig()
+    local level = GetPlayerLevel()
+    for _, config in pairs(LevelConfig) do
+        if level >= config.minLevel and level <= config.maxLevel then
+            return config
+        end
+    end
+    return LevelConfig[1]
+end
+
+-- Função para equipar arma
+local function EquipWeapon()
+    if not _G.SlowHub.SelectedWeapon then return end
+    
+    local backpack = Player:FindFirstChild("Backpack")
+    local character = Player.Character
+    
+    if backpack then
+        local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
+        if weapon then
+            character.Humanoid:EquipTool(weapon)
+        end
+    end
+end
+
+-- Função para aceitar quest
+local function AcceptQuest(questName)
+    pcall(function()
+        ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
+    end)
+end
+
+-- Função para abandonar quest
+local function AbandonQuest()
+    pcall(function()
+        ReplicatedStorage.RemoteEvents.QuestAbandon:FireServer()
+    end)
+end
+
+-- Função para atacar NPC
+local function AttackNPC(npc)
+    if not npc or not npc:FindFirstChild("Humanoid") or npc.Humanoid.Health <= 0 then
+        return false
+    end
+    
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    
+    pcall(function()
+        -- Teleportar para o NPC
+        character.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        
+        -- Equipar arma
+        EquipWeapon()
+        
+        -- Atacar
+        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+    end)
+    
+    return true
+end
+
+-- Função principal do Auto Farm
+local function AutoFarmLoop()
+    while _G.SlowHub.AutoFarmLevel do
+        wait(0.1)
+        
+        pcall(function()
+            local config = GetCurrentConfig()
+            local npcFolder = workspace.NPCs
+            
+            -- Aceitar quest
+            AcceptQuest(config.quest)
+            
+            -- Procurar NPCs para matar
+            local foundNPC = false
+            for i = 1, 5 do
+                local npcName = config.npc .. i
+                local npc = npcFolder:FindFirstChild(npcName)
+                
+                if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+                    foundNPC = true
+                    AttackNPC(npc)
+                    break
+                end
+            end
+            
+            -- Se não encontrou nenhum NPC vivo, espera respawn
+            if not foundNPC then
+                wait(2)
+            end
+        end)
+    end
+    
+    -- Abandonar quest ao desativar
+    AbandonQuest()
+end
+
+-- Toggle Auto Farm Level
 Tab:AddToggle({
     Name = "Auto Farm Level",
     Default = false,
@@ -7,15 +126,32 @@ Tab:AddToggle({
         _G.SlowHub.AutoFarmLevel = Value
         
         if Value then
-            spawn(function()
-                while _G.SlowHub.AutoFarmLevel do
-                    wait()
-                    pcall(function()
-                        -- Sua lógica de Auto Farm Level aqui
-                        print("Auto Farm Level ativo")
-                    end)
-                end
-            end)
+            if not _G.SlowHub.SelectedWeapon then
+                _G.OrionLib:MakeNotification({
+                    Name = "Slow Hub",
+                    Content = "Por favor, selecione uma arma primeiro!",
+                    Image = "rbxassetid://4483345998",
+                    Time = 5
+                })
+                return
+            end
+            
+            local config = GetCurrentConfig()
+            _G.OrionLib:MakeNotification({
+                Name = "Slow Hub",
+                Content = "Auto Farm ativado! Farmando: " .. config.npc,
+                Image = "rbxassetid://4483345998",
+                Time = 3
+            })
+            
+            spawn(AutoFarmLoop)
+        else
+            _G.OrionLib:MakeNotification({
+                Name = "Slow Hub",
+                Content = "Auto Farm desativado!",
+                Image = "rbxassetid://4483345998",
+                Time = 3
+            })
         end
     end    
 })
