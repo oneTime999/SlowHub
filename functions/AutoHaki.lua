@@ -8,43 +8,40 @@ local Player = Players.LocalPlayer
 -- Variáveis de controle
 local autoHakiConnection = nil
 local lastToggleTime = 0
-local COOLDOWN_TIME = 3 -- 3 segundos de cooldown após ativar
+local COOLDOWN_TIME = 3 -- segundos
 
--- Partes dos braços para verificar
+-- Nomes CORRETOS dos braços (R6)
 local armParts = {
-    "LeftArm",
-    "RightArm"
+    "Left Arm",
+    "Right Arm"
 }
 
--- Função para verificar se há ParticleEmitter com nome "3" nos braços
+-- Verifica se existe ParticleEmitter "3" em algum braço
 local function hasHakiEffect()
-    -- Buscar personagem do LocalPlayer no Workspace
-    local character = Workspace:FindFirstChild(Player.Name)
+    local character = Player.Character
     if not character then return false end
-    
-    for _, armPartName in pairs(armParts) do
-        local armPart = character:FindFirstChild(armPartName)
-        
-        if armPart then
-            -- Verificar se existe um ParticleEmitter chamado "3"
-            local particleEffect = armPart:FindFirstChild("3")
-            if particleEffect and particleEffect:IsA("ParticleEmitter") then
-                return true -- Encontrou ParticleEmitter "3", Haki está ativo
+
+    for _, armName in ipairs(armParts) do
+        local arm = character:FindFirstChild(armName)
+        if arm then
+            local effect = arm:FindFirstChild("3")
+            if effect and effect:IsA("ParticleEmitter") then
+                return true
             end
         end
     end
-    
-    return false -- Nenhum ParticleEmitter "3" encontrado, Haki está desativado
+
+    return false
 end
 
--- Função para ativar Haki UMA VEZ
+-- Ativa Haki uma única vez
 local function toggleHaki()
     pcall(function()
         ReplicatedStorage.RemoteEvents.HakiRemote:FireServer("Toggle")
     end)
 end
 
--- Função para parar Auto Haki
+-- Para Auto Haki
 local function stopAutoHaki()
     if autoHakiConnection then
         autoHakiConnection:Disconnect()
@@ -54,38 +51,33 @@ local function stopAutoHaki()
     lastToggleTime = 0
 end
 
--- Função para iniciar Auto Haki
+-- Inicia Auto Haki
 local function startAutoHaki()
     if autoHakiConnection then
         stopAutoHaki()
     end
-    
+
     _G.SlowHub.AutoHaki = true
     lastToggleTime = 0
-    
+
     autoHakiConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoHaki then
             stopAutoHaki()
             return
         end
-        
+
         local now = tick()
-        
-        -- Só verificar se passou o cooldown
+
         if now - lastToggleTime >= COOLDOWN_TIME then
-            -- Verificar se Haki está ativo
-            local hakiActive = hasHakiEffect()
-            
-            -- Se NÃO tiver efeito, ativar Haki UMA VEZ
-            if not hakiActive then
+            if not hasHakiEffect() then
                 toggleHaki()
-                lastToggleTime = now -- Resetar cooldown para não ativar novamente
+                lastToggleTime = now
             end
         end
     end)
 end
 
--- Toggle Auto Haki
+-- Toggle UI
 Tab:CreateToggle({
     Name = "Auto Haki",
     CurrentValue = false,
