@@ -1,4 +1,6 @@
-_G.MainTab:AddToggle({
+local Tab = _G.MainTab
+
+Tab:AddToggle({
     Name = "Auto Farm Level",
     Default = false,
     Callback = function(Value)
@@ -10,10 +12,7 @@ _G.MainTab:AddToggle({
                     wait()
                     pcall(function()
                         -- Sua lógica de Auto Farm Level aqui
-                        -- Exemplo:
-                        -- local player = game.Players.LocalPlayer
-                        -- local character = player.Character
-                        -- -- Código de farm
+                        print("Auto Farm Level ativo")
                     end)
                 end
             end)
