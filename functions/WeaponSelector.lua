@@ -1,4 +1,4 @@
-local Tab = _G.MiscTab
+local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
