@@ -1,15 +1,15 @@
 local Tab = _G.MainTab
-local githubBase = "https://raw.githubusercontent.com/seu-usuario/SlowHub/main/functions/"
+local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 -- Seção: Auto Farm
 Tab:AddSection({
     Name = "Auto Farm"
 })
 
--- Carregar e adicionar Auto Level
+-- Carregar Auto Level
 loadstring(game:HttpGet(githubBase .. "AutoLevel.lua"))()
 
--- Carregar e adicionar Auto Boss
+-- Carregar Auto Boss
 loadstring(game:HttpGet(githubBase .. "AutoBoss.lua"))()
 
 -- Seção: Haki
@@ -17,7 +17,7 @@ Tab:AddSection({
     Name = "Haki"
 })
 
--- Carregar e adicionar Auto Haki
+-- Carregar Auto Haki
 loadstring(game:HttpGet(githubBase .. "AutoHaki.lua"))()
 
 -- Seção: Controles
@@ -32,7 +32,7 @@ Tab:AddButton({
         _G.SlowHub.AutoFarmBoss = false
         _G.SlowHub.AutoHaki = false
         
-        OrionLib:MakeNotification({
+        _G.OrionLib:MakeNotification({
             Name = "Slow Hub",
             Content = "Todos os farms desativados!",
             Image = "rbxassetid://4483345998",
