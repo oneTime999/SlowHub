@@ -202,7 +202,7 @@ local function startAutoLevel()
                     
                     -- Keep player near NPC with safer teleport (10 studs above, 5 studs forward)
                     local targetCFrame = npcRoot.CFrame
-                    local offsetPosition = targetCFrame * CFrame.new(0, 10, 5)
+                    local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
                     
                     -- Only teleport if distance is reasonable
                     local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
