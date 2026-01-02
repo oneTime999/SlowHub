@@ -6,6 +6,7 @@ local Player = Players.LocalPlayer
 
 -- Variáveis de controle
 local autoHakiConnection = nil
+local hakiActivated = false
 
 -- Partes dos braços para verificar
 local armParts = {
@@ -66,6 +67,7 @@ local function stopAutoHaki()
         autoHakiConnection = nil
     end
     _G.SlowHub.AutoHaki = false
+    hakiActivated = false
 end
 
 -- Função para iniciar Auto Haki
@@ -75,8 +77,7 @@ local function startAutoHaki()
     end
     
     _G.SlowHub.AutoHaki = true
-    
-    local lastToggleTime = 0
+    hakiActivated = false
     
     autoHakiConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoHaki then
@@ -84,17 +85,18 @@ local function startAutoHaki()
             return
         end
         
-        local now = tick()
+        -- Verificar se Haki está ativo
+        local hakiActive = hasHakiEffect()
         
-        -- Só tentar ativar a cada 0.5 segundos para evitar spam
-        if now - lastToggleTime >= 0.5 then
-            -- Verificar se Haki está ativo
-            local hakiActive = hasHakiEffect()
-            
-            -- Se NÃO tiver efeito, ativar Haki
-            if not hakiActive then
+        if hakiActive then
+            -- Haki está ativo, resetar flag
+            hakiActivated = false
+        else
+            -- Haki NÃO está ativo, ativar apenas UMA vez
+            if not hakiActivated then
                 toggleHaki()
-                lastToggleTime = now
+                hakiActivated = true
+                wait(1) -- Esperar 1 segundo antes de verificar novamente
             end
         end
     end)
@@ -107,22 +109,8 @@ Tab:CreateToggle({
     Flag = "AutoHakiToggle",
     Callback = function(Value)
         if Value then
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Haki enabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
             startAutoHaki()
         else
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Auto Haki disabled!",
-                Duration = 3,
-                Image = 4483345998
-            })
-            
             stopAutoHaki()
         end
     end
