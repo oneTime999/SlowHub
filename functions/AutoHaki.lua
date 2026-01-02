@@ -3,6 +3,7 @@ local Tab = _G.MiscTab
 Tab:CreateToggle({
     Name = "Auto Haki",
     CurrentValue = false,
+    Flag = "AutoHakiToggle",
     Callback = function(Value)
         _G.SlowHub.AutoHaki = Value
         
@@ -11,8 +12,7 @@ Tab:CreateToggle({
                 while _G.SlowHub.AutoHaki do
                     wait(0.1)
                     pcall(function()
-                        -- Sua lógica de Auto Haki aqui
-                        print("Auto Haki ativo")
+                        -- Your Auto Haki logic here
                     end)
                 end
             end)
