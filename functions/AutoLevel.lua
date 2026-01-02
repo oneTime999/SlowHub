@@ -33,17 +33,31 @@ end
 
 -- Função para equipar arma
 local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return end
+    if not _G.SlowHub.SelectedWeapon then return false end
     
     local backpack = Player:FindFirstChild("Backpack")
     local character = Player.Character
     
+    if not character or not character:FindFirstChild("Humanoid") then
+        return false
+    end
+    
+    -- Verificar se a arma já está equipada
+    if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
+        return true
+    end
+    
+    -- Equipar da backpack
     if backpack then
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon and character and character:FindFirstChild("Humanoid") then
+        if weapon then
             character.Humanoid:EquipTool(weapon)
+            wait(0.1)
+            return true
         end
     end
+    
+    return false
 end
 
 -- Função para aceitar quest
@@ -72,8 +86,11 @@ local function AttackNPC(npc)
     end
     
     pcall(function()
-        -- Teleportar para o NPC
-        character.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        local npcPos = npc.HumanoidRootPart.Position
+        
+        -- Teleportar ACIMA e um pouco afastado do NPC (para evitar ataques)
+        -- Y + 20 studs acima, mantém X e Z na mesma posição
+        character.HumanoidRootPart.CFrame = CFrame.new(npcPos.X, npcPos.Y + 20, npcPos.Z)
         
         -- Equipar arma
         EquipWeapon()
@@ -87,6 +104,9 @@ end
 
 -- Função principal do Auto Farm
 local function AutoFarmLoop()
+    -- Equipar arma ao iniciar
+    EquipWeapon()
+    
     while _G.SlowHub.AutoFarmLevel do
         wait(0.1)
         
@@ -96,6 +116,9 @@ local function AutoFarmLoop()
             
             -- Aceitar quest
             AcceptQuest(config.quest)
+            
+            -- Garantir que a arma está equipada
+            EquipWeapon()
             
             -- Procurar NPCs para matar
             local foundNPC = false
@@ -125,6 +148,7 @@ end
 Tab:CreateToggle({
     Name = "Auto Farm Level",
     CurrentValue = false,
+    Flag = "AutoFarmLevelToggle",
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
         
