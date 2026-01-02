@@ -1,8 +1,8 @@
 local Tab = _G.MainTab
 
-Tab:AddToggle({
+Tab:CreateToggle({
     Name = "Auto Farm Bosses",
-    Default = false,
+    CurrentValue = false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmBoss = Value
         
@@ -17,5 +17,5 @@ Tab:AddToggle({
                 end
             end)
         end
-    end    
+    end
 })
