@@ -2,6 +2,7 @@ local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
 -- Variáveis de controle
@@ -9,33 +10,34 @@ local autoHakiConnection = nil
 local lastToggleTime = 0
 local COOLDOWN_TIME = 3 -- 3 segundos de cooldown após ativar
 
--- Partes dos braços para verificar (apenas Left e Right Arm)
+-- Partes dos braços para verificar
 local armParts = {
     "LeftArm",
     "RightArm"
 }
 
--- Função para verificar se há ParticleEmitter nos braços
+-- Função para verificar se há ParticleEmitter com nome "3" nos braços
 local function hasHakiEffect()
-    local character = Player.Character
+    -- Buscar personagem do LocalPlayer no Workspace
+    local character = Workspace:FindFirstChild(Player.Name)
     if not character then return false end
     
     for _, armPartName in pairs(armParts) do
         local armPart = character:FindFirstChild(armPartName)
         
         if armPart then
-            -- Verificar apenas ParticleEmitter
-            local particleEffect = armPart:FindFirstChildOfClass("ParticleEmitter")
-            if particleEffect then
-                return true -- Encontrou ParticleEmitter, Haki está ativo
+            -- Verificar se existe um ParticleEmitter chamado "3"
+            local particleEffect = armPart:FindFirstChild("3")
+            if particleEffect and particleEffect:IsA("ParticleEmitter") then
+                return true -- Encontrou ParticleEmitter "3", Haki está ativo
             end
         end
     end
     
-    return false -- Nenhum ParticleEmitter encontrado, Haki está desativado
+    return false -- Nenhum ParticleEmitter "3" encontrado, Haki está desativado
 end
 
--- Função para ativar Haki
+-- Função para ativar Haki UMA VEZ
 local function toggleHaki()
     pcall(function()
         ReplicatedStorage.RemoteEvents.HakiRemote:FireServer("Toggle")
@@ -74,10 +76,10 @@ local function startAutoHaki()
             -- Verificar se Haki está ativo
             local hakiActive = hasHakiEffect()
             
-            -- Se NÃO tiver efeito, ativar Haki
+            -- Se NÃO tiver efeito, ativar Haki UMA VEZ
             if not hakiActive then
                 toggleHaki()
-                lastToggleTime = now -- Resetar cooldown
+                lastToggleTime = now -- Resetar cooldown para não ativar novamente
             end
         end
     end)
