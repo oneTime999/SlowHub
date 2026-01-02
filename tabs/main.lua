@@ -12,6 +12,3 @@ Tab:CreateSection("Auto Farm")
 
 -- Carregar Auto Level
 loadstring(game:HttpGet(githubBase .. "AutoLevel.lua"))()
-
--- Carregar Auto Boss
-loadstring(game:HttpGet(githubBase .. "AutoBoss.lua"))()
