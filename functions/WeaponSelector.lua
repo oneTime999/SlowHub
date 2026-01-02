@@ -28,31 +28,31 @@ local function GetWeapons()
 end
 
 -- Dropdown para selecionar arma
-Tab:AddDropdown({
+Tab:CreateDropdown({
     Name = "Selecionar Arma",
-    Default = "",
     Options = GetWeapons(),
+    CurrentOption = "",
     Callback = function(Value)
         _G.SlowHub.SelectedWeapon = Value
-        _G.OrionLib:MakeNotification({
-            Name = "Slow Hub",
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
             Content = "Arma selecionada: " .. Value,
-            Image = "rbxassetid://4483345998",
-            Time = 3
+            Duration = 3,
+            Image = 4483345998
         })
-    end    
+    end
 })
 
 -- Botão para atualizar lista de armas
-Tab:AddButton({
+Tab:CreateButton({
     Name = "Atualizar Lista de Armas",
     Callback = function()
         local weapons = GetWeapons()
-        _G.OrionLib:MakeNotification({
-            Name = "Slow Hub",
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
             Content = "Armas encontradas: " .. #weapons,
-            Image = "rbxassetid://4483345998",
-            Time = 3
+            Duration = 3,
+            Image = 4483345998
         })
-    end    
+    end
 })
