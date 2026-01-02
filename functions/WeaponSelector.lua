@@ -29,7 +29,7 @@ end
 
 -- Dropdown para selecionar arma
 Tab:CreateDropdown({
-    Name = "Selecionar Arma",
+    Name = "Select Weapon",
     Options = GetWeapons(),
     CurrentOption = "",
     Flag = "WeaponDropdown",
@@ -37,7 +37,7 @@ Tab:CreateDropdown({
         _G.SlowHub.SelectedWeapon = Value
         _G.Rayfield:Notify({
             Title = "Slow Hub",
-            Content = "Arma selecionada: " .. Value,
+            Content = "Weapon selected: " .. Value,
             Duration = 3,
             Image = 4483345998
         })
@@ -46,12 +46,12 @@ Tab:CreateDropdown({
 
 -- Botão para atualizar lista de armas
 Tab:CreateButton({
-    Name = "Atualizar Lista de Armas",
+    Name = "Refresh Weapon List",
     Callback = function()
         local weapons = GetWeapons()
         _G.Rayfield:Notify({
             Title = "Slow Hub",
-            Content = "Armas encontradas: " .. #weapons,
+            Content = "Weapons found: " .. #weapons,
             Duration = 3,
             Image = 4483345998
         })
