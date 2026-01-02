@@ -200,7 +200,7 @@ local function startAutoLevel()
                     -- Remove any unwanted velocity
                     playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     
-                    -- Keep player near NPC with safer teleport (10 studs above, 5 studs forward)
+                    -- Keep player near NPC (5 studs above, 8 studs forward)
                     local targetCFrame = npcRoot.CFrame
                     local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
                     
