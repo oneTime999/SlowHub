@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 -- Variáveis globais
 _G.SlowHub = {
     AutoFarmLevel = false,
-    AutoFarmBoss = false,
+    AutoFarmBosses = false,
     AutoHaki = false,
     Codes = false,
     SelectedWeapon = nil
