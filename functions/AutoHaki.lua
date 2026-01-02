@@ -9,30 +9,13 @@ local autoHakiConnection = nil
 local lastToggleTime = 0
 local COOLDOWN_TIME = 3 -- 3 segundos de cooldown após ativar
 
--- Partes dos braços para verificar
+-- Partes dos braços para verificar (apenas Left e Right Arm)
 local armParts = {
-    "LeftUpperArm",
-    "RightUpperArm",
-    "LeftLowerArm",
-    "RightLowerArm",
-    "LeftHand",
-    "RightHand"
+    "LeftArm",
+    "RightArm"
 }
 
--- Tipos de efeitos que indicam Haki ativo
-local effectTypes = {
-    "ParticleEmitter",
-    "Beam",
-    "Trail",
-    "Fire",
-    "Smoke",
-    "Sparkles",
-    "PointLight",
-    "SpotLight",
-    "SurfaceLight"
-}
-
--- Função para verificar se há efeitos nos braços
+-- Função para verificar se há ParticleEmitter nos braços
 local function hasHakiEffect()
     local character = Player.Character
     if not character then return false end
@@ -41,17 +24,15 @@ local function hasHakiEffect()
         local armPart = character:FindFirstChild(armPartName)
         
         if armPart then
-            -- Verificar cada tipo de efeito
-            for _, effectType in pairs(effectTypes) do
-                local effect = armPart:FindFirstChildOfClass(effectType)
-                if effect then
-                    return true -- Encontrou efeito, Haki está ativo
-                end
+            -- Verificar apenas ParticleEmitter
+            local particleEffect = armPart:FindFirstChildOfClass("ParticleEmitter")
+            if particleEffect then
+                return true -- Encontrou ParticleEmitter, Haki está ativo
             end
         end
     end
     
-    return false -- Nenhum efeito encontrado, Haki está desativado
+    return false -- Nenhum ParticleEmitter encontrado, Haki está desativado
 end
 
 -- Função para ativar Haki
