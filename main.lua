@@ -15,12 +15,15 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "SlowHub"
 })
 
--- Criar Tab Main
+-- Criar Tab Main e salvar globalmente
 _G.MainTab = Window:MakeTab({
     Name = "Main",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
+
+-- Salvar OrionLib globalmente para notificações
+_G.OrionLib = OrionLib
 
 -- Carregar Tab Main
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
