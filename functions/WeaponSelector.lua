@@ -107,7 +107,7 @@ Tab:CreateDropdown({
 
 -- Toggle para equipar em loop
 Tab:CreateToggle({
-    Name = "Equip Tool",
+    Name = "Loop Equip Tool",
     Default = false,
     Callback = function(state)
         _G.SlowHub.EquipLoop = state
