@@ -6,6 +6,7 @@ _G.SlowHub = {
     AutoFarmBosses = false,
     AutoHaki = false,
     Codes = false,
+    Shop = false,
     SelectedWeapon = nil
 }
 
@@ -84,7 +85,7 @@ _G.Rayfield = Rayfield
 -- Carregar conteúdo das tabs
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/refs/heads/main/tabs/shop.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
 -- Salvar configurações ao fechar o jogo
