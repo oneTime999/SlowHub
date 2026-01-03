@@ -222,7 +222,7 @@ Tab:CreateToggle({
                         Title = "Slow Hub",
                         Content = "Please select a weapon first!",
                         Duration = 5,
-                        Image = 4483345998
+                        Image = 105026320884681
                     })
                 end)
                 return
@@ -234,7 +234,7 @@ Tab:CreateToggle({
                     Title = "Slow Hub",
                     Content = "Farming: " .. config.npc,
                     Duration = 3,
-                    Image = 4483345998
+                    Image = 105026320884681
                 })
             end)
             
