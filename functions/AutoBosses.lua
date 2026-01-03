@@ -19,7 +19,9 @@ local isRunning = false
 
 -- Função para pegar o Boss
 local function getBoss()
-    return workspace.NPCs:FindFirstChild(selectedBoss)
+    -- Garantir que selectedBoss é string
+    local bossName = tostring(selectedBoss)
+    return workspace.NPCs:FindFirstChild(bossName)
 end
 
 -- Função para pegar RootPart do Boss
@@ -110,19 +112,11 @@ local function startAutoFarmBoss()
             
             -- Verificar se o Boss está morto
             if bossHumanoid and bossHumanoid.Health <= 0 then
-                -- Boss morto, aguardar respawn
-                pcall(function()
-                    if Player.Character then
-                        local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                        if playerRoot then
-                            playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        end
-                    end
-                end)
+                -- Boss morto, NÃO fazer nada (não teleportar, não flutuar)
                 return
             end
             
-            -- Farm Boss
+            -- Boss está vivo, farmar
             local bossRoot = getBossRootPart(boss)
             
             if bossRoot and bossRoot.Parent and Player.Character then
@@ -152,25 +146,16 @@ local function startAutoFarmBoss()
                     end)
                 end
             end
-        else
-            -- Boss not found, stay still and wait for respawn
-            pcall(function()
-                if Player.Character then
-                    local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                    if playerRoot then
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-            end)
         end
+        -- Boss não encontrado = NÃO fazer nada (removido o código de flutuar)
     end)
 end
 
--- Dropdown para selecionar o boss
+-- Dropdown para selecionar o boss (CORRIGIDO)
 Tab:CreateDropdown({
     Name = "Selecionar Boss",
     Options = bossList,
-    CurrentOption = selectedBoss,
+    CurrentOption = "RagnaBoss",
     Flag = "SelectedBoss",
     Callback = function(Option)
         local wasRunning = isRunning
@@ -181,8 +166,12 @@ Tab:CreateDropdown({
             wait(0.3)
         end
         
-        -- Atualizar boss selecionado
-        selectedBoss = Option
+        -- Garantir que Option é string (CORREÇÃO DO BUG)
+        if type(Option) == "table" then
+            selectedBoss = Option[1] or "RagnaBoss"
+        else
+            selectedBoss = tostring(Option)
+        end
         
         -- Reiniciar se estava rodando
         if wasRunning then
@@ -191,7 +180,7 @@ Tab:CreateDropdown({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Boss alterado para: " .. Option,
+                    Content = "Boss alterado para: " .. selectedBoss,
                     Duration = 3,
                     Image = 4483345998
                 })
