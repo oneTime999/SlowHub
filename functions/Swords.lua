@@ -22,35 +22,55 @@ local function normalizeValue(Value)
     return tostring(Value or "")
 end
 
+-- Função para notificar com segurança
+local function SafeNotify(title, content, duration)
+    pcall(function()
+        if _G.Rayfield then
+            _G.Rayfield:Notify({
+                Title = title,
+                Content = content,
+                Duration = duration or 3,
+                Image = 105026320884681
+            })
+        end
+    end)
+end
+
+-- Função para pegar o HumanoidRootPart de um Model
+local function getModelRoot(model)
+    if not model then return nil end
+    
+    -- Se for um Model, procura dentro dele
+    if model:IsA("Model") then
+        return model:FindFirstChild("HumanoidRootPart") or 
+               model:FindFirstChild("Torso") or 
+               model:FindFirstChild("Head") or
+               model.PrimaryPart
+    end
+    
+    -- Se for uma Part diretamente
+    return model
+end
+
 -- Função para teleportar para o NPC
 local function teleportToNPC()
     local selectedSword = _G.SlowHub.SelectedSwordNPC
     
     if not selectedSword or selectedSword == "" then
-        Rayfield:Notify({
-            Title = "Slow Hub",
-            Content = "Please select a sword first!",
-            Duration = 3,
-            Image = 105026320884681
-        })
+        SafeNotify("Slow Hub", "Please select a sword first!")
         return
     end
     
     local getNPC = SwordNPCs[selectedSword]
     if not getNPC then
-        Rayfield:Notify({
-            Title = "Slow Hub",
-            Content = "Invalid sword selection!",
-            Duration = 3,
-            Image = 105026320884681
-        })
+        SafeNotify("Slow Hub", "Invalid sword selection!")
         return
     end
     
     local npc = getNPC()
     
     if npc then
-        local npcRoot = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChild("Head")
+        local npcRoot = getModelRoot(npc)
         
         if npcRoot and Player.Character then
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
@@ -59,35 +79,15 @@ local function teleportToNPC()
                 -- Teleporta o player para frente do NPC
                 playerRoot.CFrame = npcRoot.CFrame * CFrame.new(0, 0, 5)
                 
-                Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Teleported to " .. selectedSword .. " NPC!",
-                    Duration = 2,
-                    Image = 105026320884681
-                })
+                SafeNotify("Slow Hub", "Teleported to " .. selectedSword .. " NPC!", 2)
             else
-                Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Character not found!",
-                    Duration = 3,
-                    Image = 105026320884681
-                })
+                SafeNotify("Slow Hub", "Character not found!")
             end
         else
-            Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "NPC Root not found!",
-                Duration = 3,
-                Image = 105026320884681
-            })
+            SafeNotify("Slow Hub", "NPC Root not found!")
         end
     else
-        Rayfield:Notify({
-            Title = "Slow Hub",
-            Content = "NPC " .. selectedSword .. " not found in workspace!",
-            Duration = 3,
-            Image = 105026320884681
-        })
+        SafeNotify("Slow Hub", "NPC " .. selectedSword .. " not found in workspace!")
     end
 end
 
@@ -99,13 +99,7 @@ Tab:CreateDropdown({
     Flag = "SwordNPCDropdown",
     Callback = function(Option)
         _G.SlowHub.SelectedSwordNPC = normalizeValue(Option)
-        
-        Rayfield:Notify({
-            Title = "Slow Hub",
-            Content = "Selected: " .. _G.SlowHub.SelectedSwordNPC,
-            Duration = 2,
-            Image = 105026320884681
-        })
+        SafeNotify("Slow Hub", "Selected: " .. _G.SlowHub.SelectedSwordNPC, 2)
     end
 })
 
