@@ -1,4 +1,4 @@
-local Tab = _G.StatusTab
+local Tab = _G.StatsTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
