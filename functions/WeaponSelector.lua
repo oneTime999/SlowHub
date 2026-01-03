@@ -86,8 +86,8 @@ local function EquipSelectedTool()
     end)
 end
 
--- Dropdown corrigido
-Tab:CreateDropdown({
+-- Dropdown corrigido (armazena referência)
+local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
     Flag = "WeaponDropdown",
@@ -103,6 +103,24 @@ Tab:CreateDropdown({
             _G.SlowHub.SelectedWeapon = nil
         end
     end
+})
+
+-- Botão para refresh das armas
+Tab:CreateButton({
+    Name = "Refresh Weapons",
+    Callback = function()
+        local newWeapons = GetWeapons()
+        WeaponDropdown:Refresh(newWeapons)
+        
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Weapons list refreshed!",
+                Duration = 2,
+                Image = 105026320884681
+            })
+        end)
+    end,
 })
 
 -- Toggle para equipar em loop
