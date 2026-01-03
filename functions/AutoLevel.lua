@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- Configurações de NPCs por nível
+-- Configuracoes de NPCs por nivel
 local LevelConfig = {
     {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief", count = 5},
     {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey", count = 5},
@@ -13,12 +13,12 @@ local LevelConfig = {
     {minLevel = 3000, maxLevel = 99999, quest = "QuestNPC9", npc = "Sorcerer", count = 5}
 }
 
--- Variáveis de controle
+-- Variaveis de controle
 local autoLevelConnection = nil
 local autoLevelQuestLoop = nil
 local currentNPCIndex = 1
 
--- Inicializa configurações
+-- Inicializa configuracoes
 if not _G.SlowHub.FarmDistance then
     _G.SlowHub.FarmDistance = 8
 end
@@ -27,7 +27,7 @@ if not _G.SlowHub.FarmHeight then
     _G.SlowHub.FarmHeight = 4
 end
 
--- Função para pegar o nível do player
+-- Funcao para pegar o nivel do player
 local function GetPlayerLevel()
     local success, level = pcall(function()
         return Player.Data.Level.Value
@@ -35,7 +35,7 @@ local function GetPlayerLevel()
     return success and level or 1
 end
 
--- Função para pegar a configuração baseada no nível
+-- Funcao para pegar a configuracao baseada no nivel
 local function GetCurrentConfig()
     local level = GetPlayerLevel()
     for _, config in pairs(LevelConfig) do
@@ -46,7 +46,7 @@ local function GetCurrentConfig()
     return LevelConfig[1]
 end
 
--- Função para pegar próximo NPC
+-- Funcao para pegar proximo NPC
 local function getNextNPC(current, maxCount)
     local next = current + 1
     if next > maxCount then
@@ -55,12 +55,12 @@ local function getNextNPC(current, maxCount)
     return next
 end
 
--- Função para pegar NPC
+-- Funcao para pegar NPC
 local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
--- Função para pegar RootPart do NPC
+-- Funcao para pegar RootPart do NPC
 local function getNPCRootPart(npc)
     if npc and npc:FindFirstChild("HumanoidRootPart") then
         return npc.HumanoidRootPart
@@ -68,7 +68,7 @@ local function getNPCRootPart(npc)
     return nil
 end
 
--- Função para equipar arma
+-- Funcao para equipar arma
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     
@@ -96,7 +96,7 @@ local function EquipWeapon()
     return success
 end
 
--- Função para parar Auto Level
+-- Funcao para parar Auto Level
 local function stopAutoLevel()
     if autoLevelConnection then
         autoLevelConnection:Disconnect()
@@ -124,7 +124,7 @@ local function stopAutoLevel()
     end)
 end
 
--- Função para iniciar Auto Level
+-- Funcao para iniciar Auto Level
 local function startAutoLevel()
     if autoLevelConnection then
         stopAutoLevel()
@@ -186,7 +186,7 @@ local function startAutoLevel()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Usa distância E altura dos sliders
+                        -- Usa distancia E altura dos sliders
                         local targetCFrame = npcRoot.CFrame
                         local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
                         
@@ -260,7 +260,7 @@ Tab:CreateToggle({
     end
 })
 
--- Slider para controlar distância (frente/trás)
+-- Slider para controlar distancia (frente/tras)
 Tab:CreateSlider({
     Name = "Farm Distance",
     Range = {1, 10},
