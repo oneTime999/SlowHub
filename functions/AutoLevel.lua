@@ -9,7 +9,7 @@ local LevelConfig = {
     {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief", count = 5},
     {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey", count = 5},
     {minLevel = 750, maxLevel = 1499, quest = "QuestNPC5", npc = "DesertBandit", count = 5},
-    {minLevel = 1500, maxLevel = 2999, quest = "QuestNPC7", npc = "DesertBandit", count = 5},
+    {minLevel = 1500, maxLevel = 2999, quest = "QuestNPC7", npc = "FrostRogue", count = 5},
     {minLevel = 3000, maxLevel = 99999, quest = "QuestNPC9", npc = "Sorcerer", count = 5}
 }
 
