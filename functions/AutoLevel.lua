@@ -18,6 +18,9 @@ local autoLevelConnection = nil
 local autoLevelQuestLoop = nil
 local currentNPCIndex = 1
 
+-- Variável de distância (inicializa se não existir)
+_G.SlowHub.FarmDistance = _G.SlowHub.FarmDistance or 8
+
 -- Função para pegar o nível do player
 local function GetPlayerLevel()
     local success, level = pcall(function()
@@ -177,8 +180,9 @@ local function startAutoLevel()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
+                        -- USA A DISTÂNCIA DO SLIDER
                         local targetCFrame = npcRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, 4, 8)
+                        local offsetPosition = targetCFrame * CFrame.new(0, 4, _G.SlowHub.FarmDistance)
                         
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
@@ -212,7 +216,7 @@ end
 -- Toggle Auto Farm Level (COM SALVAMENTO)
 Tab:CreateToggle({
     Name = "Auto Farm Level",
-    CurrentValue = _G.SlowHub.AutoFarmLevel,  -- Carrega valor salvo
+    CurrentValue = _G.SlowHub.AutoFarmLevel,
     Flag = "AutoFarmLevelToggle",
     Callback = function(Value)
         if Value then
@@ -243,12 +247,39 @@ Tab:CreateToggle({
             stopAutoLevel()
         end
         
-        -- Salva automaticamente
         _G.SlowHub.AutoFarmLevel = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
+})
+
+-- SLIDER PARA CONTROLAR A DISTÂNCIA
+Tab:CreateSlider({
+    Name = "Farm Distance",
+    Range = {3, 20},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = _G.SlowHub.FarmDistance,
+    Flag = "FarmDistanceSlider",
+    Callback = function(Value)
+        _G.SlowHub.FarmDistance = Value
+        
+        -- Salva automaticamente
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        
+        -- Notifica o usuário
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Farm distance set to: " .. Value .. " studs",
+                Duration = 2,
+                Image = 105026320884681
+            })
+        end)
+    end,
 })
 
 -- Auto iniciar se estava ativado
