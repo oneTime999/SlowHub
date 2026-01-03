@@ -280,7 +280,7 @@ Tab:CreateSlider({
                 Title = "Slow Hub",
                 Content = "Distance: " .. Value .. " studs",
                 Duration = 2,
-                Image = 105026320884681
+                Image = 109860946741884
             })
         end)
     end,
@@ -306,7 +306,7 @@ Tab:CreateSlider({
                 Title = "Slow Hub",
                 Content = "Height: " .. Value .. " studs",
                 Duration = 2,
-                Image = 105026320884681
+                Image = 109860946741884
             })
         end)
     end,
