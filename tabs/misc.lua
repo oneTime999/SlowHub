@@ -1,13 +1,13 @@
 local Tab = _G.MiscTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
--- Seção: Haki
+-- Secao Haki
 Tab:CreateSection("Haki")
 
 -- Carregar Auto Haki
 loadstring(game:HttpGet(githubBase .. "AutoHaki.lua"))()
 
--- Seção: Codes
+-- Secao Codes
 Tab:CreateSection("Codes")
 
 -- Carregar Reedem All Codes
