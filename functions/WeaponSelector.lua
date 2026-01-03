@@ -2,81 +2,82 @@ local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
--- Função para pegar armas da Backpack
 local function GetWeapons()
     local weapons = {}
     
     pcall(function()
-        local backpack = Player:FindFirstChild("Backpack")
-        local character = Player.Character
+        local backpack = Player:WaitForChild("Backpack")
         
-        if backpack then
-            for _, item in pairs(backpack:GetChildren()) do
-                if item:IsA("Tool") then
-                    table.insert(weapons, item.Name)
-                end
+        for _, item in pairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                table.insert(weapons, item.Name)
             end
         end
         
-        if character then
-            for _, item in pairs(character:GetChildren()) do
+        if Player.Character then
+            for _, item in pairs(Player.Character:GetChildren()) do
                 if item:IsA("Tool") then
-                    table.insert(weapons, item.Name)
+                    local found = false
+                    for _, weaponName in pairs(weapons) do
+                        if weaponName == item.Name then
+                            found = true
+                            break
+                        end
+                    end
+                    if not found then
+                        table.insert(weapons, item.Name)
+                    end
                 end
             end
         end
     end)
     
-    -- Se não encontrou nenhuma arma, adicionar placeholder
     if #weapons == 0 then
-        table.insert(weapons, "Nenhuma arma encontrada")
+        table.insert(weapons, "No weapons found")
     end
     
     return weapons
 end
 
--- Função para equipar a arma
 local function EquipWeapon(weaponName)
     pcall(function()
-        local backpack = Player:FindFirstChild("Backpack")
-        local character = Player.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local backpack = Player:WaitForChild("Backpack")
+        local character = Player.Character or Player.CharacterAdded:Wait()
+        local humanoid = character:WaitForChild("Humanoid")
         
-        if not character or not humanoid then return end
+        local tool = backpack:FindFirstChild(weaponName)
         
-        -- Procurar a arma na mochila
-        if backpack then
-            local weapon = backpack:FindFirstChild(weaponName)
-            if weapon and weapon:IsA("Tool") then
-                -- Método 1: Mover para o personagem
-                weapon.Parent = character
-                return
-            end
+        if tool and tool:IsA("Tool") then
+            humanoid:EquipTool(tool)
         end
     end)
 end
 
--- Dropdown para selecionar arma
-local weaponDropdown = Tab:CreateDropdown({
-    Name = "Selecionar Arma",
+local weaponDropdown
+
+weaponDropdown = Tab:CreateDropdown({
+    Name = "Select Weapon",
     Options = GetWeapons(),
-    CurrentOption = "",
+    CurrentOption = GetWeapons()[1] or "No weapons found",
     Flag = "WeaponDropdown",
     Callback = function(Value)
-        if Value and Value ~= "Nenhuma arma encontrada" then
+        if Value and Value ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = Value
             EquipWeapon(Value)
         end
     end
 })
 
--- Botão para atualizar lista de armas
 Tab:CreateButton({
-    Name = "Atualizar Lista de Armas",
+    Name = "Refresh Weapon List",
     Callback = function()
         pcall(function()
             local weapons = GetWeapons()
-            weaponDropdown:Refresh(weapons)
+            weaponDropdown:Refresh(weapons, true)
+            
+            if weapons[1] then
+                weaponDropdown:Set(weapons[1])
+            end
         end)
     end
 })
