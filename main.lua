@@ -75,7 +75,7 @@ local Window = Rayfield:CreateWindow({
 -- Criar tabs e salvar globalmente
 _G.MainTab = Window:CreateTab("Main", 125686055318100)
 _G.BossesTab = Window:CreateTab("Bosses", 105026320884681)
-_G.MiscTab = Window:CreateTab("Misc", 125686055318100)
+_G.MiscTab = Window:CreateTab("Misc", 106779103527235)
 
 -- Salvar Rayfield globalmente
 _G.Rayfield = Rayfield
