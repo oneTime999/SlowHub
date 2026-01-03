@@ -257,7 +257,7 @@ Tab:CreateToggle({
 -- SLIDER PARA CONTROLAR A DISTÂNCIA
 Tab:CreateSlider({
     Name = "Farm Distance",
-    Range = {3, 20},
+    Range = {5, 10},
     Increment = 1,
     Suffix = "studs",
     CurrentValue = _G.SlowHub.FarmDistance,
