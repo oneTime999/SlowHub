@@ -18,13 +18,9 @@ local autoLevelConnection = nil
 local autoLevelQuestLoop = nil
 local currentNPCIndex = 1
 
--- Inicializa configurações se não existirem
+-- Inicializa configuração de distância
 if not _G.SlowHub.FarmDistance then
     _G.SlowHub.FarmDistance = 8
-end
-
-if not _G.SlowHub.FarmPosition then
-    _G.SlowHub.FarmPosition = "Front"
 end
 
 -- Função para pegar o nível do player
@@ -96,21 +92,63 @@ local function EquipWeapon()
     return success
 end
 
--- Função para calcular a posição baseada no dropdown
-local function CalculateFarmPosition(npcCFrame)
-    local distance = _G.SlowHub.FarmDistance
-    local position = _G.SlowHub.FarmPosition
-    
-    if position == "Top" then
-        -- Em cima do mob
-        return npcCFrame + Vector3.new(0, distance, 0)
-    elseif position == "Bottom" then
-        -- Em baixo do mob
-        return npcCFrame + Vector3.new(0, -distance, 0)
-    else -- Front (padrão)
-        -- Na frente do mob
-        return npcCFrame + (npcCFrame.LookVector * distance) + Vector3.new(0, 4, 0)
-    end
+-- Função para dar refresh no backpack
+local function RefreshBackpack()
+    pcall(function()
+        local character = Player.Character
+        local backpack = Player:FindFirstChild("Backpack")
+        
+        if not character or not backpack then return end
+        
+        -- Pega todas as ferramentas equipadas
+        local equippedTools = {}
+        for _, item in pairs(character:GetChildren()) do
+            if item:IsA("Tool") then
+                table.insert(equippedTools, item.Name)
+                item.Parent = backpack
+            end
+        end
+        
+        -- Pega todas as ferramentas do backpack
+        local backpackTools = {}
+        for _, item in pairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                table.insert(backpackTools, item)
+            end
+        end
+        
+        -- Remove todas
+        for _, tool in pairs(backpackTools) do
+            tool.Parent = nil
+        end
+        
+        wait(0.1)
+        
+        -- Recoloca todas
+        for _, tool in pairs(backpackTools) do
+            tool.Parent = backpack
+        end
+        
+        wait(0.1)
+        
+        -- Reequipa as que estavam equipadas
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            for _, toolName in pairs(equippedTools) do
+                local tool = backpack:FindFirstChild(toolName)
+                if tool then
+                    humanoid:EquipTool(tool)
+                end
+            end
+        end
+        
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Backpack refreshed!",
+            Duration = 2,
+            Image = 105026320884681
+        })
+    end)
 end
 
 -- Função para parar Auto Level
@@ -203,11 +241,14 @@ local function startAutoLevel()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Calcula a posição usando a função
-                        local targetPosition = CalculateFarmPosition(npcRoot.CFrame)
+                        -- Posiciona o player na distância definida
+                        local targetCFrame = npcRoot.CFrame
+                        local offsetPosition = targetCFrame * CFrame.new(0, 4, _G.SlowHub.FarmDistance)
                         
-                        -- Move o player para a posição
-                        playerRoot.CFrame = CFrame.new(targetPosition.Position, npcRoot.Position)
+                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                        if distance > 3 or distance < 1 then
+                            playerRoot.CFrame = offsetPosition
+                        end
                         
                         EquipWeapon()
                         
@@ -274,43 +315,10 @@ Tab:CreateToggle({
     end
 })
 
--- Dropdown para escolher posição
-Tab:CreateDropdown({
-    Name = "Farm Position",
-    Options = {"Front", "Top", "Bottom"},
-    CurrentOption = {"Front"},
-    MultipleOptions = false,
-    Flag = "FarmPositionDropdown",
-    Callback = function(Option)
-        -- Option pode vir como tabela em alguns casos
-        local selected = type(Option) == "table" and Option[1] or Option
-        _G.SlowHub.FarmPosition = selected
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-        
-        local messages = {
-            Front = "in front of the mob",
-            Top = "on top of the mob",
-            Bottom = "below the mob"
-        }
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Now farming " .. (messages[selected] or ""),
-                Duration = 2,
-                Image = 105026320884681
-            })
-        end)
-    end,
-})
-
 -- Slider para controlar distância
 Tab:CreateSlider({
     Name = "Farm Distance",
-    Range = {1, 10},
+    Range = {3, 20},
     Increment = 1,
     Suffix = "studs",
     CurrentValue = _G.SlowHub.FarmDistance,
@@ -330,6 +338,14 @@ Tab:CreateSlider({
                 Image = 105026320884681
             })
         end)
+    end,
+})
+
+-- Botão para refresh do backpack
+Tab:CreateButton({
+    Name = "Refresh Backpack",
+    Callback = function()
+        RefreshBackpack()
     end,
 })
 
