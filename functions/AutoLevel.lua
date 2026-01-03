@@ -21,6 +21,9 @@ local currentNPCIndex = 1
 -- Variável de distância (inicializa se não existir)
 _G.SlowHub.FarmDistance = _G.SlowHub.FarmDistance or 8
 
+-- Variável de posição do farm (inicializa se não existir)
+_G.SlowHub.FarmPosition = _G.SlowHub.FarmPosition or "Front"
+
 -- Função para pegar o nível do player
 local function GetPlayerLevel()
     local success, level = pcall(function()
@@ -180,9 +183,21 @@ local function startAutoLevel()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- USA A DISTÂNCIA DO SLIDER
+                        -- USA A DISTÂNCIA E POSIÇÃO DO SLIDER E DROPDOWN
                         local targetCFrame = npcRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, 4, _G.SlowHub.FarmDistance)
+                        local offsetPosition
+                        
+                        -- Define a posição baseada no dropdown
+                        if _G.SlowHub.FarmPosition == "Top" then
+                            -- Em cima do mob
+                            offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmDistance, 0)
+                        elseif _G.SlowHub.FarmPosition == "Bottom" then
+                            -- Em baixo do mob
+                            offsetPosition = targetCFrame * CFrame.new(0, -_G.SlowHub.FarmDistance, 0)
+                        else
+                            -- Na frente do mob (padrão)
+                            offsetPosition = targetCFrame * CFrame.new(0, 4, _G.SlowHub.FarmDistance)
+                        end
                         
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
@@ -257,7 +272,7 @@ Tab:CreateToggle({
 -- SLIDER PARA CONTROLAR A DISTÂNCIA
 Tab:CreateSlider({
     Name = "Farm Distance",
-    Range = {5, 10},
+    Range = {3, 20},
     Increment = 1,
     Suffix = "studs",
     CurrentValue = _G.SlowHub.FarmDistance,
@@ -275,6 +290,38 @@ Tab:CreateSlider({
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
                 Content = "Farm distance set to: " .. Value .. " studs",
+                Duration = 2,
+                Image = 105026320884681
+            })
+        end)
+    end,
+})
+
+-- DROPDOWN PARA ESCOLHER POSIÇÃO DO FARM
+Tab:CreateDropdown({
+    Name = "Farm Position",
+    Options = {"Front", "Top", "Bottom"},
+    CurrentOption = _G.SlowHub.FarmPosition,
+    Flag = "FarmPositionDropdown",
+    Callback = function(Option)
+        _G.SlowHub.FarmPosition = Option
+        
+        -- Salva automaticamente
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        
+        -- Notifica o usuário
+        local positionText = {
+            Front = "in front of",
+            Top = "on top of",
+            Bottom = "below"
+        }
+        
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Now farming " .. positionText[Option] .. " the mob",
                 Duration = 2,
                 Image = 105026320884681
             })
