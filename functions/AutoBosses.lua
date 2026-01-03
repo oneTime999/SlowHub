@@ -19,7 +19,6 @@ local isRunning = false
 
 -- Função para pegar o Boss
 local function getBoss()
-    -- Garantir que selectedBoss é string
     local bossName = tostring(selectedBoss)
     return workspace.NPCs:FindFirstChild(bossName)
 end
@@ -44,12 +43,10 @@ local function EquipWeapon()
             return false
         end
         
-        -- Verificar se a arma já está equipada
         if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
             return true
         end
         
-        -- Equipar da backpack
         if backpack then
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
@@ -71,9 +68,8 @@ local function stopAutoFarmBoss()
         autoFarmBossConnection = nil
     end
     
-    _G.SlowHub.AutoFarmBoss = false
+    _G.SlowHub.AutoFarmBosses = false
     
-    -- Stop player movement and unanchor
     pcall(function()
         if Player.Character then
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
@@ -87,20 +83,18 @@ end
 
 -- Função para iniciar Auto Farm Boss
 local function startAutoFarmBoss()
-    -- Parar qualquer instância anterior
     if isRunning then
         stopAutoFarmBoss()
         wait(0.3)
     end
     
     isRunning = true
-    _G.SlowHub.AutoFarmBoss = true
+    _G.SlowHub.AutoFarmBosses = true
     
-    -- Equipar arma ao iniciar
     EquipWeapon()
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmBoss or not isRunning then
+        if not _G.SlowHub.AutoFarmBosses or not isRunning then
             stopAutoFarmBoss()
             return
         end
@@ -110,13 +104,10 @@ local function startAutoFarmBoss()
         if boss and boss.Parent then
             local bossHumanoid = boss:FindFirstChild("Humanoid")
             
-            -- Verificar se o Boss está morto
             if bossHumanoid and bossHumanoid.Health <= 0 then
-                -- Boss morto, NÃO fazer nada (não teleportar, não flutuar)
                 return
             end
             
-            -- Boss está vivo, farmar
             local bossRoot = getBossRootPart(boss)
             
             if bossRoot and bossRoot.Parent and Player.Character then
@@ -125,33 +116,27 @@ local function startAutoFarmBoss()
                 
                 if playerRoot and humanoid and humanoid.Health > 0 then
                     pcall(function()
-                        -- Remove any unwanted velocity
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Keep player near Boss (5 studs above, 8 studs forward)
                         local targetCFrame = bossRoot.CFrame
                         local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
                         
-                        -- Only teleport if distance is reasonable
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
                             playerRoot.CFrame = offsetPosition
                         end
                         
-                        -- Equipar arma
                         EquipWeapon()
                         
-                        -- Attack Boss
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     end)
                 end
             end
         end
-        -- Boss não encontrado = NÃO fazer nada (removido o código de flutuar)
     end)
 end
 
--- Dropdown para selecionar o boss (CORRIGIDO)
+-- Dropdown para selecionar o boss
 Tab:CreateDropdown({
     Name = "Selecionar Boss",
     Options = bossList,
@@ -160,20 +145,17 @@ Tab:CreateDropdown({
     Callback = function(Option)
         local wasRunning = isRunning
         
-        -- Parar o farm atual
         if wasRunning then
             stopAutoFarmBoss()
             wait(0.3)
         end
         
-        -- Garantir que Option é string (CORREÇÃO DO BUG)
         if type(Option) == "table" then
             selectedBoss = Option[1] or "RagnaBoss"
         else
             selectedBoss = tostring(Option)
         end
         
-        -- Reiniciar se estava rodando
         if wasRunning then
             startAutoFarmBoss()
             
@@ -189,10 +171,10 @@ Tab:CreateDropdown({
     end
 })
 
--- Toggle Auto Farm Boss
+-- Toggle Auto Farm Boss (COM SALVAMENTO)
 Tab:CreateToggle({
     Name = "Auto Farm Boss",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoFarmBosses,  -- Carrega valor salvo
     Flag = "AutoFarmBossToggle",
     Callback = function(Value)
         if Value then
@@ -221,5 +203,17 @@ Tab:CreateToggle({
         else
             stopAutoFarmBoss()
         end
+        
+        -- Salva automaticamente
+        _G.SlowHub.AutoFarmBosses = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
+
+-- Auto iniciar se estava ativado
+if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
+    task.wait(2)
+    startAutoFarmBoss()
+end
