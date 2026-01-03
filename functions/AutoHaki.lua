@@ -5,18 +5,18 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
--- Variáveis de controle
+-- Variaveis de controle
 local autoHakiConnection = nil
 local lastToggleTime = 0
 local COOLDOWN_TIME = 3 -- segundos
 
--- Nomes CORRETOS dos braços (R6)
+-- Nomes CORRETOS dos bracos (R6)
 local armParts = {
     "Left Arm",
     "Right Arm"
 }
 
--- Verifica se existe ParticleEmitter "3" em algum braço
+-- Verifica se existe ParticleEmitter "3" em algum braco
 local function hasHakiEffect()
     local character = Player.Character
     if not character then return false end
@@ -34,7 +34,7 @@ local function hasHakiEffect()
     return false
 end
 
--- Ativa Haki uma única vez
+-- Ativa Haki uma unica vez
 local function toggleHaki()
     pcall(function()
         ReplicatedStorage.RemoteEvents.HakiRemote:FireServer("Toggle")
