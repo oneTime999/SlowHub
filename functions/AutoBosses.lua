@@ -17,6 +17,15 @@ local autoFarmBossConnection = nil
 local selectedBoss = "RagnaBoss"
 local isRunning = false
 
+-- Inicializa configurações de distância e altura para bosses
+if not _G.SlowHub.BossFarmDistance then
+    _G.SlowHub.BossFarmDistance = 8
+end
+
+if not _G.SlowHub.BossFarmHeight then
+    _G.SlowHub.BossFarmHeight = 5
+end
+
 -- Função para pegar o Boss
 local function getBoss()
     local bossName = tostring(selectedBoss)
@@ -118,8 +127,9 @@ local function startAutoFarmBoss()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
+                        -- Usa distância E altura dos sliders
                         local targetCFrame = bossRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
+                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                         
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
@@ -158,7 +168,6 @@ Tab:CreateDropdown({
         
         if wasRunning then
             startAutoFarmBoss()
-            
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
@@ -171,10 +180,10 @@ Tab:CreateDropdown({
     end
 })
 
--- Toggle Auto Farm Boss (COM SALVAMENTO)
+-- Toggle Auto Farm Boss
 Tab:CreateToggle({
     Name = "Auto Farm Boss",
-    CurrentValue = _G.SlowHub.AutoFarmBosses,  -- Carrega valor salvo
+    CurrentValue = _G.SlowHub.AutoFarmBosses,
     Flag = "AutoFarmBossToggle",
     Callback = function(Value)
         if Value then
@@ -184,7 +193,7 @@ Tab:CreateToggle({
                         Title = "Slow Hub",
                         Content = "Please select a weapon first!",
                         Duration = 5,
-                        Image = 4483345998
+                        Image = 105026320884681
                     })
                 end)
                 return
@@ -195,7 +204,7 @@ Tab:CreateToggle({
                     Title = "Slow Hub",
                     Content = "Farming Boss: " .. selectedBoss,
                     Duration = 3,
-                    Image = 4483345998
+                    Image = 105026320884681
                 })
             end)
             
@@ -204,12 +213,63 @@ Tab:CreateToggle({
             stopAutoFarmBoss()
         end
         
-        -- Salva automaticamente
         _G.SlowHub.AutoFarmBosses = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
+})
+
+-- Slider para controlar distância (frente/trás)
+Tab:CreateSlider({
+    Name = "Boss Farm Distance",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = _G.SlowHub.BossFarmDistance,
+    Flag = "BossFarmDistanceSlider",
+    Callback = function(Value)
+        _G.SlowHub.BossFarmDistance = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Boss Distance: " .. Value .. " studs",
+                Duration = 2,
+                Image = 105026320884681
+            })
+        end)
+    end,
+})
+
+-- Slider para controlar altura (cima/baixo)
+Tab:CreateSlider({
+    Name = "Boss Farm Height",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = _G.SlowHub.BossFarmHeight,
+    Flag = "BossFarmHeightSlider",
+    Callback = function(Value)
+        _G.SlowHub.BossFarmHeight = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Boss Height: " .. Value .. " studs",
+                Duration = 2,
+                Image = 105026320884681
+            })
+        end)
+    end,
 })
 
 -- Auto iniciar se estava ativado
