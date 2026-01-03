@@ -71,12 +71,10 @@ local function EquipWeapon()
             return false
         end
         
-        -- Verificar se a arma já está equipada
         if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
             return true
         end
         
-        -- Equipar da backpack
         if backpack then
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
@@ -102,7 +100,6 @@ local function stopAutoLevel()
     _G.SlowHub.AutoFarmLevel = false
     currentNPCIndex = 1
     
-    -- Stop player movement and unanchor
     pcall(function()
         if Player.Character then
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
@@ -113,7 +110,6 @@ local function stopAutoLevel()
         end
     end)
     
-    -- Abandonar quest
     pcall(function()
         ReplicatedStorage.RemoteEvents.QuestAbandon:FireServer()
     end)
@@ -130,10 +126,8 @@ local function startAutoLevel()
     
     local config = GetCurrentConfig()
     
-    -- Equipar arma ao iniciar
     EquipWeapon()
     
-    -- Quest accept loop (continuous)
     autoLevelQuestLoop = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
             if autoLevelQuestLoop then
@@ -143,7 +137,6 @@ local function startAutoLevel()
             return
         end
         
-        -- Atualizar config se mudou de nível
         config = GetCurrentConfig()
         
         pcall(function()
@@ -159,7 +152,6 @@ local function startAutoLevel()
             return
         end
         
-        -- Atualizar config se mudou de nível
         config = GetCurrentConfig()
         
         local now = tick()
@@ -168,16 +160,13 @@ local function startAutoLevel()
         if npc and npc.Parent then
             local npcHumanoid = npc:FindFirstChild("Humanoid")
             
-            -- Verificar se o NPC está morto
             if npcHumanoid and npcHumanoid.Health <= 0 then
-                -- NPC morto, trocar imediatamente
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 return
             end
             
             lastNPCFound = now
             
-            -- Farm current NPC
             local npcRoot = getNPCRootPart(npc)
             
             if npcRoot and npcRoot.Parent and Player.Character then
@@ -186,40 +175,32 @@ local function startAutoLevel()
                 
                 if playerRoot and humanoid and humanoid.Health > 0 then
                     pcall(function()
-                        -- Remove any unwanted velocity
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Keep player near NPC (5 studs above, 8 studs forward)
                         local targetCFrame = npcRoot.CFrame
                         local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
                         
-                        -- Only teleport if distance is reasonable
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
                             playerRoot.CFrame = offsetPosition
                         end
                         
-                        -- Equipar arma
                         EquipWeapon()
                         
-                        -- Attack NPC
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     end)
                 end
             end
         else
-            -- NPC not found, stay still and wait
             pcall(function()
                 if Player.Character then
                     local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
                     if playerRoot then
-                        -- Keep player grounded and still
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     end
                 end
             end)
             
-            -- Wait 0.3 seconds before switching to next NPC
             if lastNPCFound == nil or (now - lastNPCFound) > 0.3 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCFound = now
@@ -228,10 +209,10 @@ local function startAutoLevel()
     end)
 end
 
--- Toggle Auto Farm Level
+-- Toggle Auto Farm Level (COM SALVAMENTO)
 Tab:CreateToggle({
     Name = "Auto Farm Level",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoFarmLevel,  -- Carrega valor salvo
     Flag = "AutoFarmLevelToggle",
     Callback = function(Value)
         if Value then
@@ -261,5 +242,17 @@ Tab:CreateToggle({
         else
             stopAutoLevel()
         end
+        
+        -- Salva automaticamente
+        _G.SlowHub.AutoFarmLevel = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
+
+-- Auto iniciar se estava ativado
+if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
+    task.wait(2)
+    startAutoLevel()
+end
