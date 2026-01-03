@@ -77,10 +77,10 @@ local function startAutoHaki()
     end)
 end
 
--- Toggle UI
+-- Toggle UI (COM SALVAMENTO)
 Tab:CreateToggle({
     Name = "Auto Haki",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoHaki,  -- Carrega valor salvo
     Flag = "AutoHakiToggle",
     Callback = function(Value)
         if Value then
@@ -88,5 +88,17 @@ Tab:CreateToggle({
         else
             stopAutoHaki()
         end
+        
+        -- Salva automaticamente
+        _G.SlowHub.AutoHaki = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
+
+-- Auto iniciar se estava ativado
+if _G.SlowHub.AutoHaki then
+    task.wait(2)
+    startAutoHaki()
+end
