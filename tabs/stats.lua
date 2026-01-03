@@ -1,4 +1,4 @@
-local Tab = _G.ShopTab
+local Tab = _G.StatsTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 Tab:CreateSection("Stats")
