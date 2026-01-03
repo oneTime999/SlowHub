@@ -39,20 +39,6 @@ local function GetWeapons()
     return weapons
 end
 
-local function EquipWeapon(weaponName)
-    pcall(function()
-        local backpack = Player:WaitForChild("Backpack")
-        local character = Player.Character or Player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        
-        local tool = backpack:FindFirstChild(weaponName)
-        
-        if tool and tool:IsA("Tool") then
-            humanoid:EquipTool(tool)
-        end
-    end)
-end
-
 local weaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
@@ -61,7 +47,6 @@ local weaponDropdown = Tab:CreateDropdown({
     Callback = function(Value)
         if Value and Value ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = Value
-            EquipWeapon(Value)
         end
     end
 })
