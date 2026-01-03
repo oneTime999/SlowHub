@@ -29,33 +29,56 @@ local function GetWeapons()
     
     -- Se não encontrou nenhuma arma, adicionar placeholder
     if #weapons == 0 then
-        table.insert(weapons, "No weapons found")
+        table.insert(weapons, "Nenhuma arma encontrada")
     end
     
     return weapons
 end
 
+-- Função para equipar a arma
+local function EquipWeapon(weaponName)
+    pcall(function()
+        local backpack = Player:FindFirstChild("Backpack")
+        local character = Player.Character
+        
+        if not character then return end
+        
+        -- Procurar a arma na mochila
+        if backpack then
+            local weapon = backpack:FindFirstChild(weaponName)
+            if weapon and weapon:IsA("Tool") then
+                character.Humanoid:EquipTool(weapon)
+                return
+            end
+        end
+        
+        -- Se já estiver equipada, não fazer nada
+        if character:FindFirstChild(weaponName) then
+            return
+        end
+    end)
+end
+
 -- Dropdown para selecionar arma
 local weaponDropdown = Tab:CreateDropdown({
-    Name = "Select Weapon",
+    Name = "Selecionar Arma",
     Options = GetWeapons(),
     CurrentOption = "",
     Flag = "WeaponDropdown",
     Callback = function(Value)
-        if Value and Value ~= "No weapons found" then
+        if Value and Value ~= "Nenhuma arma encontrada" then
             _G.SlowHub.SelectedWeapon = Value
+            EquipWeapon(Value)
         end
     end
 })
 
 -- Botão para atualizar lista de armas
 Tab:CreateButton({
-    Name = "Refresh Weapon List",
+    Name = "Atualizar Lista de Armas",
     Callback = function()
         pcall(function()
             local weapons = GetWeapons()
-            
-            -- Atualizar dropdown
             weaponDropdown:Refresh(weapons)
         end)
     end
