@@ -108,22 +108,3 @@ Tab:CreateToggle({
         end)
     end
 })
-
--- Button to allocate selected stat once (manual)
-Tab:CreateButton({
-    Name = "Allocate Once",
-    Callback = function()
-        pcall(function()
-            local selectedStat = _G.SlowHub.SelectedStat
-            
-            if not selectedStat or selectedStat == "" then
-                return
-            end
-            
-            local allocateFunction = StatsMap[selectedStat]
-            if allocateFunction then
-                allocateFunction()
-            end
-        end)
-    end
-})
