@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- Lista de bosses disponíveis
+-- Lista de bosses disponiveis
 local bossList = {
     "RagnaBoss",
     "JinwooBoss",
@@ -12,12 +12,12 @@ local bossList = {
     "GojoBoss"
 }
 
--- Variáveis de controle
+-- Variaveis de controle
 local autoFarmBossConnection = nil
 local selectedBoss = "RagnaBoss"
 local isRunning = false
 
--- Inicializa configurações de distância e altura para bosses
+-- Inicializa configuracoes de distancia e altura para bosses
 if not _G.SlowHub.BossFarmDistance then
     _G.SlowHub.BossFarmDistance = 8
 end
@@ -26,13 +26,13 @@ if not _G.SlowHub.BossFarmHeight then
     _G.SlowHub.BossFarmHeight = 5
 end
 
--- Função para pegar o Boss
+-- Funcao para pegar o Boss
 local function getBoss()
     local bossName = tostring(selectedBoss)
     return workspace.NPCs:FindFirstChild(bossName)
 end
 
--- Função para pegar RootPart do Boss
+-- Funcao para pegar RootPart do Boss
 local function getBossRootPart(boss)
     if boss and boss:FindFirstChild("HumanoidRootPart") then
         return boss.HumanoidRootPart
@@ -40,7 +40,7 @@ local function getBossRootPart(boss)
     return nil
 end
 
--- Função para equipar arma
+-- Funcao para equipar arma
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     
@@ -68,7 +68,7 @@ local function EquipWeapon()
     return success
 end
 
--- Função para parar Auto Farm Boss
+-- Funcao para parar Auto Farm Boss
 local function stopAutoFarmBoss()
     isRunning = false
     
@@ -90,7 +90,7 @@ local function stopAutoFarmBoss()
     end)
 end
 
--- Função para iniciar Auto Farm Boss
+-- Funcao para iniciar Auto Farm Boss
 local function startAutoFarmBoss()
     if isRunning then
         stopAutoFarmBoss()
@@ -127,7 +127,7 @@ local function startAutoFarmBoss()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Usa distância E altura dos sliders
+                        -- Usa distancia E altura dos sliders
                         local targetCFrame = bossRoot.CFrame
                         local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                         
@@ -220,7 +220,7 @@ Tab:CreateToggle({
     end
 })
 
--- Slider para controlar distância (frente/trás)
+-- Slider para controlar distancia (frente/tras)
 Tab:CreateSlider({
     Name = "Boss Farm Distance",
     Range = {1, 10},
