@@ -40,21 +40,18 @@ local function EquipWeapon(weaponName)
     pcall(function()
         local backpack = Player:FindFirstChild("Backpack")
         local character = Player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         
-        if not character then return end
+        if not character or not humanoid then return end
         
         -- Procurar a arma na mochila
         if backpack then
             local weapon = backpack:FindFirstChild(weaponName)
             if weapon and weapon:IsA("Tool") then
-                character.Humanoid:EquipTool(weapon)
+                -- Método 1: Mover para o personagem
+                weapon.Parent = character
                 return
             end
-        end
-        
-        -- Se já estiver equipada, não fazer nada
-        if character:FindFirstChild(weaponName) then
-            return
         end
     end)
 end
