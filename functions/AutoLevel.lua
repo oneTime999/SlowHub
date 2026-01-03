@@ -18,9 +18,13 @@ local autoLevelConnection = nil
 local autoLevelQuestLoop = nil
 local currentNPCIndex = 1
 
--- Inicializa configuração de distância
+-- Inicializa configurações
 if not _G.SlowHub.FarmDistance then
     _G.SlowHub.FarmDistance = 8
+end
+
+if not _G.SlowHub.FarmHeight then
+    _G.SlowHub.FarmHeight = 4
 end
 
 -- Função para pegar o nível do player
@@ -90,65 +94,6 @@ local function EquipWeapon()
     end)
     
     return success
-end
-
--- Função para dar refresh no backpack
-local function RefreshBackpack()
-    pcall(function()
-        local character = Player.Character
-        local backpack = Player:FindFirstChild("Backpack")
-        
-        if not character or not backpack then return end
-        
-        -- Pega todas as ferramentas equipadas
-        local equippedTools = {}
-        for _, item in pairs(character:GetChildren()) do
-            if item:IsA("Tool") then
-                table.insert(equippedTools, item.Name)
-                item.Parent = backpack
-            end
-        end
-        
-        -- Pega todas as ferramentas do backpack
-        local backpackTools = {}
-        for _, item in pairs(backpack:GetChildren()) do
-            if item:IsA("Tool") then
-                table.insert(backpackTools, item)
-            end
-        end
-        
-        -- Remove todas
-        for _, tool in pairs(backpackTools) do
-            tool.Parent = nil
-        end
-        
-        wait(0.1)
-        
-        -- Recoloca todas
-        for _, tool in pairs(backpackTools) do
-            tool.Parent = backpack
-        end
-        
-        wait(0.1)
-        
-        -- Reequipa as que estavam equipadas
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            for _, toolName in pairs(equippedTools) do
-                local tool = backpack:FindFirstChild(toolName)
-                if tool then
-                    humanoid:EquipTool(tool)
-                end
-            end
-        end
-        
-        _G.Rayfield:Notify({
-            Title = "Slow Hub",
-            Content = "Backpack refreshed!",
-            Duration = 2,
-            Image = 105026320884681
-        })
-    end)
 end
 
 -- Função para parar Auto Level
@@ -241,9 +186,9 @@ local function startAutoLevel()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Posiciona o player na distância definida
+                        -- Usa distância E altura dos sliders
                         local targetCFrame = npcRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, 4, _G.SlowHub.FarmDistance)
+                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
                         
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
@@ -315,7 +260,7 @@ Tab:CreateToggle({
     end
 })
 
--- Slider para controlar distância
+-- Slider para controlar distância (frente/trás)
 Tab:CreateSlider({
     Name = "Farm Distance",
     Range = {3, 20},
@@ -341,11 +286,29 @@ Tab:CreateSlider({
     end,
 })
 
--- Botão para refresh do backpack
-Tab:CreateButton({
-    Name = "Refresh Backpack",
-    Callback = function()
-        RefreshBackpack()
+-- Slider para controlar altura (cima/baixo)
+Tab:CreateSlider({
+    Name = "Farm Height",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = _G.SlowHub.FarmHeight,
+    Flag = "FarmHeightSlider",
+    Callback = function(Value)
+        _G.SlowHub.FarmHeight = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        
+        pcall(function()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Height: " .. Value .. " studs",
+                Duration = 2,
+                Image = 105026320884681
+            })
+        end)
     end,
 })
 
