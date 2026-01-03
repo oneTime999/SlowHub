@@ -15,6 +15,7 @@ local bossList = {
 -- Variáveis de controle
 local autoFarmBossConnection = nil
 local selectedBoss = "RagnaBoss"
+local isRunning = false
 
 -- Função para pegar o Boss
 local function getBoss()
@@ -61,10 +62,13 @@ end
 
 -- Função para parar Auto Farm Boss
 local function stopAutoFarmBoss()
+    isRunning = false
+    
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
         autoFarmBossConnection = nil
     end
+    
     _G.SlowHub.AutoFarmBoss = false
     
     -- Stop player movement and unanchor
@@ -81,17 +85,20 @@ end
 
 -- Função para iniciar Auto Farm Boss
 local function startAutoFarmBoss()
-    if autoFarmBossConnection then
+    -- Parar qualquer instância anterior
+    if isRunning then
         stopAutoFarmBoss()
+        wait(0.3)
     end
     
+    isRunning = true
     _G.SlowHub.AutoFarmBoss = true
     
     -- Equipar arma ao iniciar
     EquipWeapon()
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmBoss then
+        if not _G.SlowHub.AutoFarmBoss or not isRunning then
             stopAutoFarmBoss()
             return
         end
@@ -166,13 +173,29 @@ Tab:CreateDropdown({
     CurrentOption = selectedBoss,
     Flag = "SelectedBoss",
     Callback = function(Option)
+        local wasRunning = isRunning
+        
+        -- Parar o farm atual
+        if wasRunning then
+            stopAutoFarmBoss()
+            wait(0.3)
+        end
+        
+        -- Atualizar boss selecionado
         selectedBoss = Option
         
-        -- Se Auto Farm estiver ativo, reiniciar com novo boss
-        if _G.SlowHub.AutoFarmBoss then
-            stopAutoFarmBoss()
-            wait(0.2)
+        -- Reiniciar se estava rodando
+        if wasRunning then
             startAutoFarmBoss()
+            
+            pcall(function()
+                _G.Rayfield:Notify({
+                    Title = "Slow Hub",
+                    Content = "Boss alterado para: " .. Option,
+                    Duration = 3,
+                    Image = 4483345998
+                })
+            end)
         end
     end
 })
