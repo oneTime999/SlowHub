@@ -78,6 +78,7 @@ local Window = Rayfield:CreateWindow({
 _G.MainTab = Window:CreateTab("Main", 125686055318100)
 _G.BossesTab = Window:CreateTab("Bosses", 105026320884681)
 _G.ShopTab = Window:CreateTab("Shop", 77529802245049)
+_G.StatsTab = Window:CreateTab("Stats", 125686055318100)
 _G.MiscTab = Window:CreateTab("Misc", 106779103527235)
 
 -- Salvar Rayfield globalmente
@@ -87,6 +88,7 @@ _G.Rayfield = Rayfield
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
 -- Salvar configurações ao fechar o jogo
