@@ -3,4 +3,6 @@ local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/fu
 
 -- Seção: Sword
 Tab:CreateSection("Sword")
-local githubBass = "https://raw.githubusercontent.com/oneTime999/SlowHub/refs/heads/main/functions/Swords.lua"
+
+-- Carregar Sword
+loadstring(game:HttpGet(githubBase .. "Sword.lua"))()
