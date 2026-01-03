@@ -6,82 +6,98 @@ _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedWeapon = nil
 _G.SlowHub.EquipLoop = false
 
--- Normaliza valor do dropdown (string ou table)
-local function normalizeDropdownValue(Value)
-    if typeof(Value) == "table" then
-        return Value[1]
+-- Normaliza o valor do dropdown
+local function normalizeValue(Value)
+    if type(Value) == "table" then
+        return tostring(Value[1] or "")
     end
-    return Value
+    return tostring(Value or "")
 end
 
 local function GetWeapons()
     local weapons = {}
     local added = {}
 
-    local backpack = Player:WaitForChild("Backpack")
+    pcall(function()
+        local backpack = Player:WaitForChild("Backpack")
 
-    for _, item in ipairs(backpack:GetChildren()) do
-        if item:IsA("Tool") and not added[item.Name] then
-            added[item.Name] = true
-            table.insert(weapons, item.Name)
-        end
-    end
-
-    if Player.Character then
-        for _, item in ipairs(Player.Character:GetChildren()) do
+        for _, item in ipairs(backpack:GetChildren()) do
             if item:IsA("Tool") and not added[item.Name] then
                 added[item.Name] = true
                 table.insert(weapons, item.Name)
             end
         end
-    end
+
+        if Player.Character then
+            for _, item in ipairs(Player.Character:GetChildren()) do
+                if item:IsA("Tool") and not added[item.Name] then
+                    added[item.Name] = true
+                    table.insert(weapons, item.Name)
+                end
+            end
+        end
+    end)
 
     return #weapons > 0 and weapons or {"No weapons found"}
 end
 
-local function findTool(name)
-    if not name then return nil end
-
-    local backpack = Player:FindFirstChild("Backpack")
-    if backpack then
-        local tool = backpack:FindFirstChild(name)
-        if tool then return tool end
+local function findToolByName(name)
+    if not name or name == "" or name == "No weapons found" then 
+        return nil 
     end
 
-    if Player.Character then
-        local tool = Player.Character:FindFirstChild(name)
-        if tool then return tool end
-    end
+    local tool = nil
+    
+    pcall(function()
+        local backpack = Player:FindFirstChild("Backpack")
+        if backpack then
+            tool = backpack:FindFirstChild(name)
+            if tool and tool:IsA("Tool") then return end
+        end
+
+        if Player.Character then
+            local charTool = Player.Character:FindFirstChild(name)
+            if charTool and charTool:IsA("Tool") then
+                tool = charTool
+            end
+        end
+    end)
+    
+    return tool
 end
 
 local function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
-    if not weaponName then return end
-
-    local char = Player.Character
-    if not char then return end
-
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    local tool = findTool(weaponName)
-    if tool and tool:IsA("Tool") then
-        pcall(function()
-            humanoid:EquipTool(tool)
-        end)
+    if not weaponName or weaponName == "" or weaponName == "No weapons found" then 
+        return 
     end
+
+    pcall(function()
+        local char = Player.Character
+        if not char then return end
+
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        local tool = findToolByName(weaponName)
+        if tool then
+            humanoid:EquipTool(tool)
+        end
+    end)
 end
 
--- Dropdown (corrigido)
+-- Dropdown corrigido
 Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
     Flag = "WeaponDropdown",
     Callback = function(Value)
-        local weapon = normalizeDropdownValue(Value)
-
-        if weapon and weapon ~= "No weapons found" then
+        -- Normaliza o valor recebido
+        local weapon = normalizeValue(Value)
+        
+        if weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
+            print("Weapon selected:", weapon)
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
@@ -89,7 +105,7 @@ Tab:CreateDropdown({
     end
 })
 
--- Toggle Equip em Loop
+-- Toggle para equipar em loop
 Tab:CreateToggle({
     Name = "Equip Tool",
     Default = false,
@@ -108,9 +124,9 @@ Tab:CreateToggle({
 })
 
 -- Reequipar após respawn
-Player.CharacterAdded:Connect(function()
+Player.CharacterAdded:Connect(function(char)
+    task.wait(1)
     if _G.SlowHub.EquipLoop then
-        task.wait(1)
         EquipSelectedTool()
     end
 end)
