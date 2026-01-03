@@ -164,7 +164,7 @@ Tab:CreateDropdown({
                     Title = "Slow Hub",
                     Content = "Boss alterado para: " .. selectedBoss,
                     Duration = 3,
-                    Image = 4483345998
+                    Image = 105026320884681
                 })
             end)
         end
