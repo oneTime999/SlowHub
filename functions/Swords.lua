@@ -51,7 +51,7 @@ end
 local function teleportToNPC()
     if not selectedSword or selectedSword == "" then
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.SlowHub:Notify({
                 Title = "Slow Hub",
                 Content = "Please select a sword first!",
                 Duration = 3,
@@ -64,7 +64,7 @@ local function teleportToNPC()
     local npcPath = SwordNPCs[selectedSword]
     if not npcPath then
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.SlowHub:Notify({
                 Title = "Slow Hub",
                 Content = "Invalid sword selection!",
                 Duration = 3,
@@ -87,7 +87,7 @@ local function teleportToNPC()
                     -- Teleporta o player para frente do NPC
                     playerRoot.CFrame = npcRoot.CFrame * CFrame.new(0, 0, 5)
                     
-                    _G.Rayfield:Notify({
+                    _G.SlowHub:Notify({
                         Title = "Slow Hub",
                         Content = "Teleported to " .. selectedSword .. " NPC!",
                         Duration = 2,
@@ -96,7 +96,7 @@ local function teleportToNPC()
                 end)
             else
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.SlowHub:Notify({
                         Title = "Slow Hub",
                         Content = "Character not found!",
                         Duration = 3,
@@ -106,7 +106,7 @@ local function teleportToNPC()
             end
         else
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.SlowHub:Notify({
                     Title = "Slow Hub",
                     Content = "NPC not found or invalid!",
                     Duration = 3,
@@ -116,7 +116,7 @@ local function teleportToNPC()
         end
     else
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.SlowHub:Notify({
                 Title = "Slow Hub",
                 Content = "NPC " .. selectedSword .. " not found in workspace!",
                 Duration = 3,
@@ -136,7 +136,7 @@ Tab:CreateDropdown({
         selectedSword = normalizeValue(Option)
         
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.SlowHub:Notify({
                 Title = "Slow Hub",
                 Content = "Selected: " .. selectedSword,
                 Duration = 2,
