@@ -178,7 +178,7 @@ local function startAutoLevel()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
                         local targetCFrame = npcRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, 5, 8)
+                        local offsetPosition = targetCFrame * CFrame.new(0, 4, 8)
                         
                         local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
                         if distance > 3 or distance < 1 then
