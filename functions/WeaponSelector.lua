@@ -53,9 +53,7 @@ local function EquipWeapon(weaponName)
     end)
 end
 
-local weaponDropdown
-
-weaponDropdown = Tab:CreateDropdown({
+local weaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
     CurrentOption = GetWeapons()[1] or "No weapons found",
@@ -65,19 +63,5 @@ weaponDropdown = Tab:CreateDropdown({
             _G.SlowHub.SelectedWeapon = Value
             EquipWeapon(Value)
         end
-    end
-})
-
-Tab:CreateButton({
-    Name = "Refresh Weapon List",
-    Callback = function()
-        pcall(function()
-            local weapons = GetWeapons()
-            weaponDropdown:Refresh(weapons, true)
-            
-            if weapons[1] then
-                weaponDropdown:Set(weapons[1])
-            end
-        end)
     end
 })
