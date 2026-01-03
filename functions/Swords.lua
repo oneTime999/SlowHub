@@ -4,15 +4,15 @@ local Player = Players.LocalPlayer
 
 -- Mapeamento das espadas para os NPCs
 local SwordNPCs = {
-    ["Ragna"] = "workspace.ServiceNPCs.RagnaBuyer",
-    ["Jinwoo"] = "workspace.JinwooMovesetNPC",
-    ["Saber"] = "workspace.ServiceNPCs.ExchangeNPC",
-    ["Dark Blade"] = "workspace.ServiceNPCs.DarkBladeNPC",
-    ["Katana"] = "workspace.ServiceNPCs.Katana"
+    ["Ragna"] = function() return workspace.ServiceNPCs:FindFirstChild("RagnaBuyer") end,
+    ["Jinwoo"] = function() return workspace:FindFirstChild("JinwooMovesetNPC") end,
+    ["Saber"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end,
+    ["Dark Blade"] = function() return workspace.ServiceNPCs:FindFirstChild("DarkBladeNPC") end,
+    ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end
 }
 
 -- Variável para armazenar a espada selecionada
-local selectedSword = "Ragna"
+_G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Ragna"
 
 -- Função para normalizar o valor do dropdown
 local function normalizeValue(Value)
@@ -22,107 +22,72 @@ local function normalizeValue(Value)
     return tostring(Value or "")
 end
 
--- Função para pegar o NPC pela espada selecionada
-local function getNPCFromPath(path)
-    local npc = nil
-    
-    pcall(function()
-        -- Separa o caminho
-        local parts = {}
-        for part in string.gmatch(path, "[^.]+") do
-            table.insert(parts, part)
-        end
-        
-        -- Navega pelo workspace
-        local current = game
-        for _, part in ipairs(parts) do
-            if current then
-                current = current:FindFirstChild(part)
-            end
-        end
-        
-        npc = current
-    end)
-    
-    return npc
-end
-
 -- Função para teleportar para o NPC
 local function teleportToNPC()
+    local selectedSword = _G.SlowHub.SelectedSwordNPC
+    
     if not selectedSword or selectedSword == "" then
-        pcall(function()
-            Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Please select a sword first!",
-                Duration = 3,
-                Image = 105026320884681
-            })
-        end)
+        Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Please select a sword first!",
+            Duration = 3,
+            Image = 105026320884681
+        })
         return
     end
     
-    local npcPath = SwordNPCs[selectedSword]
-    if not npcPath then
-        pcall(function()
-            Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Invalid sword selection!",
-                Duration = 3,
-                Image = 105026320884681
-            })
-        end)
+    local getNPC = SwordNPCs[selectedSword]
+    if not getNPC then
+        Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Invalid sword selection!",
+            Duration = 3,
+            Image = 105026320884681
+        })
         return
     end
     
-    local npc = getNPCFromPath(npcPath)
+    local npc = getNPC()
     
     if npc then
-        local npcRoot = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso")
+        local npcRoot = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChild("Head")
         
         if npcRoot and Player.Character then
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             
             if playerRoot then
-                pcall(function()
-                    -- Teleporta o player para frente do NPC
-                    playerRoot.CFrame = npcRoot.CFrame * CFrame.new(0, 0, 5)
-                    
-                    Rayfield:Notify({
-                        Title = "Slow Hub",
-                        Content = "Teleported to " .. selectedSword .. " NPC!",
-                        Duration = 2,
-                        Image = 105026320884681
-                    })
-                end)
-            else
-                pcall(function()
-                    Rayfield:Notify({
-                        Title = "Slow Hub",
-                        Content = "Character not found!",
-                        Duration = 3,
-                        Image = 105026320884681
-                    })
-                end)
-            end
-        else
-            pcall(function()
+                -- Teleporta o player para frente do NPC
+                playerRoot.CFrame = npcRoot.CFrame * CFrame.new(0, 0, 5)
+                
                 Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "NPC not found or invalid!",
+                    Content = "Teleported to " .. selectedSword .. " NPC!",
+                    Duration = 2,
+                    Image = 105026320884681
+                })
+            else
+                Rayfield:Notify({
+                    Title = "Slow Hub",
+                    Content = "Character not found!",
                     Duration = 3,
                     Image = 105026320884681
                 })
-            end)
-        end
-    else
-        pcall(function()
+            end
+        else
             Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "NPC " .. selectedSword .. " not found in workspace!",
+                Content = "NPC Root not found!",
                 Duration = 3,
                 Image = 105026320884681
             })
-        end)
+        end
+    else
+        Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "NPC " .. selectedSword .. " not found in workspace!",
+            Duration = 3,
+            Image = 105026320884681
+        })
     end
 end
 
@@ -130,19 +95,17 @@ end
 Tab:CreateDropdown({
     Name = "Select Sword NPC",
     Options = {"Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana"},
-    CurrentOption = {"Ragna"},
+    CurrentOption = {_G.SlowHub.SelectedSwordNPC},
     Flag = "SwordNPCDropdown",
     Callback = function(Option)
-        selectedSword = normalizeValue(Option)
+        _G.SlowHub.SelectedSwordNPC = normalizeValue(Option)
         
-        pcall(function()
-            Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Selected: " .. selectedSword,
-                Duration = 2,
-                Image = 105026320884681
-            })
-        end)
+        Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Selected: " .. _G.SlowHub.SelectedSwordNPC,
+            Duration = 2,
+            Image = 105026320884681
+        })
     end
 })
 
