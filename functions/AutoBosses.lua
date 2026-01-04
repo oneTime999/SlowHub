@@ -4,7 +4,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- Lista de bosses disponiveis
 local bossList = {
     "RagnaBoss",
     "JinwooBoss",
@@ -12,12 +11,10 @@ local bossList = {
     "GojoBoss"
 }
 
--- Variaveis de controle
 local autoFarmBossConnection = nil
 local selectedBoss = "RagnaBoss"
 local isRunning = false
 
--- Inicializa configuracoes de distancia e altura para bosses
 if not _G.SlowHub.BossFarmDistance then
     _G.SlowHub.BossFarmDistance = 8
 end
@@ -26,13 +23,11 @@ if not _G.SlowHub.BossFarmHeight then
     _G.SlowHub.BossFarmHeight = 5
 end
 
--- Funcao para pegar o Boss
 local function getBoss()
     local bossName = tostring(selectedBoss)
     return workspace.NPCs:FindFirstChild(bossName)
 end
 
--- Funcao para pegar RootPart do Boss
 local function getBossRootPart(boss)
     if boss and boss:FindFirstChild("HumanoidRootPart") then
         return boss.HumanoidRootPart
@@ -40,7 +35,6 @@ local function getBossRootPart(boss)
     return nil
 end
 
--- Funcao para equipar arma
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     
@@ -68,7 +62,6 @@ local function EquipWeapon()
     return success
 end
 
--- Funcao para parar Auto Farm Boss
 local function stopAutoFarmBoss()
     isRunning = false
     
@@ -90,7 +83,6 @@ local function stopAutoFarmBoss()
     end)
 end
 
--- Funcao para iniciar Auto Farm Boss
 local function startAutoFarmBoss()
     if isRunning then
         stopAutoFarmBoss()
@@ -127,7 +119,6 @@ local function startAutoFarmBoss()
                     pcall(function()
                         playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        -- Usa distancia E altura dos sliders
                         local targetCFrame = bossRoot.CFrame
                         local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                         
@@ -146,7 +137,6 @@ local function startAutoFarmBoss()
     end)
 end
 
--- Dropdown para selecionar o boss
 Tab:CreateDropdown({
     Name = "Selecionar Boss",
     Options = bossList,
@@ -180,7 +170,6 @@ Tab:CreateDropdown({
     end
 })
 
--- Toggle Auto Farm Boss
 Tab:CreateToggle({
     Name = "Auto Farm Boss",
     CurrentValue = _G.SlowHub.AutoFarmBosses,
@@ -220,7 +209,6 @@ Tab:CreateToggle({
     end
 })
 
--- Slider para controlar distancia (frente/tras)
 Tab:CreateSlider({
     Name = "Boss Farm Distance",
     Range = {1, 10},
@@ -246,7 +234,6 @@ Tab:CreateSlider({
     end,
 })
 
--- Slider para controlar altura (cima/baixo)
 Tab:CreateSlider({
     Name = "Boss Farm Height",
     Range = {1, 10},
@@ -272,7 +259,6 @@ Tab:CreateSlider({
     end,
 })
 
--- Auto iniciar se estava ativado
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
