@@ -2,16 +2,13 @@ local Tab = _G.ShopTab
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
--- Mapeamento dos meeles para os NPCs
 local MeeleNPCs = {
     ["Sukuna"] = function() return workspace:FindFirstChild("SukunaMovesetNPC") end,
     ["Gojo"] = function() return workspace:FindFirstChild("GojoMovesetNPC") end
 }
 
--- Variavel para armazenar o meele selecionado
 _G.SlowHub.SelectedMeeleNPC = _G.SlowHub.SelectedMeeleNPC or "Sukuna"
 
--- Funcao para normalizar o valor do dropdown
 local function normalizeValue(Value)
     if type(Value) == "table" then
         return tostring(Value[1] or "")
@@ -19,11 +16,9 @@ local function normalizeValue(Value)
     return tostring(Value or "")
 end
 
--- Funcao para pegar o HumanoidRootPart de um Model
 local function getModelRoot(model)
     if not model then return nil end
     
-    -- Se for um Model, procura dentro dele
     if model:IsA("Model") then
         return model:FindFirstChild("HumanoidRootPart") or 
                model:FindFirstChild("Torso") or 
@@ -31,11 +26,9 @@ local function getModelRoot(model)
                model.PrimaryPart
     end
     
-    -- Se for uma Part diretamente
     return model
 end
 
--- Funcao para teleportar para o NPC
 local function teleportToNPC()
     pcall(function()
         local selectedMeele = _G.SlowHub.SelectedMeeleNPC
@@ -56,14 +49,12 @@ local function teleportToNPC()
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             
             if npcRoot and playerRoot then
-                -- Teleporta o player para frente do NPC
                 playerRoot.CFrame = npcRoot.CFrame * CFrame.new(0, 0, 5)
             end
         end
     end)
 end
 
--- Dropdown para selecionar o meele
 Tab:CreateDropdown({
     Name = "Select Meele NPC",
     Options = {"Sukuna", "Gojo"},
@@ -76,7 +67,6 @@ Tab:CreateDropdown({
     end
 })
 
--- Botao para teleportar para o NPC selecionado
 Tab:CreateButton({
     Name = "Teleport to NPC",
     Callback = function()
