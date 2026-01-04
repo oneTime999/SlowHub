@@ -5,18 +5,15 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
--- Variaveis de controle
 local autoHakiConnection = nil
 local lastToggleTime = 0
-local COOLDOWN_TIME = 3 -- segundos
+local COOLDOWN_TIME = 3
 
--- Nomes CORRETOS dos bracos (R6)
 local armParts = {
     "Left Arm",
     "Right Arm"
 }
 
--- Verifica se existe ParticleEmitter "3" em algum braco
 local function hasHakiEffect()
     local character = Player.Character
     if not character then return false end
@@ -34,14 +31,12 @@ local function hasHakiEffect()
     return false
 end
 
--- Ativa Haki uma unica vez
 local function toggleHaki()
     pcall(function()
         ReplicatedStorage.RemoteEvents.HakiRemote:FireServer("Toggle")
     end)
 end
 
--- Para Auto Haki
 local function stopAutoHaki()
     if autoHakiConnection then
         autoHakiConnection:Disconnect()
@@ -51,7 +46,6 @@ local function stopAutoHaki()
     lastToggleTime = 0
 end
 
--- Inicia Auto Haki
 local function startAutoHaki()
     if autoHakiConnection then
         stopAutoHaki()
@@ -77,10 +71,9 @@ local function startAutoHaki()
     end)
 end
 
--- Toggle UI (COM SALVAMENTO)
 Tab:CreateToggle({
     Name = "Auto Haki",
-    CurrentValue = _G.SlowHub.AutoHaki,  -- Carrega valor salvo
+    CurrentValue = _G.SlowHub.AutoHaki,
     Flag = "AutoHakiToggle",
     Callback = function(Value)
         if Value then
@@ -89,7 +82,6 @@ Tab:CreateToggle({
             stopAutoHaki()
         end
         
-        -- Salva automaticamente
         _G.SlowHub.AutoHaki = Value
         if _G.SaveConfig then
             _G.SaveConfig()
@@ -97,7 +89,6 @@ Tab:CreateToggle({
     end
 })
 
--- Auto iniciar se estava ativado
 if _G.SlowHub.AutoHaki then
     task.wait(2)
     startAutoHaki()
