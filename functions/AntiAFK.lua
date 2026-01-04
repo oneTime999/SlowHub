@@ -18,7 +18,7 @@ local function stopAntiAfk()
         idledConnection = nil
     end
     
-    _G.SlowHub.AntiAfk = false
+    _G.SlowHub.AntiAFK = false
 end
 
 local function startAntiAfk()
@@ -26,10 +26,10 @@ local function startAntiAfk()
         stopAntiAfk()
     end
 
-    _G.SlowHub.AntiAfk = true
+    _G.SlowHub.AntiAFK = true
 
     idledConnection = Player.Idled:Connect(function()
-        if not _G.SlowHub.AntiAfk then
+        if not _G.SlowHub.AntiAFK then
             stopAntiAfk()
             return
         end
@@ -40,7 +40,7 @@ local function startAntiAfk()
     end)
 
     antiAfkConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AntiAfk then
+        if not _G.SlowHub.AntiAFK then
             stopAntiAfk()
             return
         end
@@ -49,8 +49,8 @@ end
 
 Tab:CreateToggle({
     Name = "Anti AFK",
-    CurrentValue = _G.SlowHub.AntiAfk,
-    Flag = "AntiAfkToggle",
+    CurrentValue = _G.SlowHub.AntiAFK,
+    Flag = "AntiAFKToggle",
     Callback = function(Value)
         if Value then
             startAntiAfk()
@@ -58,14 +58,14 @@ Tab:CreateToggle({
             stopAntiAfk()
         end
         
-        _G.SlowHub.AntiAfk = Value
+        _G.SlowHub.AntiAFK = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
 })
 
-if _G.SlowHub.AntiAfk then
+if _G.SlowHub.AntiAFK then
     task.wait(2)
     startAntiAfk()
 end
