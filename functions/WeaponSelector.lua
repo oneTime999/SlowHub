@@ -6,7 +6,6 @@ _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedWeapon = nil
 _G.SlowHub.EquipLoop = false
 
--- Normaliza o valor do dropdown
 local function normalizeValue(Value)
     if type(Value) == "table" then
         return tostring(Value[1] or "")
@@ -86,13 +85,11 @@ local function EquipSelectedTool()
     end)
 end
 
--- Dropdown corrigido (armazena referencia)
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
     Flag = "WeaponDropdown",
     Callback = function(Value)
-        -- Normaliza o valor recebido
         local weapon = normalizeValue(Value)
         
         if weapon ~= "" and weapon ~= "No weapons found" then
@@ -105,7 +102,6 @@ local WeaponDropdown = Tab:CreateDropdown({
     end
 })
 
--- Botao para refresh das armas
 Tab:CreateButton({
     Name = "Refresh Weapons",
     Callback = function()
@@ -123,7 +119,6 @@ Tab:CreateButton({
     end,
 })
 
--- Toggle para equipar em loop
 Tab:CreateToggle({
     Name = "Loop Equip Tool",
     Default = false,
@@ -141,7 +136,6 @@ Tab:CreateToggle({
     end
 })
 
--- Reequipar apos respawn
 Player.CharacterAdded:Connect(function(char)
     task.wait(1)
     if _G.SlowHub.EquipLoop then
