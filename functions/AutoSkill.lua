@@ -1,4 +1,4 @@
-local Tab = _G.MainTab
+local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,10 +16,6 @@ if not _G.SlowHub.AutoSkillC then
 end
 if not _G.SlowHub.AutoSkillV then
     _G.SlowHub.AutoSkillV = false
-end
-
-if not _G.SlowHub.SkillDelay then
-    _G.SlowHub.SkillDelay = 0.1
 end
 
 local autoSkillConnection = nil
@@ -70,7 +66,6 @@ local function startAutoSkill()
                 end
             end
         end)
-        task.wait(_G.SlowHub.SkillDelay)
     end)
 end
 
@@ -124,18 +119,6 @@ Tab:CreateToggle({
         else
             stopAutoSkill()
         end
-    end
-})
-
-Tab:CreateSlider({
-    Name = "Skill Delay",
-    Min = 0,
-    Max = 1,
-    Default = 0.1,
-    Color = Color3.fromRGB(255,255,255),
-    Increment = 0.01,
-    Callback = function(value)
-        _G.SlowHub.SkillDelay = value
     end
 })
 
