@@ -17,13 +17,13 @@ local chestList = {"Common Chest", "Rare Chest", "Epic Chest", "Legendary Chest"
 local autoChestConnection = nil
 local selectedChest = "Common Chest"
 local isChestRunning = false
-local AutoChest = false  -- ✅ Variável AutoChest
-
+local AutoChest = false
+local lastChestTime = 0
 local CHEST_DELAY = 0.5
 
 local function stopAutoChest()
     isChestRunning = false
-    AutoChest = false  -- ✅ Usa AutoChest
+    AutoChest = false
     
     if autoChestConnection then
         autoChestConnection:Disconnect()
@@ -38,25 +38,28 @@ local function startAutoChest()
     end
     
     isChestRunning = true
-    AutoChest = true  -- ✅ Usa AutoChest
+    AutoChest = true
+    lastChestTime = tick()
     
     autoChestConnection = RunService.Heartbeat:Connect(function()
-        if not AutoChest or not isChestRunning then  -- ✅ Usa AutoChest
+        if not AutoChest or not isChestRunning then
             stopAutoChest()
             return
         end
         
-        local chestName = ChestConfig[selectedChest]
-        
-        pcall(function()
-            ReplicatedStorage.Remotes.UseItem:FireServer("Use", chestName, 1)
-        end)
-        
-        task.wait(CHEST_DELAY)
+        local currentTime = tick()
+        if currentTime - lastChestTime >= CHEST_DELAY then
+            local chestName = ChestConfig[selectedChest]
+            
+            pcall(function()
+                ReplicatedStorage.Remotes.UseItem:FireServer("Use", chestName, 1)
+            end)
+            
+            lastChestTime = currentTime
+        end
     end)
 end
 
--- DROPDOWN
 Tab:CreateDropdown({
     Name = "Select Chest",
     Options = chestList,
@@ -72,7 +75,7 @@ Tab:CreateDropdown({
         pcall(function()
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Chest: " .. selectedChest,
+                Content = "Chest selected: " .. selectedChest,
                 Duration = 3,
                 Image = 105026320884681
             })
@@ -80,13 +83,12 @@ Tab:CreateDropdown({
     end
 })
 
--- TOGGLE
 Tab:CreateToggle({
     Name = "AutoChest",
-    CurrentValue = AutoChest,  -- ✅ Usa AutoChest
+    CurrentValue = AutoChest,
     Flag = "AutoChestToggle",
     Callback = function(Value)
-        AutoChest = Value  -- ✅ Usa AutoChest
+        AutoChest = Value
         
         if Value then
             pcall(function()
@@ -103,7 +105,7 @@ Tab:CreateToggle({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "AutoChest parado",
+                    Content = "AutoChest stopped",
                     Duration = 2,
                     Image = 105026320884681
                 })
