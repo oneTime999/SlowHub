@@ -8,3 +8,7 @@ loadstring(game:HttpGet(githubBase .. "AutoHaki.lua"))()
 Tab:CreateSection("Codes")
 
 loadstring(game:HttpGet(githubBase .. "Codes.lua"))()
+
+Tab:CreateSection("AFK")
+
+loadstring(game:HttpGet(githubBase .. "AntiAFK.lua"))()
