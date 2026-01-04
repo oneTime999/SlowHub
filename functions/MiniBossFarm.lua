@@ -235,7 +235,7 @@ Tab:CreateToggle({
 
 Tab:CreateSlider({
     Name = "Mini Boss Distance",
-    Range = {3, 12},
+    Range = {1, 10},
     Increment = 1,
     Suffix = "studs",
     CurrentValue = _G.SlowHub.MiniBossFarmDistance,
@@ -248,7 +248,7 @@ Tab:CreateSlider({
 
 Tab:CreateSlider({
     Name = "Mini Boss Height",
-    Range = {2, 8},
+    Range = {1, 10},
     Increment = 1,
     Suffix = "studs",
     CurrentValue = _G.SlowHub.MiniBossFarmHeight,
