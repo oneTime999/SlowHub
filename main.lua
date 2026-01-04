@@ -7,6 +7,7 @@ _G.SlowHub = {
     Codes = false,
     Shop = false,
     Stats = false,
+    AntiAFK = false,
     SelectedWeapon = nil
 }
 
