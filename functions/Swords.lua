@@ -2,7 +2,6 @@ local Tab = _G.ShopTab
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
--- Mapeamento das espadas para os NPCs
 local SwordNPCs = {
     ["Ragna"] = function() return workspace.ServiceNPCs:FindFirstChild("RagnaBuyer") end,
     ["Jinwoo"] = function() return workspace:FindFirstChild("JinwooMovesetNPC") end,
@@ -11,10 +10,8 @@ local SwordNPCs = {
     ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end
 }
 
--- Variavel para armazenar a espada selecionada
 _G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Ragna"
 
--- Funcao para normalizar o valor do dropdown
 local function normalizeValue(Value)
     if type(Value) == "table" then
         return tostring(Value[1] or "")
@@ -22,11 +19,9 @@ local function normalizeValue(Value)
     return tostring(Value or "")
 end
 
--- Funcao para pegar o HumanoidRootPart de um Model
 local function getModelRoot(model)
     if not model then return nil end
     
-    -- Se for um Model, procura dentro dele
     if model:IsA("Model") then
         return model:FindFirstChild("HumanoidRootPart") or 
                model:FindFirstChild("Torso") or 
@@ -34,11 +29,9 @@ local function getModelRoot(model)
                model.PrimaryPart
     end
     
-    -- Se for uma Part diretamente
     return model
 end
 
--- Funcao para teleportar para o NPC
 local function teleportToNPC()
     pcall(function()
         local selectedSword = _G.SlowHub.SelectedSwordNPC
@@ -59,14 +52,12 @@ local function teleportToNPC()
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             
             if npcRoot and playerRoot then
-                -- Teleporta o player para frente do NPC
                 playerRoot.CFrame = npcRoot.CFrame * CFrame.new(0, 0, 5)
             end
         end
     end)
 end
 
--- Dropdown para selecionar a espada
 Tab:CreateDropdown({
     Name = "Select Sword NPC",
     Options = {"Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana"},
@@ -79,7 +70,6 @@ Tab:CreateDropdown({
     end
 })
 
--- Botao para teleportar para o NPC selecionado
 Tab:CreateButton({
     Name = "Teleport to NPC",
     Callback = function()
