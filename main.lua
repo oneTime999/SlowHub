@@ -4,6 +4,7 @@ _G.SlowHub = {
     AutoFarmLevel = false,
     AutoFarmBosses = false,
     AutoFarmMiniBosses = false,
+    AutoChest = false,
     AutoHaki = false,
     Codes = false,
     Shop = false,
