@@ -79,7 +79,7 @@ local function EquipWeapon()
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
                 character.Humanoid:EquipTool(weapon)
-                wait(0.1)
+                task.wait(0.1)
             end
         end
     end)
@@ -109,9 +109,7 @@ local function stopAutoLevel()
         end
     end)
     
-    pcall(function()
-        ReplicatedStorage.RemoteEvents.QuestAbandon:FireServer()
-    end)
+    -- REMOVIDO: QuestAbandon - Não abandona mais missões
 end
 
 local function startAutoLevel()
@@ -126,6 +124,7 @@ local function startAutoLevel()
     
     EquipWeapon()
     
+    -- Loop de aceitar missão (SEM abandonar)
     autoLevelQuestLoop = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
             if autoLevelQuestLoop then
@@ -143,6 +142,8 @@ local function startAutoLevel()
     end)
     
     local lastNPCFound = nil
+    local lastNPCSwitch = 0
+    local NPC_TIMEOUT = 2
     
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
@@ -151,7 +152,6 @@ local function startAutoLevel()
         end
         
         config = GetCurrentConfig()
-        
         local now = tick()
         local npc = getNPC(config.npc, currentNPCIndex)
         
@@ -160,6 +160,8 @@ local function startAutoLevel()
             
             if npcHumanoid and npcHumanoid.Health <= 0 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
+                lastNPCSwitch = now
+                task.wait(0.2)
                 return
             end
             
@@ -185,7 +187,10 @@ local function startAutoLevel()
                         
                         EquipWeapon()
                         
-                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        -- Ataque com randomização
+                        if math.random() > 0.6 then
+                            ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        end
                     end)
                 end
             end
@@ -199,9 +204,10 @@ local function startAutoLevel()
                 end
             end)
             
-            if lastNPCFound == nil or (now - lastNPCFound) > 0.3 then
+            -- Troca NPC com timeout melhorado
+            if (now - lastNPCSwitch) > NPC_TIMEOUT then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
-                lastNPCFound = now
+                lastNPCSwitch = now
             end
         end
     end)
@@ -217,7 +223,7 @@ Tab:CreateToggle({
                 pcall(function()
                     _G.Rayfield:Notify({
                         Title = "Slow Hub",
-                        Content = "Please select a weapon first!",
+                        Content = "Selecione uma arma primeiro!",
                         Duration = 5,
                         Image = 105026320884681
                     })
@@ -229,8 +235,8 @@ Tab:CreateToggle({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. config.npc,
-                    Duration = 3,
+                    Content = "Farming: " .. config.npc .. " (Quest: " .. config.quest .. ")",
+                    Duration = 4,
                     Image = 105026320884681
                 })
             end)
@@ -238,6 +244,14 @@ Tab:CreateToggle({
             startAutoLevel()
         else
             stopAutoLevel()
+            pcall(function()
+                _G.Rayfield:Notify({
+                    Title = "Slow Hub",
+                    Content = "Auto Farm Level parado",
+                    Duration = 2,
+                    Image = 105026320884681
+                })
+            end)
         end
         
         _G.SlowHub.AutoFarmLevel = Value
@@ -264,7 +278,7 @@ Tab:CreateSlider({
         pcall(function()
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Distance: " .. Value .. " studs",
+                Content = "Distância: " .. Value .. " studs",
                 Duration = 2,
                 Image = 109860946741884
             })
@@ -289,7 +303,7 @@ Tab:CreateSlider({
         pcall(function()
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Height: " .. Value .. " studs",
+                Content = "Altura: " .. Value .. " studs",
                 Duration = 2,
                 Image = 109860946741884
             })
