@@ -86,7 +86,7 @@ local function EquipSelectedTool()
     end)
 end
 
--- Dropdown corrigido (armazena referência)
+-- Dropdown corrigido (armazena referencia)
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
@@ -105,7 +105,7 @@ local WeaponDropdown = Tab:CreateDropdown({
     end
 })
 
--- Botão para refresh das armas
+-- Botao para refresh das armas
 Tab:CreateButton({
     Name = "Refresh Weapons",
     Callback = function()
@@ -141,7 +141,7 @@ Tab:CreateToggle({
     end
 })
 
--- Reequipar após respawn
+-- Reequipar apos respawn
 Player.CharacterAdded:Connect(function(char)
     task.wait(1)
     if _G.SlowHub.EquipLoop then
