@@ -11,7 +11,9 @@ local codes = {
     "3000CCU",
     "3KLIKES",
     "QUESTBUGFIXSORRY",
-    "4KLIKES"
+    "4KLIKES",
+    "10KMEMBERS",
+    "500KVISITS"
 }
 
 local function redeemAllCodes()
