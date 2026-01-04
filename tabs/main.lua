@@ -9,10 +9,6 @@ Tab:CreateSection("Auto Farm")
 
 loadstring(game:HttpGet(githubBase .. "AutoLevel.lua"))()
 
-Tab:CreateSection("Auto Skill")
-
-loadstring(game:HttpGet(githubBase .. "AutoSkill.lua"))()
-
 Tab:CreateSection("Auto Chest")
 
 loadstring(game:HttpGet(githubBase .. "AutoChest.lua"))()
