@@ -1,4 +1,4 @@
-local Tab = _G.MainTab  -- Tab Misc
+local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,20 +17,18 @@ local chestList = {"Common Chest", "Rare Chest", "Epic Chest", "Legendary Chest"
 local autoChestConnection = nil
 local selectedChest = "Common Chest"
 local isChestRunning = false
+local AutoChest = false  -- ✅ Variável AutoChest
 
-if not _G.SlowHub.ChestDelay then
-    _G.SlowHub.ChestDelay = 1
-end
+local CHEST_DELAY = 0.5
 
 local function stopAutoChest()
     isChestRunning = false
+    AutoChest = false  -- ✅ Usa AutoChest
     
     if autoChestConnection then
         autoChestConnection:Disconnect()
         autoChestConnection = nil
     end
-    
-    _G.SlowHub.AutoOpenChests = false
 end
 
 local function startAutoChest()
@@ -40,26 +38,25 @@ local function startAutoChest()
     end
     
     isChestRunning = true
-    _G.SlowHub.AutoOpenChests = true
+    AutoChest = true  -- ✅ Usa AutoChest
     
     autoChestConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoOpenChests or not isChestRunning then
+        if not AutoChest or not isChestRunning then  -- ✅ Usa AutoChest
             stopAutoChest()
             return
         end
         
         local chestName = ChestConfig[selectedChest]
-        local delay = _G.SlowHub.ChestDelay or 1
         
         pcall(function()
             ReplicatedStorage.Remotes.UseItem:FireServer("Use", chestName, 1)
         end)
         
-        task.wait(delay)
+        task.wait(CHEST_DELAY)
     end)
 end
 
--- DROPDOWN DE CHESTS
+-- DROPDOWN
 Tab:CreateDropdown({
     Name = "Select Chest",
     Options = chestList,
@@ -75,7 +72,7 @@ Tab:CreateDropdown({
         pcall(function()
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Chest selecionado: " .. selectedChest,
+                Content = "Chest: " .. selectedChest,
                 Duration = 3,
                 Image = 105026320884681
             })
@@ -83,56 +80,34 @@ Tab:CreateDropdown({
     end
 })
 
--- TOGGLE AUTO OPEN CHEST
+-- TOGGLE
 Tab:CreateToggle({
-    Name = "Auto Open Chests",
-    CurrentValue = _G.SlowHub.AutoOpenChests or false,
-    Flag = "AutoOpenChestsToggle",
+    Name = "AutoChest",
+    CurrentValue = AutoChest,  -- ✅ Usa AutoChest
+    Flag = "AutoChestToggle",
     Callback = function(Value)
+        AutoChest = Value  -- ✅ Usa AutoChest
+        
         if Value then
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Abrindo: " .. selectedChest .. " (Delay: " .. (_G.SlowHub.ChestDelay or 1) .. "s)",
+                    Content = "AutoChest: " .. selectedChest .. " (0.5s)",
                     Duration = 4,
                     Image = 105026320884681
                 })
             end)
-            
             startAutoChest()
         else
             stopAutoChest()
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Auto Chests parado",
+                    Content = "AutoChest parado",
                     Duration = 2,
                     Image = 105026320884681
                 })
             end)
         end
-        
-        _G.SlowHub.AutoOpenChests = Value
     end
-})
-
--- SLIDER DE DELAY
-Tab:CreateSlider({
-    Name = "Chest Delay",
-    Range = {0.1, 5},
-    Increment = 0.1,
-    Suffix = "s",
-    CurrentValue = _G.SlowHub.ChestDelay or 1,
-    Flag = "ChestDelaySlider",
-    Callback = function(Value)
-        _G.SlowHub.ChestDelay = Value
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Delay: " .. Value .. "s",
-                Duration = 2,
-                Image = 109860946741884
-            })
-        end)
-    end,
 })
