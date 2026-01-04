@@ -11,10 +11,10 @@ local SwordNPCs = {
     ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end
 }
 
--- Variável para armazenar a espada selecionada
+-- Variavel para armazenar a espada selecionada
 _G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Ragna"
 
--- Função para normalizar o valor do dropdown
+-- Funcao para normalizar o valor do dropdown
 local function normalizeValue(Value)
     if type(Value) == "table" then
         return tostring(Value[1] or "")
@@ -22,7 +22,7 @@ local function normalizeValue(Value)
     return tostring(Value or "")
 end
 
--- Função para pegar o HumanoidRootPart de um Model
+-- Funcao para pegar o HumanoidRootPart de um Model
 local function getModelRoot(model)
     if not model then return nil end
     
@@ -38,7 +38,7 @@ local function getModelRoot(model)
     return model
 end
 
--- Função para teleportar para o NPC
+-- Funcao para teleportar para o NPC
 local function teleportToNPC()
     pcall(function()
         local selectedSword = _G.SlowHub.SelectedSwordNPC
@@ -79,7 +79,7 @@ Tab:CreateDropdown({
     end
 })
 
--- Botão para teleportar para o NPC selecionado
+-- Botao para teleportar para o NPC selecionado
 Tab:CreateButton({
     Name = "Teleport to NPC",
     Callback = function()
