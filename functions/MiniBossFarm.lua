@@ -4,15 +4,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local miniBossList = {
-    "ThiefBoss",
-    "MonkeyBoss", 
-    "DesertBoss",
-    "SnowBoss",
-    "PandaMiniBoss"
+local MiniBossConfig = {
+    ["ThiefBoss"] = {quest = "QuestNPC2"},
+    ["MonkeyBoss"] = {quest = "QuestNPC4"},
+    ["DesertBoss"] = {quest = "QuestNPC6"},
+    ["SnowBoss"] = {quest = "QuestNPC8"},
+    ["PandaMiniBoss"] = {quest = "QuestNPC10"}
 }
 
+local miniBossList = {"ThiefBoss", "MonkeyBoss", "DesertBoss", "SnowBoss", "PandaMiniBoss"}
 local autoFarmMiniBossConnection = nil
+local questConnection = nil
 local selectedMiniBoss = "ThiefBoss"
 local isRunning = false
 
@@ -24,9 +26,12 @@ if not _G.SlowHub.MiniBossFarmHeight then
     _G.SlowHub.MiniBossFarmHeight = 4
 end
 
+local function getConfig()
+    return MiniBossConfig[selectedMiniBoss] or MiniBossConfig["ThiefBoss"]
+end
+
 local function getMiniBoss()
-    local miniBossName = tostring(selectedMiniBoss)
-    return workspace.NPCs:FindFirstChild(miniBossName)
+    return workspace.NPCs:FindFirstChild(selectedMiniBoss)
 end
 
 local function getMiniBossRootPart(miniBoss)
@@ -55,7 +60,7 @@ local function EquipWeapon()
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
                 character.Humanoid:EquipTool(weapon)
-                wait(0.1)
+                task.wait(0.1)
             end
         end
     end)
@@ -71,6 +76,11 @@ local function stopAutoFarmMiniBoss()
         autoFarmMiniBossConnection = nil
     end
     
+    if questConnection then
+        questConnection:Disconnect()
+        questConnection = nil
+    end
+    
     _G.SlowHub.AutoFarmMiniBosses = false
     
     pcall(function()
@@ -78,7 +88,6 @@ local function stopAutoFarmMiniBoss()
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             if playerRoot then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                playerRoot.Anchored = false
             end
         end
     end)
@@ -87,11 +96,24 @@ end
 local function startAutoFarmMiniBoss()
     if isRunning then
         stopAutoFarmMiniBoss()
-        wait(0.3)
+        task.wait(0.3)
     end
     
     isRunning = true
     _G.SlowHub.AutoFarmMiniBosses = true
+    
+    local config = getConfig()
+    
+    -- Loop de aceitar missão
+    questConnection = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoFarmMiniBosses or not isRunning then
+            return
+        end
+        
+        pcall(function()
+            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
+        end)
+    end)
     
     EquipWeapon()
     
@@ -107,6 +129,7 @@ local function startAutoFarmMiniBoss()
             local bossHumanoid = miniBoss:FindFirstChild("Humanoid")
             
             if bossHumanoid and bossHumanoid.Health <= 0 then
+                task.wait(1) -- Espera respawn
                 return
             end
             
@@ -129,7 +152,6 @@ local function startAutoFarmMiniBoss()
                         end
                         
                         EquipWeapon()
-                        
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     end)
                 end
@@ -148,7 +170,7 @@ Tab:CreateDropdown({
         
         if wasRunning then
             stopAutoFarmMiniBoss()
-            wait(0.3)
+            task.wait(0.3)
         end
         
         if type(Option) == "table" then
@@ -162,8 +184,8 @@ Tab:CreateDropdown({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Mini Boss: " .. selectedMiniBoss,
-                    Duration = 3,
+                    Content = "Mini Boss: " .. selectedMiniBoss .. " (Quest: " .. getConfig().quest .. ")",
+                    Duration = 4,
                     Image = 105026320884681
                 })
             end)
@@ -181,7 +203,7 @@ Tab:CreateToggle({
                 pcall(function()
                     _G.Rayfield:Notify({
                         Title = "Slow Hub",
-                        Content = "Select a weapon first!",
+                        Content = "Selecione uma arma primeiro!",
                         Duration = 5,
                         Image = 105026320884681
                     })
@@ -189,11 +211,12 @@ Tab:CreateToggle({
                 return
             end
             
+            local config = getConfig()
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMiniBoss,
-                    Duration = 3,
+                    Content = "Farming: " .. selectedMiniBoss .. " (Quest: " .. config.quest .. ")",
+                    Duration = 4,
                     Image = 105026320884681
                 })
             end)
@@ -201,14 +224,6 @@ Tab:CreateToggle({
             startAutoFarmMiniBoss()
         else
             stopAutoFarmMiniBoss()
-            pcall(function()
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Mini Boss Farm stopped",
-                    Duration = 2,
-                    Image = 105026320884681
-                })
-            end)
         end
         
         _G.SlowHub.AutoFarmMiniBosses = Value
