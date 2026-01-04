@@ -1,6 +1,5 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Variaveis globais
 _G.SlowHub = {
     AutoFarmLevel = false,
     AutoFarmBosses = false,
@@ -11,17 +10,14 @@ _G.SlowHub = {
     SelectedWeapon = nil
 }
 
--- Sistema de salvamento de configuracoes
 local HttpService = game:GetService("HttpService")
 local configFolder = "SlowHub"
 local configFile = configFolder .. "/config.json"
 
--- Cria a pasta se nao existir
 if not isfolder(configFolder) then
     makefolder(configFolder)
 end
 
--- Funcao para salvar configuracoes (apenas Auto Farms e Auto Haki)
 local function SaveConfig()
     pcall(function()
         local data = {
@@ -35,7 +31,6 @@ local function SaveConfig()
     end)
 end
 
--- Funcao para carregar configuracoes
 local function LoadConfig()
     if not isfile(configFile) then
         return
@@ -45,20 +40,16 @@ local function LoadConfig()
         local json = readfile(configFile)
         local data = HttpService:JSONDecode(json)
         
-        -- Aplicar apenas Auto Farms e Auto Haki
         _G.SlowHub.AutoFarmLevel = data.AutoFarmLevel or false
         _G.SlowHub.AutoFarmBosses = data.AutoFarmBosses or false
         _G.SlowHub.AutoHaki = data.AutoHaki or false
     end)
 end
 
--- Salvar configuracao automaticamente
 _G.SaveConfig = SaveConfig
 
--- Carregar configuracoes antes de criar a janela
 LoadConfig()
 
--- Criar janela
 local Window = Rayfield:CreateWindow({
     Name = "Slow Hub",
     LoadingTitle = "Slow Hub",
@@ -74,24 +65,20 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
--- Criar tabs e salvar globalmente
 _G.MainTab = Window:CreateTab("Main", 125686055318100)
 _G.BossesTab = Window:CreateTab("Bosses", 105026320884681)
 _G.ShopTab = Window:CreateTab("Shop", 102424048012641)
 _G.StatsTab = Window:CreateTab("Stats", 109860946741884)
 _G.MiscTab = Window:CreateTab("Misc", 106779103527235)
 
--- Salvar Rayfield globalmente
 _G.Rayfield = Rayfield
 
--- Carregar conteudo das tabs
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
--- Salvar configuracoes ao fechar o jogo
 game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("RayfieldLibrary", 10)
 local RayfieldUI = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("RayfieldLibrary")
 
@@ -103,14 +90,12 @@ if RayfieldUI then
     end)
 end
 
--- Salvar periodicamente (a cada 30 segundos)
 task.spawn(function()
     while task.wait(30) do
         SaveConfig()
     end
 end)
 
--- Notificacao
 Rayfield:Notify({
     Title = "Slow Hub",
     Content = "Successfully loaded!",
