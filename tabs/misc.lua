@@ -5,6 +5,10 @@ Tab:CreateSection("Haki")
 
 loadstring(game:HttpGet(githubBase .. "AutoHaki.lua"))()
 
+Tab:CreateSection("Auto Skill")
+
+loadstring(game:HttpGet(githubBase .. "AutoSkill.lua"))()
+
 Tab:CreateSection("Codes")
 
 loadstring(game:HttpGet(githubBase .. "Codes.lua"))()
