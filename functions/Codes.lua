@@ -7,10 +7,8 @@ local codes = {
     "TRAITS",
     "NEWYEAR",
     "CHRISTMAS",
-    "200KVISITS",
     "3000CCU",
     "3KLIKES",
-    "QUESTBUGFIXSORRY",
     "4KLIKES",
     "10KMEMBERS",
     "500KVISITS"
