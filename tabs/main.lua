@@ -13,7 +13,6 @@ Tab:CreateSection("Auto Farm Selected")
 
 loadstring(game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua"))()
 
-
 Tab:CreateSection("Auto Chest")
 
 loadstring(game:HttpGet(githubBase .. "AutoChest.lua"))()
