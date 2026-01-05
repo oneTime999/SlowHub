@@ -7,6 +7,7 @@ local Player = Players.LocalPlayer
 local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer"}
 local autoFarmSelectedConnection = nil
 local selectedMob = "Thief"
+local currentNPCIndex = 1
 local isRunning = false
 
 if not _G.SlowHub.FarmDistance then
@@ -17,39 +18,50 @@ if not _G.SlowHub.FarmHeight then
     _G.SlowHub.FarmHeight = 4
 end
 
-local function getSelectedMobNPC()
-    return workspace.NPCs:FindFirstChild(selectedMob .. currentSelectedNPCIndex) or workspace.NPCs:FindFirstChild(selectedMob .. "1")
+local function getNPC(npcName, index)
+    return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
-local function getSelectedMobRootPart(npc)
+local function getNPCRootPart(npc)
     if npc and npc:FindFirstChild("HumanoidRootPart") then
         return npc.HumanoidRootPart
     end
     return nil
 end
 
-local currentSelectedNPCIndex = 1
-local function getNextSelectedNPC()
-    currentSelectedNPCIndex = currentSelectedNPCIndex + 1
-    if currentSelectedNPCIndex > 5 then
-        currentSelectedNPCIndex = 1
+local function getNextNPC(current, maxCount)
+    local next = current + 1
+    if next > maxCount then
+        return 1
     end
+    return next
 end
 
 local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return end
-    pcall(function()
+    if not _G.SlowHub.SelectedWeapon then return false end
+    
+    local success = pcall(function()
         local backpack = Player:FindFirstChild("Backpack")
         local character = Player.Character
-        if not character or not character:FindFirstChild("Humanoid") then return end
-        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
+        
+        if not character or not character:FindFirstChild("Humanoid") then
+            return false
+        end
+        
+        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
+            return true
+        end
+        
         if backpack then
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
                 character.Humanoid:EquipTool(weapon)
+                task.wait(0.1)
             end
         end
     end)
+    
+    return success
 end
 
 local function stopAutoFarmSelectedMob()
@@ -59,18 +71,32 @@ local function stopAutoFarmSelectedMob()
         autoFarmSelectedConnection = nil
     end
     _G.SlowHub.AutoFarmSelectedMob = false
+    currentNPCIndex = 1
+    
+    pcall(function()
+        if Player.Character then
+            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
+            if playerRoot then
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                playerRoot.Anchored = false
+            end
+        end
+    end)
 end
 
 local function startAutoFarmSelectedMob()
-    if isRunning then
+    if autoFarmSelectedConnection then
         stopAutoFarmSelectedMob()
-        task.wait(0.3)
     end
     
     isRunning = true
     _G.SlowHub.AutoFarmSelectedMob = true
+    currentNPCIndex = 1
     
     EquipWeapon()
+    
+    local lastNPCSwitch = 0
+    local NPC_TIMEOUT = 2
     
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
@@ -78,17 +104,20 @@ local function startAutoFarmSelectedMob()
             return
         end
         
-        local npc = getSelectedMobNPC()
+        local now = tick()
+        local npc = getNPC(selectedMob, currentNPCIndex)
         
         if npc and npc.Parent then
             local npcHumanoid = npc:FindFirstChild("Humanoid")
+            
             if npcHumanoid and npcHumanoid.Health <= 0 then
-                getNextSelectedNPC()
-                task.wait(0.5)
+                currentNPCIndex = getNextNPC(currentNPCIndex, 5)
+                lastNPCSwitch = now
+                task.wait(0.2)
                 return
             end
             
-            local npcRoot = getSelectedMobRootPart(npc)
+            local npcRoot = getNPCRootPart(npc)
             
             if npcRoot and npcRoot.Parent and Player.Character then
                 local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
@@ -107,12 +136,29 @@ local function startAutoFarmSelectedMob()
                         end
                         
                         EquipWeapon()
-                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        
+                        -- Attack with randomization (same as Auto Level)
+                        if math.random() > 0.6 then
+                            ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        end
                     end)
                 end
             end
         else
-            getNextSelectedNPC()
+            pcall(function()
+                if Player.Character then
+                    local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
+                    if playerRoot then
+                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end)
+            
+            -- NPC switch with timeout (same as Auto Level)
+            if (now - lastNPCSwitch) > NPC_TIMEOUT then
+                currentNPCIndex = getNextNPC(currentNPCIndex, 5)
+                lastNPCSwitch = now
+            end
         end
     end)
 end
@@ -135,7 +181,7 @@ Tab:CreateDropdown({
         else
             selectedMob = tostring(Option)
         end
-        currentSelectedNPCIndex = 1
+        currentNPCIndex = 1
         
         if wasRunning then
             startAutoFarmSelectedMob()
@@ -184,6 +230,9 @@ Tab:CreateToggle({
         end
         
         _G.SlowHub.AutoFarmSelectedMob = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -196,6 +245,9 @@ Tab:CreateSlider({
     Flag = "FarmDistanceSlider",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
@@ -208,5 +260,8 @@ Tab:CreateSlider({
     Flag = "FarmHeightSlider",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
