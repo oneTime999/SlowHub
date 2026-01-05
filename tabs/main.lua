@@ -8,6 +8,8 @@ loadstring(game:HttpGet(githubBase .. "WeaponSelector.lua"))()
 Tab:CreateSection("Auto Farm")
 
 loadstring(game:HttpGet(githubBase .. "AutoLevel.lua"))()
+loadstring(game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua"))()
+
 
 Tab:CreateSection("Auto Chest")
 
