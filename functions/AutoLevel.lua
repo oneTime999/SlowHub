@@ -108,8 +108,6 @@ local function stopAutoLevel()
             end
         end
     end)
-    
-    -- REMOVIDO: QuestAbandon - Não abandona mais missões
 end
 
 local function startAutoLevel()
@@ -124,7 +122,6 @@ local function startAutoLevel()
     
     EquipWeapon()
     
-    -- Loop de aceitar missão (SEM abandonar)
     autoLevelQuestLoop = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
             if autoLevelQuestLoop then
@@ -187,7 +184,6 @@ local function startAutoLevel()
                         
                         EquipWeapon()
                         
-                        -- Ataque com randomização
                         if math.random() > 0.6 then
                             ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                         end
@@ -204,7 +200,6 @@ local function startAutoLevel()
                 end
             end)
             
-            -- Troca NPC com timeout melhorado
             if (now - lastNPCSwitch) > NPC_TIMEOUT then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCSwitch = now
@@ -223,7 +218,7 @@ Tab:CreateToggle({
                 pcall(function()
                     _G.Rayfield:Notify({
                         Title = "Slow Hub",
-                        Content = "Selecione uma arma primeiro!",
+                        Content = "Select a weapon first!",
                         Duration = 5,
                         Image = 105026320884681
                     })
@@ -244,14 +239,6 @@ Tab:CreateToggle({
             startAutoLevel()
         else
             stopAutoLevel()
-            pcall(function()
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Auto Farm Level parado",
-                    Duration = 2,
-                    Image = 105026320884681
-                })
-            end)
         end
         
         _G.SlowHub.AutoFarmLevel = Value
@@ -274,15 +261,6 @@ Tab:CreateSlider({
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Distância: " .. Value .. " studs",
-                Duration = 2,
-                Image = 109860946741884
-            })
-        end)
     end,
 })
 
@@ -299,15 +277,6 @@ Tab:CreateSlider({
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Altura: " .. Value .. " studs",
-                Duration = 2,
-                Image = 109860946741884
-            })
-        end)
     end,
 })
 
