@@ -5,7 +5,16 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer"}
+local QuestConfig = {
+    ["Thief"] = "QuestNPC1",
+    ["Monkey"] = "QuestNPC3", 
+    ["DesertBandit"] = "QuestNPC5",
+    ["FrostRogue"] = "QuestNPC7",
+    ["Sorcerer"] = "QuestNPC9"
+}
+
 local autoFarmSelectedConnection = nil
+local autoQuestLoop = nil
 local selectedMob = "Thief"
 local currentNPCIndex = 1
 local isRunning = false
@@ -35,6 +44,10 @@ local function getNextNPC(current, maxCount)
         return 1
     end
     return next
+end
+
+local function getQuestForMob(mobName)
+    return QuestConfig[mobName] or "QuestNPC1"
 end
 
 local function EquipWeapon()
@@ -70,7 +83,12 @@ local function stopAutoFarmSelectedMob()
         autoFarmSelectedConnection:Disconnect()
         autoFarmSelectedConnection = nil
     end
+    if autoQuestLoop then
+        autoQuestLoop:Disconnect()
+        autoQuestLoop = nil
+    end
     _G.SlowHub.AutoFarmSelectedMob = false
+    _G.SlowHub.AutoQuestSelectedMob = false
     currentNPCIndex = 1
     
     pcall(function()
@@ -84,6 +102,28 @@ local function stopAutoFarmSelectedMob()
     end)
 end
 
+local function startAutoQuestLoop()
+    if autoQuestLoop then return end
+    
+    local questName = getQuestForMob(selectedMob)
+    autoQuestLoop = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
+            return
+        end
+        
+        pcall(function()
+            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
+        end)
+    end)
+end
+
+local function stopAutoQuestLoop()
+    if autoQuestLoop then
+        autoQuestLoop:Disconnect()
+        autoQuestLoop = nil
+    end
+end
+
 local function startAutoFarmSelectedMob()
     if autoFarmSelectedConnection then
         stopAutoFarmSelectedMob()
@@ -94,6 +134,11 @@ local function startAutoFarmSelectedMob()
     currentNPCIndex = 1
     
     EquipWeapon()
+    
+    -- Inicia loop de quest SE ativado
+    if _G.SlowHub.AutoQuestSelectedMob then
+        startAutoQuestLoop()
+    end
     
     local lastNPCSwitch = 0
     local NPC_TIMEOUT = 2
@@ -137,7 +182,6 @@ local function startAutoFarmSelectedMob()
                         
                         EquipWeapon()
                         
-                        -- Attack with randomization (same as Auto Level)
                         if math.random() > 0.6 then
                             ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                         end
@@ -154,7 +198,6 @@ local function startAutoFarmSelectedMob()
                 end
             end)
             
-            -- NPC switch with timeout (same as Auto Level)
             if (now - lastNPCSwitch) > NPC_TIMEOUT then
                 currentNPCIndex = getNextNPC(currentNPCIndex, 5)
                 lastNPCSwitch = now
@@ -188,7 +231,7 @@ Tab:CreateDropdown({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMob,
+                    Content = "Farming: " .. selectedMob .. (_G.SlowHub.AutoQuestSelectedMob and " (with quest)" or ""),
                     Duration = 4,
                     Image = 105026320884681
                 })
@@ -218,7 +261,7 @@ Tab:CreateToggle({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMob,
+                    Content = "Farming: " .. selectedMob .. (_G.SlowHub.AutoQuestSelectedMob and " (with quest)" or ""),
                     Duration = 4,
                     Image = 105026320884681
                 })
@@ -230,6 +273,43 @@ Tab:CreateToggle({
         end
         
         _G.SlowHub.AutoFarmSelectedMob = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Auto Quest Selected Mob",
+    CurrentValue = false,
+    Flag = "AutoQuestSelectedMobToggle",
+    Callback = function(Value)
+        _G.SlowHub.AutoQuestSelectedMob = Value
+        
+        if _G.SlowHub.AutoFarmSelectedMob and isRunning then
+            if Value then
+                startAutoQuestLoop()
+                pcall(function()
+                    _G.Rayfield:Notify({
+                        Title = "Slow Hub",
+                        Content = "Quest enabled for " .. selectedMob,
+                        Duration = 3,
+                        Image = 105026320884681
+                    })
+                end)
+            else
+                stopAutoQuestLoop()
+                pcall(function()
+                    _G.Rayfield:Notify({
+                        Title = "Slow Hub",
+                        Content = "Quest disabled - pure farming",
+                        Duration = 3,
+                        Image = 105026320884681
+                    })
+                end)
+            end
+        end
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
