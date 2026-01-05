@@ -8,7 +8,8 @@ local bossList = {
     "RagnaBoss",
     "JinwooBoss",
     "SukunaBoss",
-    "GojoBoss"
+    "GojoBoss",
+    "SaberBoss"
 }
 
 local autoFarmBossConnection = nil
@@ -138,7 +139,7 @@ local function startAutoFarmBoss()
 end
 
 Tab:CreateDropdown({
-    Name = "Selecionar Boss",
+    Name = "Select Boss",
     Options = bossList,
     CurrentOption = "RagnaBoss",
     Flag = "SelectedBoss",
@@ -161,7 +162,7 @@ Tab:CreateDropdown({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Boss alterado para: " .. selectedBoss,
+                    Content = "Boss changed to: " .. selectedBoss,
                     Duration = 3,
                     Image = 105026320884681
                 })
