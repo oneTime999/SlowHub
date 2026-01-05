@@ -26,9 +26,6 @@ end
 
 local autoFarmSelectedConnection = nil
 local currentSelectedNPCIndex = 1
-local lastSelectedNPCFound = nil
-local lastSelectedNPCSwitch = 0
-local SELECTED_NPC_TIMEOUT = 2
 
 local function getSelectedNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
@@ -52,7 +49,7 @@ end
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     
-    local success = pcall(function()
+    local success, result = pcall(function()
         local backpack = Player:FindFirstChild("Backpack")
         local character = Player.Character
         
@@ -69,11 +66,13 @@ local function EquipWeapon()
             if weapon then
                 character.Humanoid:EquipTool(weapon)
                 task.wait(0.1)
+                return true
             end
         end
+        return false
     end)
     
-    return success
+    return success and result
 end
 
 local function stopAutoFarmSelectedMob()
@@ -84,30 +83,23 @@ local function stopAutoFarmSelectedMob()
     _G.SlowHub.AutoFarmSelectedMob = false
     currentSelectedNPCIndex = 1
     
-    pcall(function()
-        if Player.Character then
-            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-            if playerRoot then
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                playerRoot.Anchored = false
-            end
+    spawn(function()
+        task.wait(0.1)
+        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+            Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         end
     end)
 end
 
 local function startAutoFarmSelectedMob()
-    if autoFarmSelectedConnection then
-        stopAutoFarmSelectedMob()
-    end
+    stopAutoFarmSelectedMob()
     
     _G.SlowHub.AutoFarmSelectedMob = true
     currentSelectedNPCIndex = 1
     
-    EquipWeapon()
-    
-    local now = tick()
-    lastSelectedNPCFound = now
-    lastSelectedNPCSwitch = now
+    spawn(function()
+        EquipWeapon()
+    end)
     
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob then
@@ -115,62 +107,50 @@ local function startAutoFarmSelectedMob()
             return
         end
         
+        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
+            return
+        end
+        
+        local character = Player.Character
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then
+            return
+        end
+        
         local selectedMob = _G.SlowHub.SelectedMob
-        now = tick()
         local npc = getSelectedNPC(selectedMob, currentSelectedNPCIndex)
         
         if npc and npc.Parent then
             local npcHumanoid = npc:FindFirstChild("Humanoid")
-            
             if npcHumanoid and npcHumanoid.Health <= 0 then
                 currentSelectedNPCIndex = getNextSelectedNPC(currentSelectedNPCIndex)
-                lastSelectedNPCSwitch = now
-                task.wait(0.2)
                 return
             end
             
-            lastSelectedNPCFound = now
-            
             local npcRoot = getSelectedNPCRootPart(npc)
-            
-            if npcRoot and npcRoot.Parent and Player.Character then
-                local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                local humanoid = Player.Character:FindFirstChild("Humanoid")
+            if npcRoot then
+                local playerRoot = character.HumanoidRootPart
                 
-                if playerRoot and humanoid and humanoid.Health > 0 then
+                spawn(function()
+                    EquipWeapon()
+                end)
+                
+                local targetCFrame = npcRoot.CFrame
+                local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
+                
+                local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                if distance > 3 then
+                    playerRoot.CFrame = offsetPosition
+                end
+                
+                if math.random() > 0.6 then
                     pcall(function()
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        
-                        local targetCFrame = npcRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
-                        
-                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                        if distance > 3 or distance < 1 then
-                            playerRoot.CFrame = offsetPosition
-                        end
-                        
-                        EquipWeapon()
-                        
-                        if math.random() > 0.6 then
-                            ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                        end
+                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     end)
                 end
             end
         else
-            pcall(function()
-                if Player.Character then
-                    local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                    if playerRoot then
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-            end)
-            
-            if (now - lastSelectedNPCSwitch) > SELECTED_NPC_TIMEOUT then
-                currentSelectedNPCIndex = getNextSelectedNPC(currentSelectedNPCIndex)
-                lastSelectedNPCSwitch = now
-            end
+            currentSelectedNPCIndex = getNextSelectedNPC(currentSelectedNPCIndex)
         end
     end)
 end
@@ -180,47 +160,38 @@ Tab:CreateToggle({
     CurrentValue = _G.SlowHub.AutoFarmSelectedMob,
     Flag = "AutoFarmSelectedMobToggle",
     Callback = function(Value)
+        _G.SlowHub.AutoFarmSelectedMob = Value
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                pcall(function()
-                    _G.Rayfield:Notify({
-                        Title = "Slow Hub",
-                        Content = "Select a weapon first!",
-                        Duration = 5,
-                        Image = 105026320884681
-                    })
-                end)
+                _G.Rayfield:Notify({
+                    Title = "Slow Hub",
+                    Content = "Select a weapon first!",
+                    Duration = 5,
+                    Image = 105026320884681
+                })
                 _G.SlowHub.AutoFarmSelectedMob = false
                 return
             end
-            
             if not _G.SlowHub.SelectedMob then
                 _G.SlowHub.SelectedMob = "Thief"
             end
-            
-            pcall(function()
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Farming: " .. _G.SlowHub.SelectedMob,
-                    Duration = 4,
-                    Image = 105026320884681
-                })
-            end)
-            
-            startAutoFarmSelectedMob()
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Farming: " .. _G.SlowHub.SelectedMob,
+                Duration = 4,
+                Image = 105026320884681
+            })
+            task.spawn(startAutoFarmSelectedMob)
         else
             stopAutoFarmSelectedMob()
-            pcall(function()
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Auto Farm Selected Mob stopped",
-                    Duration = 2,
-                    Image = 105026320884681
-                })
-            end)
+            _G.Rayfield:Notify({
+                Title = "Slow Hub",
+                Content = "Auto Farm Selected Mob stopped",
+                Duration = 2,
+                Image = 105026320884681
+            })
         end
         
-        _G.SlowHub.AutoFarmSelectedMob = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -236,16 +207,12 @@ Tab:CreateDropdown({
     Callback = function(Option)
         _G.SlowHub.SelectedMob = Option
         currentSelectedNPCIndex = 1
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Mob selected: " .. Option,
-                Duration = 2,
-                Image = 109860946741884
-            })
-        end)
-        
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Mob selected: " .. Option,
+            Duration = 2,
+            Image = 109860946741884
+        })
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -261,19 +228,15 @@ Tab:CreateSlider({
     Flag = "FarmDistanceSlider",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
-        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Distance: " .. Value .. " studs",
-                Duration = 2,
-                Image = 109860946741884
-            })
-        end)
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Distance: " .. Value .. " studs",
+            Duration = 2,
+            Image = 109860946741884
+        })
     end,
 })
 
@@ -286,23 +249,18 @@ Tab:CreateSlider({
     Flag = "FarmHeightSlider",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
-        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Height: " .. Value .. " studs",
-                Duration = 2,
-                Image = 109860946741884
-            })
-        end)
+        _G.Rayfield:Notify({
+            Title = "Slow Hub",
+            Content = "Height: " .. Value .. " studs",
+            Duration = 2,
+            Image = 109860946741884
+        })
     end,
 })
 
 if _G.SlowHub.AutoFarmSelectedMob and _G.SlowHub.SelectedWeapon then
-    task.wait(2)
-    startAutoFarmSelectedMob()
+    task.spawn(startAutoFarmSelectedMob)
 end
