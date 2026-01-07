@@ -84,7 +84,7 @@ Tab:CreateDropdown({
 })
 
 Tab:CreateToggle({
-    Name = "AutoChest",
+    Name = "Auto Chest",
     CurrentValue = AutoChest,
     Flag = "AutoChestToggle",
     Callback = function(Value)
