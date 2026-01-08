@@ -62,7 +62,7 @@ LoadConfig()
 local Window = Rayfield:CreateWindow({
     Name = "Slow Hub",
     LoadingTitle = "Slow Hub",
-    LoadingSubtitle = "by oneTime999",
+    LoadingSubtitle = "by oneTime and Vagner",
     ConfigurationSaving = {
         Enabled = false
     },
