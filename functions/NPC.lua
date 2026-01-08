@@ -8,7 +8,7 @@ local NPCs = {
     ["GroupRewardNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("GroupRewardNPC") end,
     ["HakiQuestNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("HakiQuestNPC") end,
     ["StorageNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("StorageNPC") end,
-    ["SummonBossNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("Summon BossNPC") end,
+    ["SummonBossNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("SummonBossNPC") end,
     ["TitlesNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("TitlesNPC") end,
     ["TraitNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("TraitNPC") end
 }
@@ -69,7 +69,7 @@ Tab:CreateDropdown({
         "GroupRewardNPC", 
         "HakiQuestNPC", 
         "StorageNPC", 
-        "SummonBossNPC", 
+        "SummonBossNPC",
         "TitlesNPC", 
         "TraitNPC"
     },
