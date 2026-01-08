@@ -10,6 +10,7 @@ _G.SlowHub = {
     AutoHaki = false,
     Codes = false,
     Shop = false,
+    NPC = false,
     Stats = false,
     AntiAFK = false,
     SelectedWeapon = nil
