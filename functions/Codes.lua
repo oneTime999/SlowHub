@@ -13,7 +13,7 @@ local codes = {
     "10KMEMBERS",
     "UPDATE1",
     "ARTIFACTS",
-    "5KLIKES"
+    "5KLIKES",
     "DELAYSORRY",
     "500KVISITS"
 }
