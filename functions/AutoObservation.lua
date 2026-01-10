@@ -6,7 +6,7 @@ local Player = Players.LocalPlayer
 
 local autoObservationConnection = nil
 local lastToggleTime = 0
-local COOLDOWN_TIME = 3
+local COOLDOWN_TIME = 3.5  -- ✅ Aumentado cooldown
 
 local function isObservationActive()
     local playerGui = Player.PlayerGui
@@ -52,11 +52,10 @@ local function startAutoObservation()
 
         local now = tick()
 
+        -- ✅ CORRIGIDO: Toggle sempre que cooldown permitir, independente do estado
         if now - lastToggleTime >= COOLDOWN_TIME then
-            if not isObservationActive() then
-                toggleObservation()
-                lastToggleTime = now
-            end
+            toggleObservation()
+            lastToggleTime = now
         end
     end)
 end
