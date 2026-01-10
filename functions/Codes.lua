@@ -2,20 +2,12 @@ local Tab = _G.MiscTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local codes = {
-    "RELEASE",
-    "UPDATE0.5",
     "TRAITS",
-    "NEWYEAR",
-    "CHRISTMAS",
-    "3000CCU",
-    "3KLIKES",
-    "4KLIKES",
     "10KMEMBERS",
     "UPDATE1",
     "ARTIFACTS",
     "5KLIKES",
-    "DELAYSORRY",
-    "500KVISITS"
+    "DELAYSORRY"
 }
 
 local function redeemAllCodes()
