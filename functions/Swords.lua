@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
 local SwordNPCs = {
-    ["Aizen"] = function() return workspace:FindFirstChild("AizenMovesetNPC") end
+    ["Aizen"] = function() return workspace:FindFirstChild("AizenMovesetNPC") end,
     ["Ragna"] = function() return workspace.ServiceNPCs:FindFirstChild("RagnaBuyer") end,
     ["Jinwoo"] = function() return workspace:FindFirstChild("JinwooMovesetNPC") end,
     ["Saber"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end,
@@ -37,7 +37,7 @@ local function teleportToNPC()
     pcall(function()
         local selectedSword = _G.SlowHub.SelectedSwordNPC
         
-        if not selectedSword or selectedSword == "Aizen" then
+        if not selectedSword or selectedSword == "" then  -- ✅ CORRIGIDO
             return
         end
         
