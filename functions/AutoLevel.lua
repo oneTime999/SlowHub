@@ -140,7 +140,7 @@ local function startAutoLevel()
     end)
     
     local lastNPCSwitch = 0
-    local NPC_SWITCH_DELAY = 3
+    local NPC_SWITCH_DELAY = 0.5  -- SUPER RÁPIDO!
     
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
@@ -155,12 +155,11 @@ local function startAutoLevel()
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
-        -- Se NPC não existe ou está morto, troca para próximo
+        -- Se NPC não existe ou está morto, troca INSTANTANEAMENTE
         if not npcAlive then
             if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCSwitch = now
-                print("Switching to Hollow" .. currentNPCIndex) -- Debug
                 return
             end
         else
