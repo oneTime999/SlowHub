@@ -51,7 +51,7 @@ local function getNextNPC(current, maxCount)
 end
 
 local function getNPC(npcName, index)
-    return workspace.NPCs:FindFirstChild(npcName .. index) or workspace.NPCs:FindFirstChild(npcName .. "1")
+    return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
 local function getNPCRootPart(npc)
@@ -139,9 +139,8 @@ local function startAutoLevel()
         end)
     end)
     
-    local lastNPCFound = nil
     local lastNPCSwitch = 0
-    local NPC_TIMEOUT = 2
+    local NPC_SWITCH_DELAY = 3
     
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
@@ -151,19 +150,22 @@ local function startAutoLevel()
         
         config = GetCurrentConfig()
         local now = tick()
-        local npc = getNPC(config.npc, currentNPCIndex)
         
-        if npc and npc.Parent then
-            local npcHumanoid = npc:FindFirstChild("Humanoid")
-            
-            if npcHumanoid and npcHumanoid.Health <= 0 then
+        -- Tenta encontrar NPC atual
+        local npc = getNPC(config.npc, currentNPCIndex)
+        local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
+        
+        -- Se NPC não existe ou está morto, troca para próximo
+        if not npcAlive then
+            if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCSwitch = now
-                task.wait(0.2)
+                print("Switching to Hollow" .. currentNPCIndex) -- Debug
                 return
             end
-            
-            lastNPCFound = now
+        else
+            -- NPC encontrado e vivo, ataca
+            lastNPCSwitch = now
             
             local npcRoot = getNPCRootPart(npc)
             
@@ -190,20 +192,6 @@ local function startAutoLevel()
                         end
                     end)
                 end
-            end
-        else
-            pcall(function()
-                if Player.Character then
-                    local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                    if playerRoot then
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-            end)
-            
-            if (now - lastNPCSwitch) > NPC_TIMEOUT then
-                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
-                lastNPCSwitch = now
             end
         end
     end)
