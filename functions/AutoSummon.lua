@@ -1,4 +1,5 @@
-local Tab = _G.BossesTab
+-- AutoSummonBoss.lua
+local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -60,7 +61,7 @@ local function startAutoSummonBoss()
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = selectedBoss .. " is already alive! Stopping summon.",
+                    Content = selectedBoss .. " is alive! Auto summon stopped.",
                     Duration = 4,
                     Image = 105026320884681
                 })
@@ -75,12 +76,12 @@ local function startAutoSummonBoss()
             summonAttempts = summonAttempts + 1
         end)
         
-        -- Para após muitas tentativas sem sucesso ou se boss apareceu
+        -- Para após muitas tentativas sem sucesso
         if summonAttempts >= MAX_ATTEMPTS then
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Max summon attempts reached for " .. selectedBoss,
+                    Content = "Max attempts reached for " .. selectedBoss,
                     Duration = 4,
                     Image = 105026320884681
                 })
@@ -88,7 +89,6 @@ local function startAutoSummonBoss()
             stopAutoSummonBoss()
         end
         
-        -- Pequeno delay entre tentativas
         task.wait(0.1)
     end)
 end
@@ -109,17 +109,17 @@ Tab:CreateDropdown({
         pcall(function()
             _G.Rayfield:Notify({
                 Title = "Slow Hub",
-                Content = "Selected Boss: " .. selectedBoss,
-                Duration = 3,
+                Content = "Selected: " .. selectedBoss,
+                Duration = 2.5,
                 Image = 105026320884681
             })
         end)
     end
 })
 
--- Toggle principal Auto Summon Boss
+-- Toggle Auto Summon Boss (SEM "Loop")
 Tab:CreateToggle({
-    Name = "Auto Summon Boss (Loop)",
+    Name = "Auto Summon Boss",
     CurrentValue = false,
     Flag = "AutoSummonBossToggle",
     Callback = function(Value)
@@ -131,8 +131,8 @@ Tab:CreateToggle({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Starting Auto Summon Loop: " .. selectedBoss,
-                    Duration = 4,
+                    Content = "Auto Summoning: " .. selectedBoss,
+                    Duration = 3,
                     Image = 105026320884681
                 })
             end)
@@ -143,8 +143,8 @@ Tab:CreateToggle({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Auto Summon Boss stopped",
-                    Duration = 3,
+                    Content = "Auto Summon stopped",
+                    Duration = 2,
                     Image = 105026320884681
                 })
             end)
@@ -154,35 +154,6 @@ Tab:CreateToggle({
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-    end
-})
-
--- Botão Manual Summon (20x spam)
-Tab:CreateButton({
-    Name = "Manual Summon Boss (20x)",
-    Callback = function()
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Manual summoning " .. selectedBoss .. " 20x...",
-                Duration = 3,
-                Image = 105026320884681
-            })
-        end)
-        
-        for i = 1, 20 do
-            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss)
-            task.wait(0.05)  -- Delay rápido entre spams
-        end
-        
-        pcall(function()
-            _G.Rayfield:Notify({
-                Title = "Slow Hub",
-                Content = "Manual summon complete! (" .. selectedBoss .. ")",
-                Duration = 3,
-                Image = 105026320884681
-            })
-        end)
     end
 })
 
