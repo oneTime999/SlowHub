@@ -11,6 +11,10 @@ local codes = {
     "3KLIKES",
     "4KLIKES",
     "10KMEMBERS",
+    "UPDATE1",
+    "ARTIFACTS",
+    "5KLIKES"
+    "DELAYSORRY",
     "500KVISITS"
 }
 
