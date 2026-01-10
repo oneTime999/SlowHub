@@ -3,12 +3,12 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
 local SwordNPCs = {
+    ["Aizen"] = function() return workspace:FindFirstChild("AizenMovesetNPC") end
     ["Ragna"] = function() return workspace.ServiceNPCs:FindFirstChild("RagnaBuyer") end,
     ["Jinwoo"] = function() return workspace:FindFirstChild("JinwooMovesetNPC") end,
     ["Saber"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end,
     ["Dark Blade"] = function() return workspace.ServiceNPCs:FindFirstChild("DarkBladeNPC") end,
-    ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end,
-    ["Aizen"] = function() return workspace:FindFirstChild("AizenMovesetNPC") end
+    ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end
 }
 
 _G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Ragna"
@@ -61,7 +61,7 @@ end
 
 Tab:CreateDropdown({
     Name = "Select Sword NPC",
-    Options = {"Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana", "Aizen"},
+    Options = {"Aizen", "Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana"},
     CurrentOption = {_G.SlowHub.SelectedSwordNPC},
     Flag = "SwordNPCDropdown",
     Callback = function(Option)
