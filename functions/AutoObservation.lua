@@ -6,7 +6,7 @@ local Player = Players.LocalPlayer
 
 local autoObservationConnection = nil
 local lastToggleTime = 0
-local COOLDOWN_TIME = 3.5  -- ✅ Aumentado cooldown
+local COOLDOWN_TIME = 3
 
 local function isObservationActive()
     local playerGui = Player.PlayerGui
@@ -18,7 +18,7 @@ local function isObservationActive()
     local mainFrame = dodgeUI:FindFirstChild("MainFrame")
     if not mainFrame then return false end
     
-    return mainFrame.Visible
+    return mainFrame.Visible  -- ✅ true = ATIVADO, false = DESATIVADO
 end
 
 local function toggleObservation()
@@ -52,10 +52,12 @@ local function startAutoObservation()
 
         local now = tick()
 
-        -- ✅ CORRIGIDO: Toggle sempre que cooldown permitir, independente do estado
+        -- ✅ CORRETO: Só ativa SE não estiver ativo (Visible=false ou UI não existe)
         if now - lastToggleTime >= COOLDOWN_TIME then
-            toggleObservation()
-            lastToggleTime = now
+            if not isObservationActive() then  -- Visible=false OU UI não existe
+                toggleObservation()
+                lastToggleTime = now
+            end
         end
     end)
 end
