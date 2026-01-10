@@ -16,7 +16,6 @@ local selectedBoss = "QinShiBoss"
 -- Função para verificar se o boss está vivo
 local function isBossAlive(bossName)
     pcall(function()
-        -- Procura o boss no workspace
         for _, obj in pairs(workspace:GetChildren()) do
             if obj.Name:find(bossName) or obj.Name == bossName then
                 local humanoid = obj:FindFirstChild("Humanoid")
@@ -46,9 +45,6 @@ local function startAutoSummonBoss()
     isSummoningBoss = true
     _G.SlowHub.AutoSummonBoss = true
     
-    local summonAttempts = 0
-    local MAX_ATTEMPTS = 50  -- Máximo de tentativas antes de parar
-    
     autoSummonBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoSummonBoss or not isSummoningBoss then
             stopAutoSummonBoss()
@@ -57,38 +53,13 @@ local function startAutoSummonBoss()
         
         -- Verifica se o boss já está vivo
         if isBossAlive(selectedBoss) then
-            pcall(function()
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = selectedBoss .. " is alive! Auto summon stopped.",
-                    Duration = 4,
-                    Image = 105026320884681
-                })
-            end)
-            stopAutoSummonBoss()
-            return
+            return -- Continua o loop, só para se desativar manualmente
         end
         
-        -- Faz o summon
+        -- Faz o summon continuamente
         pcall(function()
             ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss)
-            summonAttempts = summonAttempts + 1
         end)
-        
-        -- Para após muitas tentativas sem sucesso
-        if summonAttempts >= MAX_ATTEMPTS then
-            pcall(function()
-                _G.Rayfield:Notify({
-                    Title = "Slow Hub",
-                    Content = "Max attempts reached for " .. selectedBoss,
-                    Duration = 4,
-                    Image = 105026320884681
-                })
-            end)
-            stopAutoSummonBoss()
-        end
-        
-        task.wait(0.1)
     end)
 end
 
@@ -116,26 +87,21 @@ Tab:CreateDropdown({
     end
 })
 
--- Toggle Auto Summon Boss (SEM "Loop")
+-- Toggle Auto Summon Boss (LOOP CONTÍNUO)
 Tab:CreateToggle({
     Name = "Auto Summon Boss",
     CurrentValue = false,
     Flag = "AutoSummonBossToggle",
     Callback = function(Value)
         if Value then
-            if isSummoningBoss then
-                stopAutoSummonBoss()
-            end
-            
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Auto Summoning: " .. selectedBoss,
+                    Content = "Auto Summoning: " .. selectedBoss .. " (LOOP)",
                     Duration = 3,
                     Image = 105026320884681
                 })
             end)
-            
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
