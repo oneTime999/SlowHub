@@ -37,7 +37,7 @@ local function teleportToNPC()
     pcall(function()
         local selectedSword = _G.SlowHub.SelectedSwordNPC
         
-        if not selectedSword or selectedSword == "" then
+        if not selectedSword or selectedSword == "Aizen" then
             return
         end
         
