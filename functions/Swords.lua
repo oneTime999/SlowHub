@@ -11,7 +11,7 @@ local SwordNPCs = {
     ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end
 }
 
-_G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Ragna"
+_G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Aizen"
 
 local function normalizeValue(Value)
     if type(Value) == "table" then
