@@ -140,7 +140,7 @@ local function startAutoLevel()
     end)
     
     local lastNPCSwitch = 0
-    local NPC_SWITCH_DELAY = 0.5  -- SUPER RÁPIDO!
+    local NPC_SWITCH_DELAY = 0  -- SUPER RÁPIDO!
     
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
