@@ -3,12 +3,12 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
 local MeeleNPCs = {
-    ["Sukuna"] = function() return workspace:FindFirstChild("SukunaMovesetNPC") end,
-    ["Gojo"] = function() return workspace:FindFirstChild("GojoMovesetNPC") end,
-    ["Qin Shi"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end
+    ["Qin Shi"] = function() return workspace:FindFirstChild("SukunaMovesetNPC") end,
+    ["Sukuna"] = function() return workspace:FindFirstChild("GojoMovesetNPC") end,
+    ["Gojo"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end
 }
 
-_G.SlowHub.SelectedMeeleNPC = _G.SlowHub.SelectedMeeleNPC or "Sukuna"
+_G.SlowHub.SelectedMeeleNPC = _G.SlowHub.SelectedMeeleNPC or "Qin Shi"
 
 local function normalizeValue(Value)
     if type(Value) == "table" then
@@ -58,7 +58,7 @@ end
 
 Tab:CreateDropdown({
     Name = "Select Meele NPC",
-    Options = {"Sukuna", "Gojo", "Qin Shi"},
+    Options = {"Qin Shi", "Sukuna", "Gojo"},
     CurrentOption = {_G.SlowHub.SelectedMeeleNPC},
     Flag = "MeeleNPCDropdown",
     Callback = function(Option)
