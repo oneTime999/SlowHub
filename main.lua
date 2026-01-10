@@ -9,6 +9,7 @@ _G.SlowHub = {
     AutoSkill = false,
     AutoChest = false,
     AutoHaki = false,
+    AutoObservation = false,
     Codes = false,
     Shop = false,
     NPC = false,
