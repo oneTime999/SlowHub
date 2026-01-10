@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local bossList = {
+    "QinShiBoss",
     "RagnaBoss",
     "JinwooBoss",
     "SukunaBoss",
@@ -13,7 +14,7 @@ local bossList = {
 }
 
 local autoFarmBossConnection = nil
-local selectedBoss = "RagnaBoss"
+local selectedBoss = "QinShiBoss"
 local isRunning = false
 
 if not _G.SlowHub.BossFarmDistance then
@@ -141,7 +142,7 @@ end
 Tab:CreateDropdown({
     Name = "Select Boss",
     Options = bossList,
-    CurrentOption = "RagnaBoss",
+    CurrentOption = "QinShiBoss",
     Flag = "SelectedBoss",
     Callback = function(Option)
         local wasRunning = isRunning
@@ -152,7 +153,7 @@ Tab:CreateDropdown({
         end
         
         if type(Option) == "table" then
-            selectedBoss = Option[1] or "RagnaBoss"
+            selectedBoss = Option[1] or "QinShiBoss"
         else
             selectedBoss = tostring(Option)
         end
