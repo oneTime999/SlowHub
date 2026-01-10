@@ -4,13 +4,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer"}
+local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", "Hollow"}
 local QuestConfig = {
     ["Thief"] = "QuestNPC1",
     ["Monkey"] = "QuestNPC3", 
     ["DesertBandit"] = "QuestNPC5",
     ["FrostRogue"] = "QuestNPC7",
-    ["Sorcerer"] = "QuestNPC9"
+    ["Sorcerer"] = "QuestNPC9",
+    ["Hollow"] = "QuestNPC11"
 }
 
 local autoFarmSelectedConnection = nil
@@ -28,7 +29,7 @@ if not _G.SlowHub.FarmHeight then
 end
 
 local function getNPC(npcName, index)
-    return workspace.NPCs:FindFirstChild(npcName .. index)
+    return workspace.NPCs:FindFirstChild(npcName .. index) or workspace.NPCs:FindFirstChild(npcName .. "1")
 end
 
 local function getNPCRootPart(npc)
@@ -142,6 +143,7 @@ local function startAutoFarmSelectedMob()
     
     local lastNPCSwitch = 0
     local NPC_TIMEOUT = 2
+    local maxNPCs = (selectedMob == "Hollow") and 1 or 5
     
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
@@ -156,7 +158,7 @@ local function startAutoFarmSelectedMob()
             local npcHumanoid = npc:FindFirstChild("Humanoid")
             
             if npcHumanoid and npcHumanoid.Health <= 0 then
-                currentNPCIndex = getNextNPC(currentNPCIndex, 5)
+                currentNPCIndex = getNextNPC(currentNPCIndex, maxNPCs)
                 lastNPCSwitch = now
                 task.wait(0.2)
                 return
@@ -199,7 +201,7 @@ local function startAutoFarmSelectedMob()
             end)
             
             if (now - lastNPCSwitch) > NPC_TIMEOUT then
-                currentNPCIndex = getNextNPC(currentNPCIndex, 5)
+                currentNPCIndex = getNextNPC(currentNPCIndex, maxNPCs)
                 lastNPCSwitch = now
             end
         end
