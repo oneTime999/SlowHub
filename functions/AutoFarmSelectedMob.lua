@@ -29,7 +29,7 @@ if not _G.SlowHub.FarmHeight then
 end
 
 local function getNPC(npcName, index)
-    return workspace.NPCs:FindFirstChild(npcName .. index) or workspace.NPCs:FindFirstChild(npcName .. "1")
+    return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
 local function getNPCRootPart(npc)
@@ -49,6 +49,15 @@ end
 
 local function getQuestForMob(mobName)
     return QuestConfig[mobName] or "QuestNPC1"
+end
+
+local function getMobConfig(mobName)
+    local maxNPCs = (mobName == "Hollow") and 1 or 5
+    return {
+        npc = mobName,
+        quest = getQuestForMob(mobName),
+        count = maxNPCs
+    }
 end
 
 local function EquipWeapon()
@@ -103,10 +112,9 @@ local function stopAutoFarmSelectedMob()
     end)
 end
 
-local function startAutoQuestLoop()
+local function startAutoQuestLoop(questName)
     if autoQuestLoop then return end
     
-    local questName = getQuestForMob(selectedMob)
     autoQuestLoop = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
             return
@@ -134,16 +142,16 @@ local function startAutoFarmSelectedMob()
     _G.SlowHub.AutoFarmSelectedMob = true
     currentNPCIndex = 1
     
+    local config = getMobConfig(selectedMob)
     EquipWeapon()
     
     -- Inicia loop de quest SE ativado
     if _G.SlowHub.AutoQuestSelectedMob then
-        startAutoQuestLoop()
+        startAutoQuestLoop(config.quest)
     end
     
     local lastNPCSwitch = 0
-    local NPC_TIMEOUT = 2
-    local maxNPCs = (selectedMob == "Hollow") and 1 or 5
+    local NPC_SWITCH_DELAY = 0  -- SUPER RÁPIDO como no Auto Farm Level!
     
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
@@ -151,18 +159,23 @@ local function startAutoFarmSelectedMob()
             return
         end
         
+        local config = getMobConfig(selectedMob)
         local now = tick()
-        local npc = getNPC(selectedMob, currentNPCIndex)
         
-        if npc and npc.Parent then
-            local npcHumanoid = npc:FindFirstChild("Humanoid")
-            
-            if npcHumanoid and npcHumanoid.Health <= 0 then
-                currentNPCIndex = getNextNPC(currentNPCIndex, maxNPCs)
+        -- Tenta encontrar NPC atual (igual ao Auto Farm Level)
+        local npc = getNPC(config.npc, currentNPCIndex)
+        local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
+        
+        -- Se NPC não existe ou está morto, troca INSTANTANEAMENTE (igual ao Auto Farm Level)
+        if not npcAlive then
+            if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
+                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCSwitch = now
-                task.wait(0.2)
                 return
             end
+        else
+            -- NPC encontrado e vivo, ataca (igual ao Auto Farm Level)
+            lastNPCSwitch = now
             
             local npcRoot = getNPCRootPart(npc)
             
@@ -189,20 +202,6 @@ local function startAutoFarmSelectedMob()
                         end
                     end)
                 end
-            end
-        else
-            pcall(function()
-                if Player.Character then
-                    local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                    if playerRoot then
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-            end)
-            
-            if (now - lastNPCSwitch) > NPC_TIMEOUT then
-                currentNPCIndex = getNextNPC(currentNPCIndex, maxNPCs)
-                lastNPCSwitch = now
             end
         end
     end)
@@ -260,10 +259,11 @@ Tab:CreateToggle({
                 return
             end
             
+            local config = getMobConfig(selectedMob)
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMob .. (_G.SlowHub.AutoQuestSelectedMob and " (with quest)" or ""),
+                    Content = "Farming: " .. config.npc .. " (Quest: " .. config.quest .. ")",
                     Duration = 4,
                     Image = 105026320884681
                 })
@@ -289,8 +289,9 @@ Tab:CreateToggle({
         _G.SlowHub.AutoQuestSelectedMob = Value
         
         if _G.SlowHub.AutoFarmSelectedMob and isRunning then
+            local config = getMobConfig(selectedMob)
             if Value then
-                startAutoQuestLoop()
+                startAutoQuestLoop(config.quest)
                 pcall(function()
                     _G.Rayfield:Notify({
                         Title = "Slow Hub",
@@ -345,5 +346,5 @@ Tab:CreateSlider({
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-    end,
+    end, 
 })
