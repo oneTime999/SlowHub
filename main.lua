@@ -33,7 +33,8 @@ local function SaveConfig()
             AutoFarmBosses = _G.SlowHub.AutoFarmBosses,
             AutoHaki = _G.SlowHub.AutoHaki,
             AntiAFK = _G.SlowHub.AntiAFK,
-            AutoSkill = _G.SlowHub.AutoSkill
+            AutoSkill = _G.SlowHub.AutoSkill,
+            AutoObservation = _G.SlowHub.AutoObservation
         }
         
         local json = HttpService:JSONEncode(data)
@@ -55,6 +56,7 @@ local function LoadConfig()
         _G.SlowHub.AutoHaki = data.AutoHaki or false
         _G.SlowHub.AntiAFK = data.AntiAFK or false
         _G.SlowHub.AutoSkill = data.AutoSkill or false
+        _G.SlowHub.AutoObservation = data.AutoObservation or false
     end)
 end
 
