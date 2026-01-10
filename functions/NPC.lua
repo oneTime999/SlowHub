@@ -11,7 +11,6 @@ local NPCs = {
     ["SummonBossNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("SummonBossNPC") end,
     ["TitlesNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("TitlesNPC") end,
     ["TraitNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("TraitNPC") end,
-    ["AizenMovesetNPC"] = function() return workspace:FindFirstChild("AizenMovesetNPC") end,
     ["ObservationBuyer"] = function() return workspace.ServiceNPCs:FindFirstChild("ObservationBuyer") end
 }
 
@@ -74,7 +73,6 @@ Tab:CreateDropdown({
         "SummonBossNPC",
         "TitlesNPC", 
         "TraitNPC",
-        "AizenMovesetNPC",
         "ObservationBuyer"
     },
     CurrentOption = {_G.SlowHub.SelectedNPC},
