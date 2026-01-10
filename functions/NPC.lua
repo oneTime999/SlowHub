@@ -11,7 +11,9 @@ local NPCs = {
     ["SummonBossNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("SummonBossNPC") end,
     ["TitlesNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("TitlesNPC") end,
     ["TraitNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("TraitNPC") end,
-    ["ObservationBuyer"] = function() return workspace.ServiceNPCs:FindFirstChild("ObservationBuyer") end
+    ["ObservationBuyer"] = function() return workspace.ServiceNPCs:FindFirstChild("ObservationBuyer") end,
+    ["ArtifactsUnlocker"] = function() return workspace.ServiceNPCs:FindFirstChild("ArtifactsUnlocker") end,
+    ["ArtifactMilestoneNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("ArtifactMilestoneNPC") end
 }
 
 _G.SlowHub.SelectedNPC = _G.SlowHub.SelectedNPC or "EnchantNPC"
@@ -73,7 +75,9 @@ Tab:CreateDropdown({
         "SummonBossNPC",
         "TitlesNPC", 
         "TraitNPC",
-        "ObservationBuyer"
+        "ObservationBuyer",
+        "ArtifactsUnlocker",
+        "ArtifactMilestoneNPC"
     },
     CurrentOption = {_G.SlowHub.SelectedNPC},
     Flag = "NPCDropdown",
