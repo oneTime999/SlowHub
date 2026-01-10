@@ -52,11 +52,11 @@ local function getQuestForMob(mobName)
 end
 
 local function getMobConfig(mobName)
-    local maxNPCs = (mobName == "Hollow") and 1 or 5
+    -- CORRIGIDO: TODOS os mobs (incluindo Hollow) têm 5 NPCs agora
     return {
         npc = mobName,
         quest = getQuestForMob(mobName),
-        count = maxNPCs
+        count = 5  -- ✅ TODOS = 5 NPCs (Hollow1, Hollow2, Hollow3, Hollow4, Hollow5)
     }
 end
 
@@ -151,7 +151,7 @@ local function startAutoFarmSelectedMob()
     end
     
     local lastNPCSwitch = 0
-    local NPC_SWITCH_DELAY = 0  -- SUPER RÁPIDO como no Auto Farm Level!
+    local NPC_SWITCH_DELAY = 0
     
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
@@ -162,11 +162,11 @@ local function startAutoFarmSelectedMob()
         local config = getMobConfig(selectedMob)
         local now = tick()
         
-        -- Tenta encontrar NPC atual (igual ao Auto Farm Level)
+        -- Procura NPC atual
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
-        -- Se NPC não existe ou está morto, troca INSTANTANEAMENTE (igual ao Auto Farm Level)
+        -- SE NPC não existe OU está morto → TROCA IMEDIATAMENTE
         if not npcAlive then
             if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
@@ -174,7 +174,7 @@ local function startAutoFarmSelectedMob()
                 return
             end
         else
-            -- NPC encontrado e vivo, ataca (igual ao Auto Farm Level)
+            -- NPC vivo → ataca
             lastNPCSwitch = now
             
             local npcRoot = getNPCRootPart(npc)
@@ -232,7 +232,7 @@ Tab:CreateDropdown({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMob .. (_G.SlowHub.AutoQuestSelectedMob and " (with quest)" or ""),
+                    Content = "Farming: " .. selectedMob .. " (5 NPCs)",
                     Duration = 4,
                     Image = 105026320884681
                 })
@@ -263,7 +263,7 @@ Tab:CreateToggle({
             pcall(function()
                 _G.Rayfield:Notify({
                     Title = "Slow Hub",
-                    Content = "Farming: " .. config.npc .. " (Quest: " .. config.quest .. ")",
+                    Content = "Farming: " .. config.npc .. " (Hollow1-Hollow5)",
                     Duration = 4,
                     Image = 105026320884681
                 })
