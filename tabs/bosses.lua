@@ -5,6 +5,10 @@ Tab:CreateSection("Boss Farm")
 
 loadstring(game:HttpGet(githubBase .. "AutoBosses.lua"))()
 
+Tab:CreateSection("Summon")
+
+loadstring(game:HttpGet(githubBase .. "AutoSummon.lua"))()
+
 Tab:CreateSection("Mini Boss Farm")
 
 loadstring(game:HttpGet(githubBase .. "MiniBossFarm.lua"))()
