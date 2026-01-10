@@ -9,7 +9,8 @@ local LevelConfig = {
     {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey", count = 5},
     {minLevel = 750, maxLevel = 1499, quest = "QuestNPC5", npc = "DesertBandit", count = 5},
     {minLevel = 1500, maxLevel = 2999, quest = "QuestNPC7", npc = "FrostRogue", count = 5},
-    {minLevel = 3000, maxLevel = 99999, quest = "QuestNPC9", npc = "Sorcerer", count = 5}
+    {minLevel = 3000, maxLevel = 5499, quest = "QuestNPC9", npc = "Sorcerer", count = 5},
+    {minLevel = 5500, maxLevel = 99999, quest = "QuestNPC11", npc = "Hollow", count = 1}
 }
 
 local autoLevelConnection = nil
@@ -50,7 +51,7 @@ local function getNextNPC(current, maxCount)
 end
 
 local function getNPC(npcName, index)
-    return workspace.NPCs:FindFirstChild(npcName .. index)
+    return workspace.NPCs:FindFirstChild(npcName .. index) or workspace.NPCs:FindFirstChild(npcName .. "1")
 end
 
 local function getNPCRootPart(npc)
