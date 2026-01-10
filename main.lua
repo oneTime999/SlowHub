@@ -3,6 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 _G.SlowHub = {
     AutoFarmLevel = false,
     AutoFarmBosses = false,
+    AutoSummon = false,
     AutoFarmMiniBosses = false,
     AutoFarmSelectedMob = false,
     AutoSkill = false,
