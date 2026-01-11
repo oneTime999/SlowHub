@@ -1,9 +1,4 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-Fluent:Notify({
-    Title = "Fluent",
-    Content = "Successfully loaded.",
-    Duration = 5
-})
 
 _G.SlowHub = {
     AutoFarmLevel = false,
@@ -61,18 +56,15 @@ end
 _G.SaveConfig = SaveConfig
 LoadConfig()
 
--- Configuração CORRETA do Fluent com tema funcionando
 local Window = Fluent:CreateWindow({
     Title = "Slow Hub",
     SubTitle = "by oneTime and Vagner",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
+    Acrylic = false,
+    Theme = "Dark",
     MinimizeKey = Enum.KeyCode.RightControl
 })
-
--- Aplica o tema ESCURO corretamente
-Fluent:SetLibraryTheme("Dark")
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
@@ -89,8 +81,6 @@ _G.StatsTab = Tabs.Stats
 _G.MiscTab = Tabs.Misc
 _G.Fluent = Fluent
 
--- Carrega as abas APENAS DEPOIS da janela ser criada
-task.wait(0.5) -- Pequeno delay para garantir que tudo carregou
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
