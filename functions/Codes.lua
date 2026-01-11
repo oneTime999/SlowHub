@@ -7,6 +7,8 @@ local codes = {
     "UPDATE1",
     "ARTIFACTS",
     "5KLIKES",
+    "MANYRESTARTS",
+    "QOLUPDATEVERYSOON",
     "DELAYSORRY"
 }
 
