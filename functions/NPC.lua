@@ -18,13 +18,6 @@ local NPCs = {
 
 _G.SlowHub.SelectedNPC = _G.SlowHub.SelectedNPC or "EnchantNPC"
 
-local function normalizeValue(Value)
-    if type(Value) == "table" then
-        return tostring(Value[1] or "")
-    end
-    return tostring(Value or "")
-end
-
 local function getModelRoot(model)
     if not model then return nil end
     
@@ -64,9 +57,9 @@ local function teleportToNPC()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select NPC",
-    Options = {
+local Dropdown = Tab:AddDropdown("SelectNPC", {
+    Title = "Select NPC",
+    Values = {
         "EnchantNPC", 
         "ExchangeNPC", 
         "GroupRewardNPC", 
@@ -79,18 +72,17 @@ Tab:CreateDropdown({
         "ArtifactsUnlocker",
         "ArtifactMilestoneNPC"
     },
-    CurrentOption = {_G.SlowHub.SelectedNPC},
-    Flag = "NPCDropdown",
-    Callback = function(Option)
+    Default = 1, -- EnchantNPC é o primeiro
+    Callback = function(Value)
         pcall(function()
-            _G.SlowHub.SelectedNPC = normalizeValue(Option)
+            _G.SlowHub.SelectedNPC = tostring(Value)
         end)
     end
 })
 
-Tab:CreateButton({
-    Name = "Teleport to NPC",
+local Button = Tab:AddButton({
+    Title = "Teleport to NPC",
     Callback = function()
         teleportToNPC()
-    end,
+    end
 })
