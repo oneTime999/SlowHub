@@ -160,12 +160,11 @@ local function startAutoFarmMiniBoss()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Mini Boss",
-    Options = miniBossList,
-    CurrentOption = "ThiefBoss",
-    Flag = "SelectedMiniBoss",
-    Callback = function(Option)
+local Dropdown = Tab:AddDropdown("SelectMiniBoss", {
+    Title = "Select Mini Boss",
+    Values = miniBossList,
+    Default = 1, -- ThiefBoss é o primeiro
+    Callback = function(Value)
         local wasRunning = isRunning
         
         if wasRunning then
@@ -173,39 +172,32 @@ Tab:CreateDropdown({
             task.wait(0.3)
         end
         
-        if type(Option) == "table" then
-            selectedMiniBoss = Option[1] or "ThiefBoss"
-        else
-            selectedMiniBoss = tostring(Option)
-        end
+        selectedMiniBoss = tostring(Value)
         
         if wasRunning then
             startAutoFarmMiniBoss()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Mini Boss: " .. selectedMiniBoss .. " (Quest: " .. getConfig().quest .. ")",
-                    Duration = 4,
-                    Image = 105026320884681
+                    Duration = 4
                 })
             end)
         end
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Farm Mini Boss",
-    CurrentValue = _G.SlowHub.AutoFarmMiniBosses or false,
-    Flag = "AutoFarmMiniBossToggle",
+local Toggle = Tab:AddToggle("AutoFarmMiniBoss", {
+    Title = "Auto Farm Mini Boss",
+    Default = _G.SlowHub.AutoFarmMiniBosses or false,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.Fluent:Notify({
                         Title = "Slow Hub",
                         Content = "Selecione uma arma primeiro!",
-                        Duration = 5,
-                        Image = 105026320884681
+                        Duration = 5
                     })
                 end)
                 return
@@ -213,11 +205,10 @@ Tab:CreateToggle({
             
             local config = getConfig()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Farming: " .. selectedMiniBoss .. " (Quest: " .. config.quest .. ")",
-                    Duration = 4,
-                    Image = 105026320884681
+                    Duration = 4
                 })
             end)
             
@@ -233,30 +224,28 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Mini Boss Distance",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.MiniBossFarmDistance,
-    Flag = "MiniBossFarmDistanceSlider",
+local DistanceSlider = Tab:AddSlider("MiniBossDistance", {
+    Title = "Mini Boss Distance (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.MiniBossFarmDistance,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.MiniBossFarmDistance = Value
         if _G.SaveConfig then _G.SaveConfig() end
-    end,
+    end
 })
 
-Tab:CreateSlider({
-    Name = "Mini Boss Height",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.MiniBossFarmHeight,
-    Flag = "MiniBossFarmHeightSlider",
+local HeightSlider = Tab:AddSlider("MiniBossHeight", {
+    Title = "Mini Boss Height (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.MiniBossFarmHeight,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.MiniBossFarmHeight = Value
         if _G.SaveConfig then _G.SaveConfig() end
-    end,
+    end
 })
 
 if _G.SlowHub.AutoFarmMiniBosses and _G.SlowHub.SelectedWeapon then
