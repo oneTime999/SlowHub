@@ -64,53 +64,44 @@ local function startAutoSummonBoss()
 end
 
 -- Dropdown para selecionar Boss
-Tab:CreateDropdown({
-    Name = "Select Boss",
-    Options = BossList,
-    CurrentOption = "QinShiBoss",
-    Flag = "BossDropdown",
-    Callback = function(Option)
-        if type(Option) == "table" then
-            selectedBoss = Option[1] or "QinShiBoss"
-        else
-            selectedBoss = tostring(Option)
-        end
+local Dropdown = Tab:AddDropdown("SelectBossSummon", {
+    Title = "Select Boss",
+    Values = BossList,
+    Default = 1, -- QinShiBoss é o primeiro
+    Callback = function(Value)
+        selectedBoss = tostring(Value)
         
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.Fluent:Notify({
                 Title = "Slow Hub",
                 Content = "Selected: " .. selectedBoss,
-                Duration = 2.5,
-                Image = 105026320884681
+                Duration = 2.5
             })
         end)
     end
 })
 
 -- Toggle Auto Summon Boss (LOOP CONTÍNUO)
-Tab:CreateToggle({
-    Name = "Auto Summon Boss",
-    CurrentValue = false,
-    Flag = "AutoSummonBossToggle",
+local Toggle = Tab:AddToggle("AutoSummonBoss", {
+    Title = "Auto Summon Boss",
+    Default = false,
     Callback = function(Value)
         if Value then
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Auto Summoning: " .. selectedBoss .. " (LOOP)",
-                    Duration = 3,
-                    Image = 105026320884681
+                    Duration = 3
                 })
             end)
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Auto Summon stopped",
-                    Duration = 2,
-                    Image = 105026320884681
+                    Duration = 2
                 })
             end)
         end
