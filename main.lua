@@ -74,9 +74,6 @@ local Tabs = {
     Misc = Window:AddTab({ Title = "Misc", Icon = "settings" })
 }
 
-Fluent.Options.Acrylic = false
-Window.Acrylic = false
-
 _G.MainTab = Tabs.Main
 _G.BossesTab = Tabs.Bosses
 _G.ShopTab = Tabs.Shop
@@ -91,6 +88,19 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/ma
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
 Window:SelectTab(1)
+
+task.spawn(function()
+    while task.wait(1) do
+        if Window.Instance then
+            for _, v in pairs(Window.Instance:GetDescendants()) do
+                if v:IsA("Frame") and (v.Name == "Main" or v.Name == "Container") then
+                    v.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+                    v.BackgroundTransparency = 0
+                end
+            end
+        end
+    end
+end)
 
 task.spawn(function()
     while task.wait(30) do
