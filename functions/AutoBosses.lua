@@ -14,14 +14,10 @@ local bossList = {
     "SaberBoss"
 }
 
--- Sistema de seleção múltipla de bosses
-local selectedBosses = {}
-for _, boss in ipairs(bossList) do
-    selectedBosses[boss] = false
-end
+-- Tabela para rastrear quais bosses estão selecionados
+_G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
 
 local autoFarmBossConnection = nil
-local currentBossIndex = 1
 local isRunning = false
 
 if not _G.SlowHub.BossFarmDistance then
@@ -32,37 +28,19 @@ if not _G.SlowHub.BossFarmHeight then
     _G.SlowHub.BossFarmHeight = 5
 end
 
--- Retorna lista de bosses selecionados
-local function getSelectedBosses()
-    local selected = {}
-    for boss, enabled in pairs(selectedBosses) do
-        if enabled then
-            table.insert(selected, boss)
-        end
-    end
-    return selected
-end
-
--- Pega o próximo boss vivo da lista
-local function getNextAliveBoss()
-    local selected = getSelectedBosses()
-    if #selected == 0 then return nil end
-    
-    -- Procura boss vivo começando do índice atual
-    for i = 1, #selected do
-        local index = ((currentBossIndex - 1 + i - 1) % #selected) + 1
-        local bossName = selected[index]
-        local boss = workspace.NPCs:FindFirstChild(bossName)
-        
-        if boss and boss.Parent then
-            local humanoid = boss:FindFirstChild("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                currentBossIndex = index
-                return boss
+-- Busca primeiro boss vivo e selecionado
+local function getAliveBoss()
+    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+        if isSelected then
+            local boss = workspace.NPCs:FindFirstChild(bossName)
+            if boss and boss.Parent then
+                local humanoid = boss:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    return boss
+                end
             end
         end
     end
-    
     return nil
 end
 
@@ -92,7 +70,7 @@ local function EquipWeapon()
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
                 character.Humanoid:EquipTool(weapon)
-                wait(0.1)
+                task.wait(0.1)
             end
         end
     end)
@@ -124,17 +102,11 @@ end
 local function startAutoFarmBoss()
     if isRunning then
         stopAutoFarmBoss()
-        wait(0.3)
-    end
-    
-    local selected = getSelectedBosses()
-    if #selected == 0 then
-        return
+        task.wait(0.3)
     end
     
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
-    currentBossIndex = 1
     
     EquipWeapon()
     
@@ -144,83 +116,100 @@ local function startAutoFarmBoss()
             return
         end
         
-        local boss = getNextAliveBoss()
+        -- Busca boss vivo
+        local boss = getAliveBoss()
         
-        if boss and boss.Parent then
-            local bossHumanoid = boss:FindFirstChild("Humanoid")
+        if not boss then
+            return -- Nenhum boss vivo encontrado, espera
+        end
+        
+        local bossHumanoid = boss:FindFirstChild("Humanoid")
+        if not bossHumanoid or bossHumanoid.Health <= 0 then
+            return
+        end
+        
+        local bossRoot = getBossRootPart(boss)
+        
+        if bossRoot and bossRoot.Parent and Player.Character then
+            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = Player.Character:FindFirstChild("Humanoid")
             
-            if bossHumanoid and bossHumanoid.Health <= 0 then
-                return
-            end
-            
-            local bossRoot = getBossRootPart(boss)
-            
-            if bossRoot and bossRoot.Parent and Player.Character then
-                local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                local humanoid = Player.Character:FindFirstChild("Humanoid")
-                
-                if playerRoot and humanoid and humanoid.Health > 0 then
-                    pcall(function()
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        
-                        local targetCFrame = bossRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
-                        
-                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                        if distance > 3 or distance < 1 then
-                            playerRoot.CFrame = offsetPosition
-                        end
-                        
-                        EquipWeapon()
-                        
-                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                    end)
-                end
+            if playerRoot and humanoid and humanoid.Health > 0 then
+                pcall(function()
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    
+                    local targetCFrame = bossRoot.CFrame
+                    local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
+                    
+                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                    if distance > 3 or distance < 1 then
+                        playerRoot.CFrame = offsetPosition
+                    end
+                    
+                    EquipWeapon()
+                    
+                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                end)
             end
         end
     end)
 end
 
--- Cria toggles individuais para cada boss
+-- Seção de seleção de bosses
 Tab:AddParagraph({
-    Title = "Select Bosses to Farm",
-    Content = "Enable multiple bosses"
+    Title = "Select Bosses",
+    Content = "Choose which bosses to farm"
 })
 
+-- Cria um toggle para cada boss
 for _, bossName in ipairs(bossList) do
-    Tab:AddToggle("Boss_" .. bossName, {
+    local Toggle = Tab:AddToggle("SelectBoss_" .. bossName, {
         Title = bossName,
         Default = false,
         Callback = function(Value)
-            selectedBosses[bossName] = Value
+            _G.SlowHub.SelectedBosses[bossName] = Value
             
-            -- Se está farmando, reinicia para aplicar mudanças
-            if isRunning then
-                stopAutoFarmBoss()
-                wait(0.1)
-                if #getSelectedBosses() > 0 then
-                    startAutoFarmBoss()
-                end
+            if _G.SaveConfig then
+                _G.SaveConfig()
             end
         end
     })
 end
 
+-- Seção de controle
 Tab:AddParagraph({
     Title = "Farm Control",
     Content = ""
 })
 
-local Toggle = Tab:AddToggle("AutoFarmBoss", {
+local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
     Title = "Auto Farm Selected Bosses",
-    Default = _G.SlowHub.AutoFarmBosses,
+    Default = false,
     Callback = function(Value)
         if Value then
+            -- Verifica se tem arma selecionada
             if not _G.SlowHub.SelectedWeapon then
+                _G.SlowHub.AutoFarmBosses = false
+                if FarmToggle then
+                    FarmToggle:SetValue(false)
+                end
                 return
             end
             
-            if #getSelectedBosses() == 0 then
+            -- Verifica se pelo menos 1 boss foi selecionado
+            local hasSelected = false
+            for _, selected in pairs(_G.SlowHub.SelectedBosses) do
+                if selected then
+                    hasSelected = true
+                    break
+                end
+            end
+            
+            if not hasSelected then
+                _G.SlowHub.AutoFarmBosses = false
+                if FarmToggle then
+                    FarmToggle:SetValue(false)
+                end
                 return
             end
             
@@ -266,6 +255,7 @@ local HeightSlider = Tab:AddSlider("BossFarmHeight", {
     end
 })
 
+-- Auto-start se estava ativo
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
