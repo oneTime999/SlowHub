@@ -47,10 +47,9 @@ local function startAntiAfk()
     end)
 end
 
-Tab:CreateToggle({
-    Name = "Anti AFK",
-    CurrentValue = _G.SlowHub.AntiAFK,
-    Flag = "AntiAFKToggle",
+local Toggle = Tab:AddToggle("AntiAFK", {
+    Title = "Anti AFK",
+    Default = _G.SlowHub.AntiAFK,
     Callback = function(Value)
         if Value then
             startAntiAfk()
