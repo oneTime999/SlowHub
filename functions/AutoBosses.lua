@@ -156,13 +156,6 @@ local Dropdown = Tab:AddDropdown("SelectBoss", {
         
         if wasRunning then
             startAutoFarmBoss()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Boss changed to: " .. selectedBoss,
-                    Duration = 3
-                })
-            end)
         end
     end
 })
@@ -173,23 +166,8 @@ local Toggle = Tab:AddToggle("AutoFarmBoss", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                pcall(function()
-                    _G.Fluent:Notify({
-                        Title = "Slow Hub",
-                        Content = "Please select a weapon first!",
-                        Duration = 5
-                    })
-                end)
                 return
             end
-            
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Farming Boss: " .. selectedBoss,
-                    Duration = 3
-                })
-            end)
             
             startAutoFarmBoss()
         else
@@ -215,14 +193,6 @@ local DistanceSlider = Tab:AddSlider("BossFarmDistance", {
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-        
-        pcall(function()
-            _G.Fluent:Notify({
-                Title = "Slow Hub",
-                Content = "Boss Distance: " .. Value .. " studs",
-                Duration = 2
-            })
-        end)
     end
 })
 
@@ -238,14 +208,6 @@ local HeightSlider = Tab:AddSlider("BossFarmHeight", {
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-        
-        pcall(function()
-            _G.Fluent:Notify({
-                Title = "Slow Hub",
-                Content = "Boss Height: " .. Value .. " studs",
-                Duration = 2
-            })
-        end)
     end
 })
 
