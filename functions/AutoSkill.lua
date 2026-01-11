@@ -64,8 +64,8 @@ local function updateAutoSkill()
 end
 
 -- UI AUTO SKILL TOGGLES
-Tab:CreateToggle({
-    Name = "Auto Skill Z",
+local ToggleZ = Tab:AddToggle("AutoSkillZ", {
+    Title = "Auto Skill Z",
     Default = false,
     Callback = function(value)
         _G.SlowHub.AutoSkillZ = value
@@ -73,8 +73,8 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Skill X",
+local ToggleX = Tab:AddToggle("AutoSkillX", {
+    Title = "Auto Skill X",
     Default = false,
     Callback = function(value)
         _G.SlowHub.AutoSkillX = value
@@ -82,8 +82,8 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Skill C",
+local ToggleC = Tab:AddToggle("AutoSkillC", {
+    Title = "Auto Skill C",
     Default = false,
     Callback = function(value)
         _G.SlowHub.AutoSkillC = value
@@ -91,8 +91,8 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Skill V",
+local ToggleV = Tab:AddToggle("AutoSkillV", {
+    Title = "Auto Skill V",
     Default = false,
     Callback = function(value)
         _G.SlowHub.AutoSkillV = value
