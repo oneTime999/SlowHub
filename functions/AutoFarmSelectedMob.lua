@@ -207,12 +207,11 @@ local function startAutoFarmSelectedMob()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Mob",
-    Options = MobList,
-    CurrentOption = "Thief",
-    Flag = "SelectedMobDropdown",
-    Callback = function(Option)
+local Dropdown = Tab:AddDropdown("SelectMob", {
+    Title = "Select Mob",
+    Values = MobList,
+    Default = 1, -- Thief é o primeiro
+    Callback = function(Value)
         local wasRunning = isRunning
         
         if wasRunning then
@@ -220,40 +219,33 @@ Tab:CreateDropdown({
             task.wait(0.3)
         end
         
-        if type(Option) == "table" then
-            selectedMob = Option[1] or "Thief"
-        else
-            selectedMob = tostring(Option)
-        end
+        selectedMob = tostring(Value)
         currentNPCIndex = 1
         
         if wasRunning then
             startAutoFarmSelectedMob()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Farming: " .. selectedMob .. " (5 NPCs)",
-                    Duration = 4,
-                    Image = 105026320884681
+                    Duration = 4
                 })
             end)
         end
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Farm Selected Mob",
-    CurrentValue = false,
-    Flag = "AutoFarmSelectedMobToggle",
+local Toggle = Tab:AddToggle("AutoFarmSelectedMob", {
+    Title = "Auto Farm Selected Mob",
+    Default = false,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.Fluent:Notify({
                         Title = "Slow Hub",
                         Content = "Select a weapon first!",
-                        Duration = 5,
-                        Image = 105026320884681
+                        Duration = 5
                     })
                 end)
                 return
@@ -261,11 +253,10 @@ Tab:CreateToggle({
             
             local config = getMobConfig(selectedMob)
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Farming: " .. config.npc .. " (Hollow1-Hollow5)",
-                    Duration = 4,
-                    Image = 105026320884681
+                    Duration = 4
                 })
             end)
             
@@ -281,10 +272,9 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Quest Selected Mob",
-    CurrentValue = false,
-    Flag = "AutoQuestSelectedMobToggle",
+local QuestToggle = Tab:AddToggle("AutoQuestSelectedMob", {
+    Title = "Auto Quest Selected Mob",
+    Default = false,
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         
@@ -293,21 +283,19 @@ Tab:CreateToggle({
             if Value then
                 startAutoQuestLoop(config.quest)
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.Fluent:Notify({
                         Title = "Slow Hub",
                         Content = "Quest enabled for " .. selectedMob,
-                        Duration = 3,
-                        Image = 105026320884681
+                        Duration = 3
                     })
                 end)
             else
                 stopAutoQuestLoop()
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.Fluent:Notify({
                         Title = "Slow Hub",
                         Content = "Quest disabled - pure farming",
-                        Duration = 3,
-                        Image = 105026320884681
+                        Duration = 3
                     })
                 end)
             end
@@ -319,32 +307,30 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Farm Distance",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.FarmDistance,
-    Flag = "FarmDistanceSlider",
+local DistanceSlider = Tab:AddSlider("FarmDistance", {
+    Title = "Farm Distance (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmDistance,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-    end,
+    end
 })
 
-Tab:CreateSlider({
-    Name = "Farm Height",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.FarmHeight,
-    Flag = "FarmHeightSlider",
+local HeightSlider = Tab:AddSlider("FarmHeight", {
+    Title = "Farm Height (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmHeight,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-    end, 
+    end
 })
