@@ -1,7 +1,5 @@
--- Carregando Fluent
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- Configurações globais
 _G.SlowHub = {
     AutoFarmLevel = false,
     AutoFarmBosses = false,
@@ -20,7 +18,6 @@ _G.SlowHub = {
     SelectedWeapon = nil
 }
 
--- Sistema de salvamento
 local HttpService = game:GetService("HttpService")
 local configFolder = "SlowHub"
 local configFile = configFolder .. "/config.json"
@@ -39,21 +36,14 @@ local function SaveConfig()
             AutoSkill = _G.SlowHub.AutoSkill,
             AutoObservation = _G.SlowHub.AutoObservation
         }
-        
-        local json = HttpService:JSONEncode(data)
-        writefile(configFile, json)
+        writefile(configFile, HttpService:JSONEncode(data))
     end)
 end
 
 local function LoadConfig()
-    if not isfile(configFile) then
-        return
-    end
-    
+    if not isfile(configFile) then return end
     pcall(function()
-        local json = readfile(configFile)
-        local data = HttpService:JSONDecode(json)
-        
+        local data = HttpService:JSONDecode(readfile(configFile))
         _G.SlowHub.AutoFarmLevel = data.AutoFarmLevel or false
         _G.SlowHub.AutoFarmBosses = data.AutoFarmBosses or false
         _G.SlowHub.AutoHaki = data.AutoHaki or false
@@ -64,21 +54,18 @@ local function LoadConfig()
 end
 
 _G.SaveConfig = SaveConfig
-
 LoadConfig()
 
--- Criando a janela
 local Window = Fluent:CreateWindow({
     Title = "Slow Hub",
     SubTitle = "by oneTime and Vagner",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
+    Acrylic = false,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
+    MinimizeKey = Enum.KeyCode.RightControl
 })
 
--- Criando as tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Bosses = Window:AddTab({ Title = "Bosses", Icon = "skull" }),
@@ -87,42 +74,29 @@ local Tabs = {
     Misc = Window:AddTab({ Title = "Misc", Icon = "settings" })
 }
 
--- Salvando referências globais para uso nos outros scripts
 _G.MainTab = Tabs.Main
 _G.BossesTab = Tabs.Bosses
 _G.ShopTab = Tabs.Shop
 _G.StatsTab = Tabs.Stats
 _G.MiscTab = Tabs.Misc
 _G.Fluent = Fluent
-_G.Options = Fluent.Options
 
--- Carregando os scripts das tabs
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
--- Auto-save a cada 30 segundos
+Window:SelectTab(1)
+
 task.spawn(function()
     while task.wait(30) do
         SaveConfig()
     end
 end)
 
--- Salvar quando a UI for fechada
-local GUI = game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("ScreenGui", 10)
-if GUI then
-    game:GetService("RunService").Heartbeat:Connect(function()
-        if not GUI.Parent then
-            SaveConfig()
-        end
-    end)
-end
-
--- Notificação de carregamento
 Fluent:Notify({
     Title = "Slow Hub",
-    Content = "Successfully loaded!",
+    Content = "Script loaded successfully!",
     Duration = 5
 })
