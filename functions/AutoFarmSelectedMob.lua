@@ -224,13 +224,6 @@ local Dropdown = Tab:AddDropdown("SelectMob", {
         
         if wasRunning then
             startAutoFarmSelectedMob()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMob .. " (5 NPCs)",
-                    Duration = 4
-                })
-            end)
         end
     end
 })
@@ -241,24 +234,8 @@ local Toggle = Tab:AddToggle("AutoFarmSelectedMob", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                pcall(function()
-                    _G.Fluent:Notify({
-                        Title = "Slow Hub",
-                        Content = "Select a weapon first!",
-                        Duration = 5
-                    })
-                end)
                 return
             end
-            
-            local config = getMobConfig(selectedMob)
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Farming: " .. config.npc .. " (Hollow1-Hollow5)",
-                    Duration = 4
-                })
-            end)
             
             startAutoFarmSelectedMob()
         else
@@ -282,22 +259,8 @@ local QuestToggle = Tab:AddToggle("AutoQuestSelectedMob", {
             local config = getMobConfig(selectedMob)
             if Value then
                 startAutoQuestLoop(config.quest)
-                pcall(function()
-                    _G.Fluent:Notify({
-                        Title = "Slow Hub",
-                        Content = "Quest enabled for " .. selectedMob,
-                        Duration = 3
-                    })
-                end)
             else
                 stopAutoQuestLoop()
-                pcall(function()
-                    _G.Fluent:Notify({
-                        Title = "Slow Hub",
-                        Content = "Quest disabled - pure farming",
-                        Duration = 3
-                    })
-                end)
             end
         end
         
