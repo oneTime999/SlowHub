@@ -202,24 +202,8 @@ local Toggle = Tab:AddToggle("AutoFarmLevel", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                pcall(function()
-                    _G.Fluent:Notify({
-                        Title = "Slow Hub",
-                        Content = "Select a weapon first!",
-                        Duration = 5
-                    })
-                end)
                 return
             end
-            
-            local config = GetCurrentConfig()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Farming: " .. config.npc .. " (Quest: " .. config.quest .. ")",
-                    Duration = 4
-                })
-            end)
             
             startAutoLevel()
         else
