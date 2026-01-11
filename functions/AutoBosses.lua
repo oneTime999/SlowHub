@@ -18,11 +18,13 @@ _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
 
 local autoFarmBossConnection = nil
 local isRunning = false
+local currentTargetBoss = nil
 
 _G.SlowHub.BossFarmDistance = _G.SlowHub.BossFarmDistance or 8
 _G.SlowHub.BossFarmHeight = _G.SlowHub.BossFarmHeight or 5
 
-local function getAliveBoss()
+local function getAllAliveBosses()
+    local aliveBosses = {}
     local possibleFolders = {"workspace.NPCs", "workspace", "workspace.Enemies"}
     
     for _, folderPath in ipairs(possibleFolders) do
@@ -33,8 +35,8 @@ local function getAliveBoss()
                     local boss = folder:FindFirstChild(bossName, true)
                     if boss and boss.Parent then
                         local humanoid = boss:FindFirstChildOfClass("Humanoid")
-                        if humanoid and humanoid.Health > 0 and humanoid.Health ~= humanoid.MaxHealth * 0 then
-                            return boss
+                        if humanoid and humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
+                            table.insert(aliveBosses, boss)
                         end
                     end
                 end
@@ -42,21 +44,31 @@ local function getAliveBoss()
         end
     end
     
-    for _, folderPath in ipairs(possibleFolders) do
-        local folder = workspace:FindFirstChild(folderPath:match("([^.]+)$"), true)
-        if folder then
-            for _, obj in pairs(folder:GetDescendants()) do
-                if obj:IsA("Model") and obj.Name:find("Boss") then
-                    local humanoid = obj:FindFirstChildOfClass("Humanoid")
-                    if humanoid and humanoid.Health > 0 and humanoid.Health ~= humanoid.MaxHealth * 0 then
-                        return obj
-                    end
-                end
-            end
+    return aliveBosses
+end
+
+local function getNextTargetBoss(currentBoss)
+    local aliveBosses = getAllAliveBosses()
+    
+    if #aliveBosses == 0 then
+        return nil
+    end
+    
+    if #aliveBosses == 1 then
+        return aliveBosses[1]
+    end
+    
+    if not currentBoss then
+        return aliveBosses[1]
+    end
+    
+    for i, boss in ipairs(aliveBosses) do
+        if boss ~= currentBoss then
+            return boss
         end
     end
     
-    return nil
+    return aliveBosses[1]
 end
 
 local function getBossRootPart(boss)
@@ -97,6 +109,7 @@ end
 
 local function stopAutoFarmBoss()
     isRunning = false
+    currentTargetBoss = nil
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -122,6 +135,7 @@ local function startAutoFarmBoss()
     
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
+    currentTargetBoss = nil
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         pcall(function()
@@ -144,45 +158,57 @@ local function startAutoFarmBoss()
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             if not playerRoot then return end
             
-            local boss = getAliveBoss()
+            local aliveBosses = getAllAliveBosses()
             
-            if boss then
-                local bossHumanoid = boss:FindFirstChildOfClass("Humanoid")
-                if bossHumanoid and bossHumanoid.Health > 0 then
-                    local bossRoot = getBossRootPart(boss)
-                    
-                    if bossRoot then
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            if #aliveBosses > 0 then
+                local targetBoss = getNextTargetBoss(currentTargetBoss)
+                
+                if targetBoss and targetBoss ~= currentTargetBoss then
+                    currentTargetBoss = targetBoss
+                elseif targetBoss == nil then
+                    currentTargetBoss = nil
+                end
+                
+                if currentTargetBoss then
+                    local bossHumanoid = currentTargetBoss:FindFirstChildOfClass("Humanoid")
+                    if bossHumanoid and bossHumanoid.Health > 0 then
+                        local bossRoot = getBossRootPart(currentTargetBoss)
                         
-                        local targetCFrame = bossRoot.CFrame
-                        local distanceOffset = _G.SlowHub.BossFarmDistance
-                        local heightOffset = _G.SlowHub.BossFarmHeight
-                        
-                        local offsetCFrame = targetCFrame * CFrame.new(
-                            math.random(-distanceOffset, distanceOffset) * 0.3,
-                            heightOffset,
-                            math.random(-distanceOffset, distanceOffset)
-                        )
-                        
-                        local distance = (playerRoot.Position - offsetCFrame.Position).Magnitude
-                        if distance > 5 or distance < 1 then
-                            playerRoot.CFrame = offsetCFrame
+                        if bossRoot then
+                            playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            
+                            local targetCFrame = bossRoot.CFrame
+                            local distanceOffset = _G.SlowHub.BossFarmDistance
+                            local heightOffset = _G.SlowHub.BossFarmHeight
+                            
+                            local offsetCFrame = targetCFrame * CFrame.new(
+                                math.random(-distanceOffset, distanceOffset) * 0.3,
+                                heightOffset,
+                                math.random(-distanceOffset, distanceOffset)
+                            )
+                            
+                            local distance = (playerRoot.Position - offsetCFrame.Position).Magnitude
+                            if distance > 5 or distance < 1 then
+                                playerRoot.CFrame = offsetCFrame
+                            end
+                            
+                            EquipWeapon()
+                            task.wait(0.1)
+                            
+                            pcall(function()
+                                if ReplicatedStorage:FindFirstChild("CombatSystem") then
+                                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                                end
+                            end)
+                            
+                            pcall(function()
+                                if ReplicatedStorage:FindFirstChild("Remotes") then
+                                    ReplicatedStorage.Remotes.Attack:FireServer(currentTargetBoss)
+                                end
+                            end)
                         end
-                        
-                        EquipWeapon()
-                        task.wait(0.1)
-                        
-                        pcall(function()
-                            if ReplicatedStorage:FindFirstChild("CombatSystem") then
-                                ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                            end
-                        end)
-                        
-                        pcall(function()
-                            if ReplicatedStorage:FindFirstChild("Remotes") then
-                                ReplicatedStorage.Remotes.Attack:FireServer(boss)
-                            end
-                        end)
+                    else
+                        currentTargetBoss = nil
                     end
                 end
             end
@@ -192,7 +218,7 @@ end
 
 Tab:AddParagraph({
     Title = "Select Bosses", 
-    Content = "Choose which bosses to farm (farms all bosses if none selected)"
+    Content = "Select multiple bosses to farm. Cycles between alive ones automatically."
 })
 
 for _, bossName in ipairs(bossList) do
@@ -208,11 +234,11 @@ end
 
 Tab:AddParagraph({
     Title = "Farm Control",
-    Content = "Auto farm controls"
+    Content = "Multi-boss auto farm with automatic target switching"
 })
 
 local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Auto Farm Bosses",
+    Title = "Multi Boss Farm",
     Default = false,
     Callback = function(Value)
         if Value then
