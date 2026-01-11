@@ -70,14 +70,6 @@ local Dropdown = Tab:AddDropdown("SelectBossSummon", {
     Default = 1, -- QinShiBoss é o primeiro
     Callback = function(Value)
         selectedBoss = tostring(Value)
-        
-        pcall(function()
-            _G.Fluent:Notify({
-                Title = "Slow Hub",
-                Content = "Selected: " .. selectedBoss,
-                Duration = 2.5
-            })
-        end)
     end
 })
 
@@ -87,23 +79,9 @@ local Toggle = Tab:AddToggle("AutoSummonBoss", {
     Default = false,
     Callback = function(Value)
         if Value then
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Auto Summoning: " .. selectedBoss .. " (LOOP)",
-                    Duration = 3
-                })
-            end)
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Auto Summon stopped",
-                    Duration = 2
-                })
-            end)
         end
         
         _G.SlowHub.AutoSummonBoss = Value
