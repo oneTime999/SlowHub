@@ -14,8 +14,14 @@ local bossList = {
     "SaberBoss"
 }
 
+-- Sistema de seleção múltipla de bosses
+local selectedBosses = {}
+for _, boss in ipairs(bossList) do
+    selectedBosses[boss] = false
+end
+
 local autoFarmBossConnection = nil
-local selectedBoss = "AizenBoss"
+local currentBossIndex = 1
 local isRunning = false
 
 if not _G.SlowHub.BossFarmDistance then
@@ -26,9 +32,38 @@ if not _G.SlowHub.BossFarmHeight then
     _G.SlowHub.BossFarmHeight = 5
 end
 
-local function getBoss()
-    local bossName = tostring(selectedBoss)
-    return workspace.NPCs:FindFirstChild(bossName)
+-- Retorna lista de bosses selecionados
+local function getSelectedBosses()
+    local selected = {}
+    for boss, enabled in pairs(selectedBosses) do
+        if enabled then
+            table.insert(selected, boss)
+        end
+    end
+    return selected
+end
+
+-- Pega o próximo boss vivo da lista
+local function getNextAliveBoss()
+    local selected = getSelectedBosses()
+    if #selected == 0 then return nil end
+    
+    -- Procura boss vivo começando do índice atual
+    for i = 1, #selected do
+        local index = ((currentBossIndex - 1 + i - 1) % #selected) + 1
+        local bossName = selected[index]
+        local boss = workspace.NPCs:FindFirstChild(bossName)
+        
+        if boss and boss.Parent then
+            local humanoid = boss:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                currentBossIndex = index
+                return boss
+            end
+        end
+    end
+    
+    return nil
 end
 
 local function getBossRootPart(boss)
@@ -92,8 +127,14 @@ local function startAutoFarmBoss()
         wait(0.3)
     end
     
+    local selected = getSelectedBosses()
+    if #selected == 0 then
+        return
+    end
+    
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
+    currentBossIndex = 1
     
     EquipWeapon()
     
@@ -103,7 +144,7 @@ local function startAutoFarmBoss()
             return
         end
         
-        local boss = getBoss()
+        local boss = getNextAliveBoss()
         
         if boss and boss.Parent then
             local bossHumanoid = boss:FindFirstChild("Humanoid")
@@ -140,32 +181,46 @@ local function startAutoFarmBoss()
     end)
 end
 
-local Dropdown = Tab:AddDropdown("SelectBoss", {
-    Title = "Select Boss",
-    Values = bossList,
-    Default = 1, -- AizenBoss é o primeiro da lista
-    Callback = function(Value)
-        local wasRunning = isRunning
-        
-        if wasRunning then
-            stopAutoFarmBoss()
-            wait(0.3)
+-- Cria toggles individuais para cada boss
+Tab:AddParagraph({
+    Title = "Select Bosses to Farm",
+    Content = "Enable multiple bosses"
+})
+
+for _, bossName in ipairs(bossList) do
+    Tab:AddToggle("Boss_" .. bossName, {
+        Title = bossName,
+        Default = false,
+        Callback = function(Value)
+            selectedBosses[bossName] = Value
+            
+            -- Se está farmando, reinicia para aplicar mudanças
+            if isRunning then
+                stopAutoFarmBoss()
+                wait(0.1)
+                if #getSelectedBosses() > 0 then
+                    startAutoFarmBoss()
+                end
+            end
         end
-        
-        selectedBoss = tostring(Value)
-        
-        if wasRunning then
-            startAutoFarmBoss()
-        end
-    end
+    })
+end
+
+Tab:AddParagraph({
+    Title = "Farm Control",
+    Content = ""
 })
 
 local Toggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Auto Farm Boss",
+    Title = "Auto Farm Selected Bosses",
     Default = _G.SlowHub.AutoFarmBosses,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
+                return
+            end
+            
+            if #getSelectedBosses() == 0 then
                 return
             end
             
