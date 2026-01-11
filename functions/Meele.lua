@@ -10,13 +10,6 @@ local MeeleNPCs = {
 
 _G.SlowHub.SelectedMeeleNPC = _G.SlowHub.SelectedMeeleNPC or "Qin Shi"
 
-local function normalizeValue(Value)
-    if type(Value) == "table" then
-        return tostring(Value[1] or "")
-    end
-    return tostring(Value or "")
-end
-
 local function getModelRoot(model)
     if not model then return nil end
     
@@ -56,21 +49,20 @@ local function teleportToNPC()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Meele NPC",
-    Options = {"Qin Shi", "Sukuna", "Gojo"},
-    CurrentOption = {_G.SlowHub.SelectedMeeleNPC},
-    Flag = "MeeleNPCDropdown",
-    Callback = function(Option)
+local Dropdown = Tab:AddDropdown("SelectMeeleNPC", {
+    Title = "Select Meele NPC",
+    Values = {"Qin Shi", "Sukuna", "Gojo"},
+    Default = 1, -- Qin Shi é o primeiro
+    Callback = function(Value)
         pcall(function()
-            _G.SlowHub.SelectedMeeleNPC = normalizeValue(Option)
+            _G.SlowHub.SelectedMeeleNPC = tostring(Value)
         end)
     end
 })
 
-Tab:CreateButton({
-    Name = "Teleport to NPC",
+local Button = Tab:AddButton({
+    Title = "Teleport to NPC",
     Callback = function()
         teleportToNPC()
-    end,
+    end
 })
