@@ -74,6 +74,9 @@ local Tabs = {
     Misc = Window:AddTab({ Title = "Misc", Icon = "settings" })
 }
 
+Fluent.Options.Acrylic = false
+Window.Acrylic = false
+
 _G.MainTab = Tabs.Main
 _G.BossesTab = Tabs.Bosses
 _G.ShopTab = Tabs.Shop
