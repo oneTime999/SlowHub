@@ -196,19 +196,17 @@ local function startAutoLevel()
     end)
 end
 
-Tab:CreateToggle({
-    Name = "Auto Farm Level",
-    CurrentValue = _G.SlowHub.AutoFarmLevel,
-    Flag = "AutoFarmLevelToggle",
+local Toggle = Tab:AddToggle("AutoFarmLevel", {
+    Title = "Auto Farm Level",
+    Default = _G.SlowHub.AutoFarmLevel,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.Fluent:Notify({
                         Title = "Slow Hub",
                         Content = "Select a weapon first!",
-                        Duration = 5,
-                        Image = 105026320884681
+                        Duration = 5
                     })
                 end)
                 return
@@ -216,11 +214,10 @@ Tab:CreateToggle({
             
             local config = GetCurrentConfig()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Farming: " .. config.npc .. " (Quest: " .. config.quest .. ")",
-                    Duration = 4,
-                    Image = 105026320884681
+                    Duration = 4
                 })
             end)
             
@@ -236,36 +233,34 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Farm Distance",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.FarmDistance,
-    Flag = "FarmDistanceSlider",
+local DistanceSlider = Tab:AddSlider("FarmDistance", {
+    Title = "Farm Distance (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmDistance,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-    end,
+    end
 })
 
-Tab:CreateSlider({
-    Name = "Farm Height",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.FarmHeight,
-    Flag = "FarmHeightSlider",
+local HeightSlider = Tab:AddSlider("FarmHeight", {
+    Title = "Farm Height (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmHeight,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         
         if _G.SaveConfig then
             _G.SaveConfig()
         end
-    end,
+    end
 })
 
 if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
