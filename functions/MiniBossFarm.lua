@@ -176,13 +176,6 @@ local Dropdown = Tab:AddDropdown("SelectMiniBoss", {
         
         if wasRunning then
             startAutoFarmMiniBoss()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Mini Boss: " .. selectedMiniBoss .. " (Quest: " .. getConfig().quest .. ")",
-                    Duration = 4
-                })
-            end)
         end
     end
 })
@@ -193,24 +186,8 @@ local Toggle = Tab:AddToggle("AutoFarmMiniBoss", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                pcall(function()
-                    _G.Fluent:Notify({
-                        Title = "Slow Hub",
-                        Content = "Selecione uma arma primeiro!",
-                        Duration = 5
-                    })
-                end)
                 return
             end
-            
-            local config = getConfig()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "Farming: " .. selectedMiniBoss .. " (Quest: " .. config.quest .. ")",
-                    Duration = 4
-                })
-            end)
             
             startAutoFarmMiniBoss()
         else
