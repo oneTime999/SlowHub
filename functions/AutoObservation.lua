@@ -62,10 +62,9 @@ local function startAutoObservation()
     end)
 end
 
-Tab:CreateToggle({
-    Name = "Auto Observation Haki",
-    CurrentValue = _G.SlowHub.AutoObservation,
-    Flag = "AutoObservationToggle",
+local Toggle = Tab:AddToggle("AutoObservation", {
+    Title = "Auto Observation Haki",
+    Default = _G.SlowHub.AutoObservation,
     Callback = function(Value)
         if Value then
             startAutoObservation()
