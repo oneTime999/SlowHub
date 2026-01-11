@@ -71,10 +71,9 @@ local function startAutoHaki()
     end)
 end
 
-Tab:CreateToggle({
-    Name = "Auto Haki",
-    CurrentValue = _G.SlowHub.AutoHaki,
-    Flag = "AutoHakiToggle",
+local Toggle = Tab:AddToggle("AutoHaki", {
+    Title = "Auto Haki",
+    Default = _G.SlowHub.AutoHaki,
     Callback = function(Value)
         if Value then
             startAutoHaki()
