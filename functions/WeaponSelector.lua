@@ -106,14 +106,6 @@ local RefreshButton = Tab:AddButton({
                 _G.Options.SelectWeapon:SetValues(newWeapons)
             end
         end)
-        
-        pcall(function()
-            _G.Fluent:Notify({
-                Title = "Slow Hub",
-                Content = "Weapons list refreshed!",
-                Duration = 2
-            })
-        end)
     end
 })
 
