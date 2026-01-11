@@ -140,12 +140,11 @@ local function startAutoFarmBoss()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Boss",
-    Options = bossList,
-    CurrentOption = "AizenBoss",
-    Flag = "SelectedBoss",
-    Callback = function(Option)
+local Dropdown = Tab:AddDropdown("SelectBoss", {
+    Title = "Select Boss",
+    Values = bossList,
+    Default = 1, -- AizenBoss é o primeiro da lista
+    Callback = function(Value)
         local wasRunning = isRunning
         
         if wasRunning then
@@ -153,50 +152,42 @@ Tab:CreateDropdown({
             wait(0.3)
         end
         
-        if type(Option) == "table" then
-            selectedBoss = Option[1] or "AizenBoss"
-        else
-            selectedBoss = tostring(Option)
-        end
+        selectedBoss = tostring(Value)
         
         if wasRunning then
             startAutoFarmBoss()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Boss changed to: " .. selectedBoss,
-                    Duration = 3,
-                    Image = 105026320884681
+                    Duration = 3
                 })
             end)
         end
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Farm Boss",
-    CurrentValue = _G.SlowHub.AutoFarmBosses,
-    Flag = "AutoFarmBossToggle",
+local Toggle = Tab:AddToggle("AutoFarmBoss", {
+    Title = "Auto Farm Boss",
+    Default = _G.SlowHub.AutoFarmBosses,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 pcall(function()
-                    _G.Rayfield:Notify({
+                    _G.Fluent:Notify({
                         Title = "Slow Hub",
                         Content = "Please select a weapon first!",
-                        Duration = 5,
-                        Image = 105026320884681
+                        Duration = 5
                     })
                 end)
                 return
             end
             
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "Farming Boss: " .. selectedBoss,
-                    Duration = 3,
-                    Image = 105026320884681
+                    Duration = 3
                 })
             end)
             
@@ -212,13 +203,12 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Boss Farm Distance",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.BossFarmDistance,
-    Flag = "BossFarmDistanceSlider",
+local DistanceSlider = Tab:AddSlider("BossFarmDistance", {
+    Title = "Boss Farm Distance (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.BossFarmDistance,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.BossFarmDistance = Value
         
@@ -227,23 +217,21 @@ Tab:CreateSlider({
         end
         
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.Fluent:Notify({
                 Title = "Slow Hub",
                 Content = "Boss Distance: " .. Value .. " studs",
-                Duration = 2,
-                Image = 105026320884681
+                Duration = 2
             })
         end)
-    end,
+    end
 })
 
-Tab:CreateSlider({
-    Name = "Boss Farm Height",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "studs",
-    CurrentValue = _G.SlowHub.BossFarmHeight,
-    Flag = "BossFarmHeightSlider",
+local HeightSlider = Tab:AddSlider("BossFarmHeight", {
+    Title = "Boss Farm Height (studs)",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.BossFarmHeight,
+    Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.BossFarmHeight = Value
         
@@ -252,14 +240,13 @@ Tab:CreateSlider({
         end
         
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.Fluent:Notify({
                 Title = "Slow Hub",
                 Content = "Boss Height: " .. Value .. " studs",
-                Duration = 2,
-                Image = 105026320884681
+                Duration = 2
             })
         end)
-    end,
+    end
 })
 
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
