@@ -66,14 +66,6 @@ local Dropdown = Tab:AddDropdown("SelectChest", {
     Default = 1, -- Common Chest é o primeiro
     Callback = function(Value)
         selectedChest = tostring(Value)
-        
-        pcall(function()
-            _G.Fluent:Notify({
-                Title = "Slow Hub",
-                Content = "Chest selected: " .. selectedChest,
-                Duration = 3
-            })
-        end)
     end
 })
 
@@ -84,23 +76,9 @@ local Toggle = Tab:AddToggle("AutoChest", {
         AutoChest = Value
         
         if Value then
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "AutoChest: " .. selectedChest .. " (0.5s)",
-                    Duration = 4
-                })
-            end)
             startAutoChest()
         else
             stopAutoChest()
-            pcall(function()
-                _G.Fluent:Notify({
-                    Title = "Slow Hub",
-                    Content = "AutoChest stopped",
-                    Duration = 2
-                })
-            end)
         end
     end
 })
