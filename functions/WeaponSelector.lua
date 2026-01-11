@@ -6,13 +6,6 @@ _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedWeapon = nil
 _G.SlowHub.EquipLoop = false
 
-local function normalizeValue(Value)
-    if type(Value) == "table" then
-        return tostring(Value[1] or "")
-    end
-    return tostring(Value or "")
-end
-
 local function GetWeapons()
     local weapons = {}
     local added = {}
@@ -85,12 +78,12 @@ local function EquipSelectedTool()
     end)
 end
 
-local WeaponDropdown = Tab:CreateDropdown({
-    Name = "Select Weapon",
-    Options = GetWeapons(),
-    Flag = "WeaponDropdown",
+local WeaponDropdown = Tab:AddDropdown("SelectWeapon", {
+    Title = "Select Weapon",
+    Values = GetWeapons(),
+    Default = 1,
     Callback = function(Value)
-        local weapon = normalizeValue(Value)
+        local weapon = tostring(Value)
         
         if weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
@@ -102,25 +95,30 @@ local WeaponDropdown = Tab:CreateDropdown({
     end
 })
 
-Tab:CreateButton({
-    Name = "Refresh Weapons",
+local RefreshButton = Tab:AddButton({
+    Title = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
-        WeaponDropdown:Refresh(newWeapons)
+        
+        -- Atualiza o dropdown com a nova lista de armas
+        pcall(function()
+            if _G.Options and _G.Options.SelectWeapon then
+                _G.Options.SelectWeapon:SetValues(newWeapons)
+            end
+        end)
         
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.Fluent:Notify({
                 Title = "Slow Hub",
                 Content = "Weapons list refreshed!",
-                Duration = 2,
-                Image = 105026320884681
+                Duration = 2
             })
         end)
-    end,
+    end
 })
 
-Tab:CreateToggle({
-    Name = "Loop Equip Tool",
+local EquipLoopToggle = Tab:AddToggle("LoopEquipTool", {
+    Title = "Loop Equip Tool",
     Default = false,
     Callback = function(state)
         _G.SlowHub.EquipLoop = state
