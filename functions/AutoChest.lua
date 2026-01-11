@@ -60,54 +60,45 @@ local function startAutoChest()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Chest",
-    Options = chestList,
-    CurrentOption = "Common Chest",
-    Flag = "SelectedChest",
-    Callback = function(Option)
-        if type(Option) == "table" then
-            selectedChest = Option[1] or "Common Chest"
-        else
-            selectedChest = tostring(Option)
-        end
+local Dropdown = Tab:AddDropdown("SelectChest", {
+    Title = "Select Chest",
+    Values = chestList,
+    Default = 1, -- Common Chest é o primeiro
+    Callback = function(Value)
+        selectedChest = tostring(Value)
         
         pcall(function()
-            _G.Rayfield:Notify({
+            _G.Fluent:Notify({
                 Title = "Slow Hub",
                 Content = "Chest selected: " .. selectedChest,
-                Duration = 3,
-                Image = 105026320884681
+                Duration = 3
             })
         end)
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Chest",
-    CurrentValue = AutoChest,
-    Flag = "AutoChestToggle",
+local Toggle = Tab:AddToggle("AutoChest", {
+    Title = "Auto Chest",
+    Default = AutoChest,
     Callback = function(Value)
         AutoChest = Value
         
         if Value then
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "AutoChest: " .. selectedChest .. " (0.5s)",
-                    Duration = 4,
-                    Image = 105026320884681
+                    Duration = 4
                 })
             end)
             startAutoChest()
         else
             stopAutoChest()
             pcall(function()
-                _G.Rayfield:Notify({
+                _G.Fluent:Notify({
                     Title = "Slow Hub",
                     Content = "AutoChest stopped",
-                    Duration = 2,
-                    Image = 105026320884681
+                    Duration = 2
                 })
             end)
         end
