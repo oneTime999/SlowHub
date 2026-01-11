@@ -13,13 +13,6 @@ local SwordNPCs = {
 
 _G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Aizen"
 
-local function normalizeValue(Value)
-    if type(Value) == "table" then
-        return tostring(Value[1] or "")
-    end
-    return tostring(Value or "")
-end
-
 local function getModelRoot(model)
     if not model then return nil end
     
@@ -37,7 +30,7 @@ local function teleportToNPC()
     pcall(function()
         local selectedSword = _G.SlowHub.SelectedSwordNPC
         
-        if not selectedSword or selectedSword == "" then  -- ✅ CORRIGIDO
+        if not selectedSword or selectedSword == "" then
             return
         end
         
@@ -59,21 +52,20 @@ local function teleportToNPC()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Sword NPC",
-    Options = {"Aizen", "Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana"},
-    CurrentOption = {_G.SlowHub.SelectedSwordNPC},
-    Flag = "SwordNPCDropdown",
-    Callback = function(Option)
+local Dropdown = Tab:AddDropdown("SelectSwordNPC", {
+    Title = "Select Sword NPC",
+    Values = {"Aizen", "Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana"},
+    Default = 1, -- Aizen é o primeiro
+    Callback = function(Value)
         pcall(function()
-            _G.SlowHub.SelectedSwordNPC = normalizeValue(Option)
+            _G.SlowHub.SelectedSwordNPC = tostring(Value)
         end)
     end
 })
 
-Tab:CreateButton({
-    Name = "Teleport to NPC",
+local Button = Tab:AddButton({
+    Title = "Teleport to NPC",
     Callback = function()
         teleportToNPC()
-    end,
+    end
 })
