@@ -1,5 +1,7 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Carregando Fluent
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
+-- Configurações globais
 _G.SlowHub = {
     AutoFarmLevel = false,
     AutoFarmBosses = false,
@@ -18,6 +20,7 @@ _G.SlowHub = {
     SelectedWeapon = nil
 }
 
+-- Sistema de salvamento
 local HttpService = game:GetService("HttpService")
 local configFolder = "SlowHub"
 local configFile = configFolder .. "/config.json"
@@ -64,55 +67,62 @@ _G.SaveConfig = SaveConfig
 
 LoadConfig()
 
-local Window = Rayfield:CreateWindow({
-    Name = "Slow Hub",
-    LoadingTitle = "Slow Hub",
-    LoadingSubtitle = "by oneTime and Vagner",
-    ConfigurationSaving = {
-        Enabled = false
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "noinvitelink",
-        RememberJoins = true
-    },
-    KeySystem = false
+-- Criando a janela
+local Window = Fluent:CreateWindow({
+    Title = "Slow Hub",
+    SubTitle = "by oneTime and Vagner",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
-_G.MainTab = Window:CreateTab("Main", 125686055318100)
-_G.BossesTab = Window:CreateTab("Bosses", 105026320884681)
-_G.ShopTab = Window:CreateTab("Shop", 102424048012641)
-_G.StatsTab = Window:CreateTab("Stats", 109860946741884)
-_G.MiscTab = Window:CreateTab("Misc", 140369423520801)
+-- Criando as tabs
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Bosses = Window:AddTab({ Title = "Bosses", Icon = "skull" }),
+    Shop = Window:AddTab({ Title = "Shop", Icon = "shopping-cart" }),
+    Stats = Window:AddTab({ Title = "Stats", Icon = "bar-chart" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" })
+}
 
-_G.Rayfield = Rayfield
+-- Salvando referências globais para uso nos outros scripts
+_G.MainTab = Tabs.Main
+_G.BossesTab = Tabs.Bosses
+_G.ShopTab = Tabs.Shop
+_G.StatsTab = Tabs.Stats
+_G.MiscTab = Tabs.Misc
+_G.Fluent = Fluent
+_G.Options = Fluent.Options
 
+-- Carregando os scripts das tabs
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
 
-game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("RayfieldLibrary", 10)
-local RayfieldUI = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("RayfieldLibrary")
-
-if RayfieldUI then
-    game:GetService("RunService").Heartbeat:Connect(function()
-        if not RayfieldUI.Parent then
-            SaveConfig()
-        end
-    end)
-end
-
+-- Auto-save a cada 30 segundos
 task.spawn(function()
     while task.wait(30) do
         SaveConfig()
     end
 end)
 
-Rayfield:Notify({
+-- Salvar quando a UI for fechada
+local GUI = game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("ScreenGui", 10)
+if GUI then
+    game:GetService("RunService").Heartbeat:Connect(function()
+        if not GUI.Parent then
+            SaveConfig()
+        end
+    end)
+end
+
+-- Notificação de carregamento
+Fluent:Notify({
     Title = "Slow Hub",
     Content = "Successfully loaded!",
-    Duration = 5,
-    Image = 125686055318100
+    Duration = 5
 })
