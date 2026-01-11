@@ -56,17 +56,17 @@ end
 _G.SaveConfig = SaveConfig
 LoadConfig()
 
--- Configuração correta do tema
-Fluent:SetLibraryTheme("Dark")
-
 local Window = Fluent:CreateWindow({
     Title = "Slow Hub",
     SubTitle = "by oneTime and Vagner",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, -- Mudança aqui para melhor visual
+    Acrylic = false,
+    Theme = "Dark",
     MinimizeKey = Enum.KeyCode.RightControl
 })
+
+Fluent.Options.Acrylic = false
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
@@ -83,7 +83,6 @@ _G.StatsTab = Tabs.Stats
 _G.MiscTab = Tabs.Misc
 _G.Fluent = Fluent
 
--- Carrega as abas
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
@@ -92,7 +91,14 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/ma
 
 Window:SelectTab(1)
 
--- Remove o loop de override de cores que estava conflitando com o tema
+task.spawn(function()
+    while task.wait(0.5) do
+        if Window and Window.Instance then
+            Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        end
+    end
+end)
+
 task.spawn(function()
     while task.wait(30) do
         SaveConfig()
