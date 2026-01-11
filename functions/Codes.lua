@@ -21,8 +21,8 @@ local function redeemAllCodes()
     end
 end
 
-Tab:CreateButton({
-    Name = "Redeem All Codes",
+local Button = Tab:AddButton({
+    Title = "Redeem All Codes",
     Callback = function()
         redeemAllCodes()
     end
