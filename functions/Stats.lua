@@ -19,15 +19,7 @@ local StatsMap = {
 }
 
 _G.SlowHub.SelectedStat = _G.SlowHub.SelectedStat or ""
-
 _G.SlowHub.StatLoopEnabled = _G.SlowHub.StatLoopEnabled or false
-
-local function normalizeValue(Value)
-    if type(Value) == "table" then
-        return tostring(Value[1] or "")
-    end
-    return tostring(Value or "")
-end
 
 local function statLoopFunction()
     while _G.SlowHub.StatLoopEnabled do
@@ -71,22 +63,20 @@ local function stopStatLoop()
     end)
 end
 
-Tab:CreateDropdown({
-    Name = "Select Stat",
-    Options = {"Melee", "Defense", "Sword", "Power"},
-    CurrentOption = {_G.SlowHub.SelectedStat},
-    Flag = "StatDropdown",
-    Callback = function(Option)
+local Dropdown = Tab:AddDropdown("SelectStat", {
+    Title = "Select Stat",
+    Values = {"Melee", "Defense", "Sword", "Power"},
+    Default = 1,
+    Callback = function(Value)
         pcall(function()
-            _G.SlowHub.SelectedStat = normalizeValue(Option)
+            _G.SlowHub.SelectedStat = tostring(Value)
         end)
     end
 })
 
-Tab:CreateToggle({
-    Name = "Enable Stat Loop",
-    CurrentValue = _G.SlowHub.StatLoopEnabled,
-    Flag = "StatLoopToggle",
+local Toggle = Tab:AddToggle("StatLoop", {
+    Title = "Enable Stat Loop",
+    Default = _G.SlowHub.StatLoopEnabled,
     Callback = function(Value)
         pcall(function()
             if Value then
