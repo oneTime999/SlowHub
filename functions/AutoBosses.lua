@@ -14,19 +14,31 @@ local bossList = {
     "SaberBoss"
 }
 
--- Tabela para rastrear quais bosses estão selecionados
+-- --- CONFIGURAÇÃO DAS POSIÇÕES INICIAIS (SAFE ZONES) ---
+local BossSafeZones = {
+    ["AizenBoss"]  = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875),
+    
+    ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625), -- Chin e Saber
+    ["SaberBoss"]  = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625), -- Chin e Saber
+    
+    ["RagnaBoss"]  = CFrame.new(282.7808837890625, -2.7751426696777344, -1479.363525390625),
+    
+    ["JinwooBoss"] = CFrame.new(235.1376190185547, 3.1064343452453613, 659.7340698242188),
+    
+    ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875), -- Gojo e Sukuna
+    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)  -- Gojo e Sukuna
+}
+-- -------------------------------------------------------
+
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
 
 local autoFarmBossConnection = nil
 local isRunning = false
+local lastTargetBoss = nil        -- Armazena qual foi o último boss focado
+local hasVisitedSafeZone = false  -- Controle para saber se já foi no tp inicial
 
-if not _G.SlowHub.BossFarmDistance then
-    _G.SlowHub.BossFarmDistance = 8
-end
-
-if not _G.SlowHub.BossFarmHeight then
-    _G.SlowHub.BossFarmHeight = 5
-end
+if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
+if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
 -- Busca primeiro boss vivo e selecionado
 local function getAliveBoss()
@@ -80,6 +92,8 @@ end
 
 local function stopAutoFarmBoss()
     isRunning = false
+    lastTargetBoss = nil        -- Reseta o alvo
+    hasVisitedSafeZone = false  -- Reseta a verificação
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -120,7 +134,10 @@ local function startAutoFarmBoss()
         local boss = getAliveBoss()
         
         if not boss then
-            return -- Nenhum boss vivo encontrado, espera
+            -- Se não tem boss vivo, reseta as variáveis para quando um nascer
+            lastTargetBoss = nil
+            hasVisitedSafeZone = false
+            return 
         end
         
         local bossHumanoid = boss:FindFirstChild("Humanoid")
@@ -128,13 +145,44 @@ local function startAutoFarmBoss()
             return
         end
         
+        -- LÓGICA DO TELEPORTE INICIAL
+        -- Se mudou de boss (ou o boss renasceu e é uma nova instancia), reseta o flag
+        if boss ~= lastTargetBoss then
+            lastTargetBoss = boss
+            hasVisitedSafeZone = false
+        end
+
+        local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
+
+        -- Se ainda não visitou a zona segura, vai pra lá primeiro
+        if not hasVisitedSafeZone then
+            local safeCFrame = BossSafeZones[boss.Name]
+            if safeCFrame then
+                pcall(function()
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    playerRoot.CFrame = safeCFrame
+                end)
+                
+                -- Pequeno delay visual para garantir que chegou
+                -- Como estamos no Heartbeat, não use task.wait() longo aqui, 
+                -- mas o return faz ele tentar de novo no próximo frame.
+                -- Vamos considerar visitado assim que o TP for executado.
+                hasVisitedSafeZone = true 
+                return
+            else
+                -- Se não tiver coordenada configurada, pula essa etapa
+                hasVisitedSafeZone = true
+            end
+        end
+
+        -- LÓGICA DE FARM (Só acontece se hasVisitedSafeZone for true)
         local bossRoot = getBossRootPart(boss)
         
-        if bossRoot and bossRoot.Parent and Player.Character then
-            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
+        if bossRoot and bossRoot.Parent then
             local humanoid = Player.Character:FindFirstChild("Humanoid")
             
-            if playerRoot and humanoid and humanoid.Health > 0 then
+            if humanoid and humanoid.Health > 0 then
                 pcall(function()
                     playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     
@@ -193,6 +241,7 @@ local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
                 if FarmToggle then
                     FarmToggle:SetValue(false)
                 end
+                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma primeiro!", Duration = 3})
                 return
             end
             
@@ -210,6 +259,7 @@ local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
                 if FarmToggle then
                     FarmToggle:SetValue(false)
                 end
+                _G.Fluent:Notify({Title = "Erro", Content = "Selecione pelo menos um Boss!", Duration = 3})
                 return
             end
             
