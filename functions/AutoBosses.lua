@@ -27,22 +27,25 @@ local function getAllAliveBosses()
     local aliveBosses = {}
     local possibleFolders = {"workspace.NPCs", "workspace", "workspace.Enemies"}
     
-    for _, folderPath in ipairs(possibleFolders) do
-        local folder = workspace:FindFirstChild(folderPath:match("([^.]+)$"), true)
-        if folder then
-            for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-                if isSelected then
-                    local boss = folder:FindFirstChild(bossName, true)
-                    if boss and boss.Parent then
-                        local humanoid = boss:FindFirstChildOfClass("Humanoid")
-                        if humanoid and humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
-                            table.insert(aliveBosses, boss)
+    pcall(function()
+        for _, folderPath in ipairs(possibleFolders) do
+            local folderName = folderPath:match("([^.]+)$")
+            local folder = workspace:FindFirstChild(folderName, true)
+            if folder and (folder:IsA("Folder") or folder:IsA("Model")) then
+                for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+                    if isSelected then
+                        local boss = folder:FindFirstChild(bossName, true)
+                        if boss and boss.Parent then
+                            local humanoid = boss:FindFirstChildOfClass("Humanoid")
+                            if humanoid and humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
+                                table.insert(aliveBosses, boss)
+                            end
                         end
                     end
                 end
             end
         end
-    end
+    end)
     
     return aliveBosses
 end
@@ -74,37 +77,36 @@ end
 local function getBossRootPart(boss)
     if not boss then return nil end
     
-    local rootPart = boss:FindFirstChild("HumanoidRootPart") or 
-                     boss:FindFirstChild("Torso") or 
-                     boss:FindFirstChild("UpperTorso") or 
-                     boss.PrimaryPart
+    pcall(function()
+        return boss:FindFirstChild("HumanoidRootPart") or 
+               boss:FindFirstChild("Torso") or 
+               boss:FindFirstChild("UpperTorso") or 
+               boss.PrimaryPart
+    end)
     
-    return rootPart
+    return nil
 end
 
 local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return false end
-    
     pcall(function()
+        if not _G.SlowHub.SelectedWeapon then return end
+        
         local character = Player.Character
         if not character or not character:FindFirstChild("Humanoid") then return end
         
         local backpack = Player:FindFirstChild("Backpack")
         
         if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-            return true
+            return
         end
         
         if backpack then
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
             if weapon then
                 character.Humanoid:EquipTool(weapon)
-                task.wait(0.2)
             end
         end
     end)
-    
-    return true
 end
 
 local function stopAutoFarmBoss()
@@ -112,7 +114,9 @@ local function stopAutoFarmBoss()
     currentTargetBoss = nil
     
     if autoFarmBossConnection then
-        autoFarmBossConnection:Disconnect()
+        pcall(function()
+            autoFarmBossConnection:Disconnect()
+        end)
         autoFarmBossConnection = nil
     end
     
@@ -128,10 +132,8 @@ local function stopAutoFarmBoss()
 end
 
 local function startAutoFarmBoss()
-    if isRunning then
-        stopAutoFarmBoss()
-        task.wait(0.5)
-    end
+    stopAutoFarmBoss()
+    task.wait(0.1)
     
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
@@ -144,16 +146,9 @@ local function startAutoFarmBoss()
                 return
             end
             
-            if not Player.Character or not Player.Character:FindFirstChild("Humanoid") then
-                task.wait(1)
-                return
-            end
-            
-            local humanoid = Player.Character:FindFirstChild("Humanoid")
-            if not humanoid or humanoid.Health <= 0 then
-                task.wait(1)
-                return
-            end
+            if not Player.Character then return end
+            local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then return end
             
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             if not playerRoot then return end
@@ -163,10 +158,8 @@ local function startAutoFarmBoss()
             if #aliveBosses > 0 then
                 local targetBoss = getNextTargetBoss(currentTargetBoss)
                 
-                if targetBoss and targetBoss ~= currentTargetBoss then
+                if targetBoss ~= currentTargetBoss then
                     currentTargetBoss = targetBoss
-                elseif targetBoss == nil then
-                    currentTargetBoss = nil
                 end
                 
                 if currentTargetBoss then
@@ -174,36 +167,41 @@ local function startAutoFarmBoss()
                     if bossHumanoid and bossHumanoid.Health > 0 then
                         local bossRoot = getBossRootPart(currentTargetBoss)
                         
-                        if bossRoot then
-                            playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        if bossRoot and bossRoot.Parent then
+                            pcall(function()
+                                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                                
+                                local targetCFrame = bossRoot.CFrame
+                                local distanceOffset = math.clamp(_G.SlowHub.BossFarmDistance or 8, 1, 10)
+                                local heightOffset = math.clamp(_G.SlowHub.BossFarmHeight or 5, 1, 10)
+                                
+                                local offsetCFrame = targetCFrame * CFrame.new(
+                                    math.random(-distanceOffset, distanceOffset) * 0.3,
+                                    heightOffset,
+                                    math.random(-distanceOffset, distanceOffset)
+                                )
+                                
+                                local distance = (playerRoot.Position - offsetCFrame.Position).Magnitude
+                                if distance > 5 then
+                                    playerRoot.CFrame = offsetCFrame
+                                end
+                                
+                                EquipWeapon()
+                            end)
                             
-                            local targetCFrame = bossRoot.CFrame
-                            local distanceOffset = _G.SlowHub.BossFarmDistance
-                            local heightOffset = _G.SlowHub.BossFarmHeight
-                            
-                            local offsetCFrame = targetCFrame * CFrame.new(
-                                math.random(-distanceOffset, distanceOffset) * 0.3,
-                                heightOffset,
-                                math.random(-distanceOffset, distanceOffset)
-                            )
-                            
-                            local distance = (playerRoot.Position - offsetCFrame.Position).Magnitude
-                            if distance > 5 or distance < 1 then
-                                playerRoot.CFrame = offsetCFrame
-                            end
-                            
-                            EquipWeapon()
                             task.wait(0.1)
                             
                             pcall(function()
-                                if ReplicatedStorage:FindFirstChild("CombatSystem") then
-                                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                                local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
+                                if combatSystem and combatSystem:FindFirstChild("Remotes") then
+                                    combatSystem.Remotes.RequestHit:FireServer()
                                 end
                             end)
                             
                             pcall(function()
-                                if ReplicatedStorage:FindFirstChild("Remotes") then
-                                    ReplicatedStorage.Remotes.Attack:FireServer(currentTargetBoss)
+                                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                                if remotes then
+                                    remotes.Attack:FireServer(currentTargetBoss)
                                 end
                             end)
                         end
@@ -222,14 +220,18 @@ Tab:AddParagraph({
 })
 
 for _, bossName in ipairs(bossList) do
-    Tab:AddToggle("SelectBoss_" .. bossName, {
-        Title = bossName,
-        Default = false,
-        Callback = function(Value)
-            _G.SlowHub.SelectedBosses[bossName] = Value
-            if _G.SaveConfig then _G.SaveConfig() end
-        end
-    })
+    pcall(function()
+        Tab:AddToggle("SelectBoss_" .. bossName, {
+            Title = bossName,
+            Default = false,
+            Callback = function(Value)
+                _G.SlowHub.SelectedBosses[bossName] = Value
+                if _G.SaveConfig then 
+                    pcall(_G.SaveConfig) 
+                end
+            end
+        })
+    end)
 end
 
 Tab:AddParagraph({
@@ -237,56 +239,65 @@ Tab:AddParagraph({
     Content = "Multi-boss auto farm with automatic target switching"
 })
 
-local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Multi Boss Farm",
-    Default = false,
-    Callback = function(Value)
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                FarmToggle:SetValue(false)
-                return
-            end
-            
-            startAutoFarmBoss()
-        else
-            stopAutoFarmBoss()
+pcall(function()
+    local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
+        Title = "Multi Boss Farm",
+        Default = false,
+        Callback = function(Value)
+            pcall(function()
+                if Value then
+                    if not _G.SlowHub.SelectedWeapon then
+                        FarmToggle:SetValue(false)
+                        return
+                    end
+                    
+                    startAutoFarmBoss()
+                else
+                    stopAutoFarmBoss()
+                end
+                
+                if _G.SaveConfig then
+                    pcall(_G.SaveConfig)
+                end
+            end)
         end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
+    })
+end)
+
+pcall(function()
+    Tab:AddSlider("BossFarmDistance", {
+        Title = "Boss Distance",
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.BossFarmDistance,
+        Rounding = 0,
+        Callback = function(Value)
+            _G.SlowHub.BossFarmDistance = Value
+            if _G.SaveConfig then pcall(_G.SaveConfig) end
         end
-    end
-})
-
-Tab:AddSlider("BossFarmDistance", {
-    Title = "Boss Distance",
-    Min = 3,
-    Max = 15,
-    Default = _G.SlowHub.BossFarmDistance,
-    Rounding = 1,
-    Callback = function(Value)
-        _G.SlowHub.BossFarmDistance = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end
-})
-
-Tab:AddSlider("BossFarmHeight", {
-    Title = "Farm Height",
-    Min = 0,
-    Max = 15,
-    Default = _G.SlowHub.BossFarmHeight,
-    Rounding = 1,
-    Callback = function(Value)
-        _G.SlowHub.BossFarmHeight = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end
-})
+    })
+    
+    Tab:AddSlider("BossFarmHeight", {
+        Title = "Farm Height",
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.BossFarmHeight,
+        Rounding = 0,
+        Callback = function(Value)
+            _G.SlowHub.BossFarmHeight = Value
+            if _G.SaveConfig then pcall(_G.SaveConfig) end
+        end
+    })
+end)
 
 spawn(function()
+    task.wait(3)
     if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
-        task.wait(3)
-        if FarmToggle then
-            FarmToggle:SetValue(true)
-        end
+        pcall(function()
+            local FarmToggle = Tab:FindFirstChild("AutoFarmBoss")
+            if FarmToggle then
+                FarmToggle:SetValue(true)
+            end
+        end)
     end
 end)
