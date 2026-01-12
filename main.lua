@@ -68,63 +68,44 @@ end
 local function CreateAuthWindow()
     local AuthWindow = Fluent:CreateWindow({
         Title = "Slow Hub - Authentication",
-        SubTitle = "Enter your key to continue",
+        SubTitle = "Enter your key",
         TabWidth = 160,
-        Size = UDim2.fromOffset(500, 350),
+        Size = UDim2.fromOffset(400, 250),
         Acrylic = false,
         Theme = "Darker",
         MinimizeKey = Enum.KeyCode.LeftControl
     })
     
-    local AuthTab = AuthWindow:AddTab({ Title = "Login", Icon = "key" })
-    
-    AuthTab:AddParagraph({
-        Title = "Welcome to Slow Hub!",
-        Content = "Please enter your key below to access the script.\n\nDon't have a key? Contact our Discord server."
-    })
+    local AuthTab = AuthWindow:AddTab({ Title = "Key", Icon = "key" })
     
     local enteredKey = ""
     local isAuthenticating = false
     
     local KeyInput = AuthTab:AddInput("KeyInput", {
-        Title = "Enter Key",
-        Placeholder = "Paste your 32-character key here",
+        Title = "Key",
+        Placeholder = "Enter 32-character key",
         Callback = function(Value)
             enteredKey = Value
         end
     })
     
-    local StatusLabel = AuthTab:AddParagraph({
-        Title = "Status",
-        Content = "Waiting for key..."
-    })
-    
-    local function UpdateStatus(title, content)
-        StatusLabel.Title = title
-        StatusLabel.Content = content
-    end
-    
     AuthTab:AddButton({
-        Title = "Verify Key",
+        Title = "Verify",
         Callback = function()
             if isAuthenticating then
                 return
             end
             
             if not enteredKey or enteredKey == "" then
-                UpdateStatus("❌ Error", "Please enter a key first!")
                 return
             end
             
             isAuthenticating = true
-            UpdateStatus("⏳ Checking...", "Validating your key with LuaRmor...")
             
             task.spawn(function()
                 local status = CheckKey(enteredKey)
                 
                 if status.code == "KEY_VALID" then
-                    UpdateStatus("✅ Success!", "Key is valid! Loading Slow Hub...")
-                    
                     SaveKey(enteredKey)
                     _G.script_key = enteredKey
                     
@@ -136,43 +117,10 @@ local function CreateAuthWindow()
                     
                     pcall(LoadMainHub)
                     
-                elseif status.code == "KEY_HWID_LOCKED" then
-                    UpdateStatus("⚠️ HWID Locked", "This key is linked to another device.\nUse /resethwid in Discord bot to reset.")
-                    isAuthenticating = false
-                    
-                elseif status.code == "KEY_EXPIRED" then
-                    UpdateStatus("❌ Expired", "Your key has expired.\nContact support to renew.")
-                    DeleteSavedKey()
-                    isAuthenticating = false
-                    
-                elseif status.code == "KEY_BANNED" then
-                    UpdateStatus("❌ Banned", "This key has been blacklisted.\nContact support for details.")
-                    DeleteSavedKey()
-                    isAuthenticating = false
-                    
-                elseif status.code == "KEY_INCORRECT" then
-                    UpdateStatus("❌ Invalid Key", "Key does not exist or has been deleted.")
-                    isAuthenticating = false
-                    
-                else
-                    UpdateStatus("❌ Error", "An error occurred: " .. (status.message or "Unknown error"))
-                    isAuthenticating = false
                 end
+                isAuthenticating = false
             end)
         end
-    })
-    
-    AuthTab:AddButton({
-        Title = "Clear Saved Key",
-        Callback = function()
-            DeleteSavedKey()
-            UpdateStatus("🗑️ Cleared", "Saved key has been deleted.")
-        end
-    })
-    
-    AuthTab:AddParagraph({
-        Title = "Need Help?",
-        Content = "Join our Discord server for support:\ndiscord.gg/slowhub"
     })
 end
 
