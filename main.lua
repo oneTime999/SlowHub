@@ -46,15 +46,27 @@ local function CheckKey(key)
         }
     end
     
-    local api = loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))()
+    local success, api = pcall(function()
+        return loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))()
+    end)
+    
+    if not success then
+        return {
+            code = "ERROR",
+            message = "Failed to load LuaRmor library"
+        }
+    end
+    
     api.script_id = SCRIPT_ID
     
     local status = api.check_key(key)
     return status
 end
 
+local AuthWindow = nil
+
 local function CreateAuthWindow()
-    local AuthWindow = Fluent:CreateWindow({
+    AuthWindow = Fluent:CreateWindow({
         Title = "Slow Hub - Authentication",
         SubTitle = "Enter your key to continue",
         TabWidth = 160,
@@ -116,17 +128,13 @@ local function CreateAuthWindow()
                     SaveKey(enteredKey)
                     script_key = enteredKey
                     
-                    task.wait(0.5)
+                    task.wait(1)
                     
-                    pcall(function()
-                        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-                            if v.Name == "ScreenGui" then
-                                v:Destroy()
-                            end
-                        end
-                    end)
+                    AuthWindow:Destroy()
+                    AuthWindow = nil
                     
                     task.wait(0.5)
+                    
                     LoadMainHub()
                     
                 elseif status.code == "KEY_HWID_LOCKED" then
@@ -170,16 +178,6 @@ local function CreateAuthWindow()
 end
 
 function LoadMainHub()
-    pcall(function()
-        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-            if v.Name == "ScreenGui" and v:FindFirstChild("Frame") then
-                v:Destroy()
-            end
-        end
-    end)
-    
-    task.wait(0.3)
-    
     _G.SlowHub = {
         AutoFarmLevel = false,
         AutoFarmBosses = false,
@@ -248,17 +246,19 @@ function LoadMainHub()
     })
 
     pcall(function()
-        local gui = game:GetService("CoreGui"):WaitForChild("ScreenGui", 5)
-        if gui then
-            local mainFrame = gui:FindFirstChild("Frame")
-            if mainFrame then
-                mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-                
-                for _, obj in pairs(mainFrame:GetDescendants()) do
-                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                        if obj.Name:find("Tab") or obj.Parent and obj.Parent.Name:find("Tab") then
-                            obj.TextSize = 16
-                            obj.Font = Enum.Font.GothamBold
+        task.wait(0.5)
+        for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+            if gui.Name == "ScreenGui" then
+                local mainFrame = gui:FindFirstChild("Frame")
+                if mainFrame then
+                    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+                    
+                    for _, obj in pairs(mainFrame:GetDescendants()) do
+                        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                            if obj.Name:find("Tab") or obj.Parent and obj.Parent.Name:find("Tab") then
+                                obj.TextSize = 16
+                                obj.Font = Enum.Font.GothamBold
+                            end
                         end
                     end
                 end
@@ -294,14 +294,16 @@ function LoadMainHub()
         end
     end)
 
-    local GUI = game:GetService("CoreGui"):WaitForChild("ScreenGui", 10)
-    if GUI then
-        game:GetService("RunService").Heartbeat:Connect(function()
-            if not GUI.Parent then
-                SaveConfig()
-            end
-        end)
-    end
+    task.spawn(function()
+        local GUI = game:GetService("CoreGui"):WaitForChild("ScreenGui", 10)
+        if GUI then
+            game:GetService("RunService").Heartbeat:Connect(function()
+                if not GUI.Parent then
+                    SaveConfig()
+                end
+            end)
+        end
+    end)
 
     Fluent:Notify({
         Title = "Slow Hub",
@@ -317,7 +319,6 @@ if savedKey then
     
     if status.code == "KEY_VALID" then
         script_key = savedKey
-        task.wait(0.5)
         LoadMainHub()
     else
         DeleteSavedKey()
