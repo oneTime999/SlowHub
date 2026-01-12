@@ -36,6 +36,11 @@ LRM_INIT_SCRIPT(function()
             Callback = function(Text) enteredKey = Text end
         })
         
+        local StatusParagraph = Tab:AddParagraph({
+            Title = "Status",
+            Content = "Waiting for input..."
+        })
+        
         Tab:AddButton({
             Title = "Verify Key", Callback = function()
                 if #enteredKey ~= 32 then 
@@ -43,26 +48,27 @@ LRM_INIT_SCRIPT(function()
                     return 
                 end
                 
-                Tab:AddParagraph("Status", "Checking...")
+                StatusParagraph:SetDesc("Checking key...")
                 
                 local status = api.check_key(enteredKey)
                 
                 if status.code == "KEY_VALID" then
                     SaveKey(enteredKey)
                     finalKey = enteredKey
+                    StatusParagraph:SetDesc("Authenticated! Loading...")
                     Fluent:Notify({Title = "Success", Content = "Authenticated! Loading...", Duration = 3})
                     task.wait(1.5)
                     Window:Destroy()
                     authenticated = true
                 elseif status.code == "KEY_HWID_LOCKED" then
                      Fluent:Notify({Title = "Error", Content = "HWID Mismatch (Reset needed)", Duration = 5})
-                     Tab:AddParagraph("Status", "Error: HWID Mismatch")
+                     StatusParagraph:SetDesc("Error: HWID Mismatch")
                 elseif status.code == "KEY_EXPIRED" then
                      Fluent:Notify({Title = "Error", Content = "Key Expired", Duration = 5})
-                     Tab:AddParagraph("Status", "Error: Expired")
+                     StatusParagraph:SetDesc("Error: Expired")
                 else
                     Fluent:Notify({Title = "Error", Content = "Invalid Key", Duration = 3})
-                    Tab:AddParagraph("Status", "Error: Invalid Key")
+                    StatusParagraph:SetDesc("Error: Invalid Key")
                 end
             end
         })
@@ -88,6 +94,8 @@ LRM_INIT_SCRIPT(function()
 
     script_key = finalKey
 end)
+
+-- --- FIM DA PROTEÇÃO / INICIO DO HUB ---
 
 local HttpService = game:GetService("HttpService")
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -158,6 +166,40 @@ local Window = Fluent:CreateWindow({
 
 _G.SlowHub.Window = Window
 
+-- --- ADICIONANDO BOTÃO MOBILE ---
+local function CreateMobileUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    local ImageButton = Instance.new("ImageButton")
+    local UICorner = Instance.new("UICorner")
+
+    ScreenGui.Name = "SlowHubMobileButton"
+    -- Tenta colocar no CoreGui (mais seguro), se falhar coloca no PlayerGui
+    if pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end) then
+    else ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
+
+    ImageButton.Parent = ScreenGui
+    ImageButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ImageButton.BackgroundTransparency = 0.5 -- Fundo semi-transparente
+    ImageButton.Position = UDim2.new(0.9, -60, 0.4, 0) -- Posição inicial (Lado direito)
+    ImageButton.Size = UDim2.new(0, 50, 0, 50) -- Tamanho do botão
+    ImageButton.Image = "rbxassetid://116746146580891" -- Foto que você pediu
+    ImageButton.Draggable = true -- Permite arrastar o botão
+    ImageButton.Active = true
+
+    UICorner.CornerRadius = UDim.new(1, 0) -- Deixa o botão redondo
+    UICorner.Parent = ImageButton
+
+    -- Função de Clique
+    ImageButton.MouseButton1Click:Connect(function()
+        -- Simula o aperto da tecla LeftControl para abrir/fechar o Fluent
+        local vim = game:GetService("VirtualInputManager")
+        vim:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+    end)
+end
+
+CreateMobileUI()
+-- ------------------------------
+
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Bosses = Window:AddTab({ Title = "Bosses", Icon = "skull" }),
@@ -174,6 +216,7 @@ _G.MiscTab = Tabs.Misc
 _G.Fluent = Fluent
 _G.Options = Fluent.Options
 
+-- Carregando os scripts externos
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
