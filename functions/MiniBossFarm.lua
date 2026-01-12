@@ -13,18 +13,26 @@ local MiniBossConfig = {
 }
 
 local miniBossList = {"ThiefBoss", "MonkeyBoss", "DesertBoss", "SnowBoss", "PandaMiniBoss"}
+
+-- --- COORDENADAS SAFE ZONES (TP INICIAL) ---
+local MiniBossSafeZones = {
+    ["ThiefBoss"]     = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),   -- Area Thief
+    ["MonkeyBoss"]    = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),    -- Area Monkey
+    ["DesertBoss"]    = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),     -- Area Desert
+    ["SnowBoss"]      = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),     -- Area Frost
+    ["PandaMiniBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)     -- Area Panda (Sorcerer)
+}
+-- -------------------------------------------
+
 local autoFarmMiniBossConnection = nil
 local questConnection = nil
 local selectedMiniBoss = "ThiefBoss"
 local isRunning = false
+local lastSelectedMiniBoss = nil -- Controle de troca
+local hasVisitedSafeZone = false -- Controle de TP
 
-if not _G.SlowHub.MiniBossFarmDistance then
-    _G.SlowHub.MiniBossFarmDistance = 6
-end
-
-if not _G.SlowHub.MiniBossFarmHeight then
-    _G.SlowHub.MiniBossFarmHeight = 4
-end
+if not _G.SlowHub.MiniBossFarmDistance then _G.SlowHub.MiniBossFarmDistance = 6 end
+if not _G.SlowHub.MiniBossFarmHeight then _G.SlowHub.MiniBossFarmHeight = 4 end
 
 local function getConfig()
     return MiniBossConfig[selectedMiniBoss] or MiniBossConfig["ThiefBoss"]
@@ -70,6 +78,8 @@ end
 
 local function stopAutoFarmMiniBoss()
     isRunning = false
+    lastSelectedMiniBoss = nil
+    hasVisitedSafeZone = false
     
     if autoFarmMiniBossConnection then
         autoFarmMiniBossConnection:Disconnect()
@@ -88,6 +98,7 @@ local function stopAutoFarmMiniBoss()
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             if playerRoot then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                playerRoot.Anchored = false
             end
         end
     end)
@@ -123,38 +134,58 @@ local function startAutoFarmMiniBoss()
             return
         end
         
+        -- LÓGICA SAFE ZONE
+        if selectedMiniBoss ~= lastSelectedMiniBoss then
+            lastSelectedMiniBoss = selectedMiniBoss
+            hasVisitedSafeZone = false
+        end
+
+        local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
+
+        if not hasVisitedSafeZone then
+            local safeCFrame = MiniBossSafeZones[selectedMiniBoss]
+            if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
+                pcall(function()
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    playerRoot.CFrame = safeCFrame
+                end)
+                hasVisitedSafeZone = true
+                return -- Espera chegar
+            else
+                hasVisitedSafeZone = true
+            end
+        end
+
+        -- LÓGICA FARM
         local miniBoss = getMiniBoss()
         
         if miniBoss and miniBoss.Parent then
             local bossHumanoid = miniBoss:FindFirstChild("Humanoid")
             
             if bossHumanoid and bossHumanoid.Health <= 0 then
-                task.wait(1) -- Espera respawn
+                -- Boss morto, não precisa esperar 1s parado, apenas retorna
                 return
             end
             
             local bossRoot = getMiniBossRootPart(miniBoss)
+            local humanoid = Player.Character:FindFirstChild("Humanoid")
             
-            if bossRoot and bossRoot.Parent and Player.Character then
-                local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                local humanoid = Player.Character:FindFirstChild("Humanoid")
-                
-                if playerRoot and humanoid and humanoid.Health > 0 then
-                    pcall(function()
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        
-                        local targetCFrame = bossRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.MiniBossFarmHeight, _G.SlowHub.MiniBossFarmDistance)
-                        
-                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                        if distance > 3 or distance < 1 then
-                            playerRoot.CFrame = offsetPosition
-                        end
-                        
-                        EquipWeapon()
-                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                    end)
-                end
+            if bossRoot and bossRoot.Parent and humanoid and humanoid.Health > 0 then
+                pcall(function()
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    
+                    local targetCFrame = bossRoot.CFrame
+                    local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.MiniBossFarmHeight, _G.SlowHub.MiniBossFarmDistance)
+                    
+                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                    if distance > 3 or distance < 1 then
+                        playerRoot.CFrame = offsetPosition
+                    end
+                    
+                    EquipWeapon()
+                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                end)
             end
         end
     end)
@@ -163,7 +194,7 @@ end
 local Dropdown = Tab:AddDropdown("SelectMiniBoss", {
     Title = "Select Mini Boss",
     Values = miniBossList,
-    Default = 1, -- ThiefBoss é o primeiro
+    Default = 1,
     Callback = function(Value)
         local wasRunning = isRunning
         
@@ -186,6 +217,8 @@ local Toggle = Tab:AddToggle("AutoFarmMiniBoss", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
+                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma!", Duration = 3})
+                if Toggle then Toggle:SetValue(false) end
                 return
             end
             
