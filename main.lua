@@ -5,6 +5,8 @@ local Player = Players.LocalPlayer
 
 local SCRIPT_ID = "33714296afe58acfdbf28f4c6e3a6837"
 
+_G.script_key = nil
+
 local configFolder = "SlowHub"
 local keyFile = configFolder .. "/key.txt"
 
@@ -126,16 +128,16 @@ local function CreateAuthWindow()
                     UpdateStatus("✅ Success!", "Key is valid! Loading Slow Hub...")
                     
                     SaveKey(enteredKey)
-                    script_key = enteredKey
+                    _G.script_key = enteredKey
                     
-                    task.wait(1)
+                    task.wait(1.5)
                     
                     AuthWindow:Destroy()
                     AuthWindow = nil
                     
                     task.wait(0.5)
                     
-                    LoadMainHub()
+                    pcall(LoadMainHub)
                     
                 elseif status.code == "KEY_HWID_LOCKED" then
                     UpdateStatus("⚠️ HWID Locked", "This key is linked to another device.\nUse /resethwid in Discord bot to reset.")
@@ -178,6 +180,10 @@ local function CreateAuthWindow()
 end
 
 function LoadMainHub()
+    if not _G.script_key then
+        return
+    end
+
     _G.SlowHub = {
         AutoFarmLevel = false,
         AutoFarmBosses = false,
@@ -282,11 +288,21 @@ function LoadMainHub()
     _G.Fluent = Fluent
     _G.Options = Fluent.Options
 
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
+    end)
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
+    end)
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
+    end)
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
+    end)
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
+    end)
 
     task.spawn(function()
         while task.wait(30) do
@@ -318,8 +334,9 @@ if savedKey then
     local status = CheckKey(savedKey)
     
     if status.code == "KEY_VALID" then
-        script_key = savedKey
-        LoadMainHub()
+        _G.script_key = savedKey
+        task.wait(0.5)
+        pcall(LoadMainHub)
     else
         DeleteSavedKey()
         CreateAuthWindow()
