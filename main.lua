@@ -116,9 +116,17 @@ local function CreateAuthWindow()
                     SaveKey(enteredKey)
                     script_key = enteredKey
                     
-                    task.wait(1)
+                    task.wait(0.5)
                     
-                    AuthWindow:Destroy()
+                    pcall(function()
+                        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+                            if v.Name == "ScreenGui" then
+                                v:Destroy()
+                            end
+                        end
+                    end)
+                    
+                    task.wait(0.5)
                     LoadMainHub()
                     
                 elseif status.code == "KEY_HWID_LOCKED" then
@@ -162,6 +170,16 @@ local function CreateAuthWindow()
 end
 
 function LoadMainHub()
+    pcall(function()
+        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+            if v.Name == "ScreenGui" and v:FindFirstChild("Frame") then
+                v:Destroy()
+            end
+        end
+    end)
+    
+    task.wait(0.3)
+    
     _G.SlowHub = {
         AutoFarmLevel = false,
         AutoFarmBosses = false,
@@ -230,7 +248,7 @@ function LoadMainHub()
     })
 
     pcall(function()
-        local gui = Player.PlayerGui:WaitForChild("ScreenGui", 5)
+        local gui = game:GetService("CoreGui"):WaitForChild("ScreenGui", 5)
         if gui then
             local mainFrame = gui:FindFirstChild("Frame")
             if mainFrame then
@@ -276,7 +294,7 @@ function LoadMainHub()
         end
     end)
 
-    local GUI = Player.PlayerGui:WaitForChild("ScreenGui", 10)
+    local GUI = game:GetService("CoreGui"):WaitForChild("ScreenGui", 10)
     if GUI then
         game:GetService("RunService").Heartbeat:Connect(function()
             if not GUI.Parent then
@@ -299,6 +317,7 @@ if savedKey then
     
     if status.code == "KEY_VALID" then
         script_key = savedKey
+        task.wait(0.5)
         LoadMainHub()
     else
         DeleteSavedKey()
