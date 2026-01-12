@@ -65,10 +65,8 @@ local function CheckKey(key)
     return status
 end
 
-local AuthWindow = nil
-
 local function CreateAuthWindow()
-    AuthWindow = Fluent:CreateWindow({
+    local AuthWindow = Fluent:CreateWindow({
         Title = "Slow Hub - Authentication",
         SubTitle = "Enter your key to continue",
         TabWidth = 160,
@@ -130,10 +128,9 @@ local function CreateAuthWindow()
                     SaveKey(enteredKey)
                     _G.script_key = enteredKey
                     
-                    task.wait(1.5)
+                    task.wait(2)
                     
                     AuthWindow:Destroy()
-                    AuthWindow = nil
                     
                     task.wait(0.5)
                     
