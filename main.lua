@@ -55,7 +55,7 @@ local function CheckKey(key)
     if not success then
         return {
             code = "ERROR",
-            message = "Failed to load LuaRmor library"
+            message = "Failed to load library"
         }
     end
     
@@ -70,7 +70,7 @@ local function CreateAuthWindow()
         Title = "Slow Hub - Authentication",
         SubTitle = "Enter your key",
         TabWidth = 160,
-        Size = UDim2.fromOffset(400, 250),
+        Size = UDim2.fromOffset(500, 350),
         Acrylic = false,
         Theme = "Darker",
         MinimizeKey = Enum.KeyCode.LeftControl
