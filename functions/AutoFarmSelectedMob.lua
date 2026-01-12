@@ -14,19 +14,27 @@ local QuestConfig = {
     ["Hollow"] = "QuestNPC11"
 }
 
+-- --- COORDENADAS DOS TP INICIAIS (SAFE ZONES) ---
+local MobSafeZones = {
+    ["Thief"]        = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
+    ["Monkey"]       = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
+    ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
+    ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
+    ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
+    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875) -- Mesma do Aizen
+}
+-- ------------------------------------------------
+
 local autoFarmSelectedConnection = nil
 local autoQuestLoop = nil
 local selectedMob = "Thief"
 local currentNPCIndex = 1
 local isRunning = false
+local lastSelectedMobForSafeZone = nil -- Controle de troca de mob
+local hasVisitedSafeZone = false       -- Controle do TP inicial
 
-if not _G.SlowHub.FarmDistance then
-    _G.SlowHub.FarmDistance = 8
-end
-
-if not _G.SlowHub.FarmHeight then
-    _G.SlowHub.FarmHeight = 4
-end
+if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
+if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
 
 local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
@@ -52,11 +60,10 @@ local function getQuestForMob(mobName)
 end
 
 local function getMobConfig(mobName)
-    -- CORRIGIDO: TODOS os mobs (incluindo Hollow) têm 5 NPCs agora
     return {
         npc = mobName,
         quest = getQuestForMob(mobName),
-        count = 5  -- ✅ TODOS = 5 NPCs (Hollow1, Hollow2, Hollow3, Hollow4, Hollow5)
+        count = 5 
     }
 end
 
@@ -100,6 +107,8 @@ local function stopAutoFarmSelectedMob()
     _G.SlowHub.AutoFarmSelectedMob = false
     _G.SlowHub.AutoQuestSelectedMob = false
     currentNPCIndex = 1
+    lastSelectedMobForSafeZone = nil
+    hasVisitedSafeZone = false
     
     pcall(function()
         if Player.Character then
@@ -162,6 +171,33 @@ local function startAutoFarmSelectedMob()
         local config = getMobConfig(selectedMob)
         local now = tick()
         
+        -- LÓGICA DE SAFE ZONE
+        -- Se o mob mudou (ou ligou o script agora), reseta o flag
+        if selectedMob ~= lastSelectedMobForSafeZone then
+            lastSelectedMobForSafeZone = selectedMob
+            hasVisitedSafeZone = false
+        end
+
+        local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
+
+        -- Se ainda não foi na Safe Zone deste mob, vai agora
+        if not hasVisitedSafeZone then
+            local safeCFrame = MobSafeZones[selectedMob]
+            if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
+                pcall(function()
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    playerRoot.CFrame = safeCFrame
+                end)
+                hasVisitedSafeZone = true
+                return -- Espera o próximo frame
+            else
+                hasVisitedSafeZone = true
+            end
+        end
+
+        -- LÓGICA DE FARM (Só roda se hasVisitedSafeZone for true)
+        
         -- Procura NPC atual
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
@@ -178,30 +214,26 @@ local function startAutoFarmSelectedMob()
             lastNPCSwitch = now
             
             local npcRoot = getNPCRootPart(npc)
+            local humanoid = Player.Character:FindFirstChild("Humanoid")
             
-            if npcRoot and npcRoot.Parent and Player.Character then
-                local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-                local humanoid = Player.Character:FindFirstChild("Humanoid")
-                
-                if playerRoot and humanoid and humanoid.Health > 0 then
-                    pcall(function()
-                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        
-                        local targetCFrame = npcRoot.CFrame
-                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
-                        
-                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                        if distance > 3 or distance < 1 then
-                            playerRoot.CFrame = offsetPosition
-                        end
-                        
-                        EquipWeapon()
-                        
-                        if math.random() > 0.6 then
-                            ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                        end
-                    end)
-                end
+            if npcRoot and npcRoot.Parent and humanoid and humanoid.Health > 0 then
+                pcall(function()
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    
+                    local targetCFrame = npcRoot.CFrame
+                    local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
+                    
+                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                    if distance > 3 or distance < 1 then
+                        playerRoot.CFrame = offsetPosition
+                    end
+                    
+                    EquipWeapon()
+                    
+                    if math.random() > 0.6 then
+                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                    end
+                end)
             end
         end
     end)
@@ -234,6 +266,8 @@ local Toggle = Tab:AddToggle("AutoFarmSelectedMob", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
+                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma primeiro!", Duration = 3})
+                if Toggle then Toggle:SetValue(false) end
                 return
             end
             
