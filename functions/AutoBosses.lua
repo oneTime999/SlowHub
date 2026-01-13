@@ -14,33 +14,26 @@ local bossList = {
     "SaberBoss"
 }
 
--- --- CONFIGURAÇÃO DAS POSIÇÕES INICIAIS (SAFE ZONES) ---
 local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875),
-    
-    ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625), -- Chin e Saber
-    ["SaberBoss"]  = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625), -- Chin e Saber
-    
+    ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
+    ["SaberBoss"]  = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
     ["RagnaBoss"]  = CFrame.new(282.7808837890625, -2.7751426696777344, -1479.363525390625),
-    
     ["JinwooBoss"] = CFrame.new(235.1376190185547, 3.1064343452453613, 659.7340698242188),
-    
-    ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875), -- Gojo e Sukuna
-    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)  -- Gojo e Sukuna
+    ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
+    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
 }
--- -------------------------------------------------------
 
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
 
 local autoFarmBossConnection = nil
 local isRunning = false
-local lastTargetBoss = nil        -- Armazena qual foi o último boss focado
-local hasVisitedSafeZone = false  -- Controle para saber se já foi no tp inicial
+local lastTargetBoss = nil
+local hasVisitedSafeZone = false
 
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
 if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
--- Busca primeiro boss vivo e selecionado
 local function getAliveBoss()
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
@@ -92,8 +85,8 @@ end
 
 local function stopAutoFarmBoss()
     isRunning = false
-    lastTargetBoss = nil        -- Reseta o alvo
-    hasVisitedSafeZone = false  -- Reseta a verificação
+    lastTargetBoss = nil
+    hasVisitedSafeZone = false
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -130,11 +123,9 @@ local function startAutoFarmBoss()
             return
         end
         
-        -- Busca boss vivo
         local boss = getAliveBoss()
         
         if not boss then
-            -- Se não tem boss vivo, reseta as variáveis para quando um nascer
             lastTargetBoss = nil
             hasVisitedSafeZone = false
             return 
@@ -145,8 +136,6 @@ local function startAutoFarmBoss()
             return
         end
         
-        -- LÓGICA DO TELEPORTE INICIAL
-        -- Se mudou de boss (ou o boss renasceu e é uma nova instancia), reseta o flag
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
             hasVisitedSafeZone = false
@@ -155,7 +144,6 @@ local function startAutoFarmBoss()
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
-        -- Se ainda não visitou a zona segura, vai pra lá primeiro
         if not hasVisitedSafeZone then
             local safeCFrame = BossSafeZones[boss.Name]
             if safeCFrame then
@@ -163,20 +151,13 @@ local function startAutoFarmBoss()
                     playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     playerRoot.CFrame = safeCFrame
                 end)
-                
-                -- Pequeno delay visual para garantir que chegou
-                -- Como estamos no Heartbeat, não use task.wait() longo aqui, 
-                -- mas o return faz ele tentar de novo no próximo frame.
-                -- Vamos considerar visitado assim que o TP for executado.
                 hasVisitedSafeZone = true 
                 return
             else
-                -- Se não tiver coordenada configurada, pula essa etapa
                 hasVisitedSafeZone = true
             end
         end
 
-        -- LÓGICA DE FARM (Só acontece se hasVisitedSafeZone for true)
         local bossRoot = getBossRootPart(boss)
         
         if bossRoot and bossRoot.Parent then
@@ -203,13 +184,11 @@ local function startAutoFarmBoss()
     end)
 end
 
--- Seção de seleção de bosses
 Tab:AddParagraph({
     Title = "Select Bosses",
     Content = "Choose which bosses to farm"
 })
 
--- Cria um toggle para cada boss
 for _, bossName in ipairs(bossList) do
     local Toggle = Tab:AddToggle("SelectBoss_" .. bossName, {
         Title = bossName,
@@ -224,7 +203,6 @@ for _, bossName in ipairs(bossList) do
     })
 end
 
--- Seção de controle
 Tab:AddParagraph({
     Title = "Farm Control",
     Content = ""
@@ -235,17 +213,15 @@ local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
     Default = false,
     Callback = function(Value)
         if Value then
-            -- Verifica se tem arma selecionada
             if not _G.SlowHub.SelectedWeapon then
                 _G.SlowHub.AutoFarmBosses = false
                 if FarmToggle then
                     FarmToggle:SetValue(false)
                 end
-                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma primeiro!", Duration = 3})
+                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
                 return
             end
             
-            -- Verifica se pelo menos 1 boss foi selecionado
             local hasSelected = false
             for _, selected in pairs(_G.SlowHub.SelectedBosses) do
                 if selected then
@@ -259,7 +235,7 @@ local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
                 if FarmToggle then
                     FarmToggle:SetValue(false)
                 end
-                _G.Fluent:Notify({Title = "Erro", Content = "Selecione pelo menos um Boss!", Duration = 3})
+                _G.Fluent:Notify({Title = "Error", Content = "Select at least one Boss!", Duration = 3})
                 return
             end
             
@@ -305,7 +281,6 @@ local HeightSlider = Tab:AddSlider("BossFarmHeight", {
     end
 })
 
--- Auto-start se estava ativo
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
