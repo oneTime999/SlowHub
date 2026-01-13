@@ -28,6 +28,10 @@ LRM_INIT_SCRIPT(function()
             Acrylic = false, Theme = "Darker", MinimizeKey = Enum.KeyCode.LeftControl
         })
         
+        pcall(function()
+            Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        end)
+        
         local Tab = Window:AddTab({ Title = "Auth", Icon = "key" })
         local enteredKey = ""
         
@@ -95,8 +99,6 @@ LRM_INIT_SCRIPT(function()
     script_key = finalKey
 end)
 
--- --- FIM DA PROTEÇÃO / INICIO DO HUB ---
-
 local HttpService = game:GetService("HttpService")
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
@@ -160,45 +162,49 @@ _G.SaveConfig = SaveConfig
 LoadConfig()
 
 local Window = Fluent:CreateWindow({
-    Title = "Slow Hub", SubTitle = "v1.0", TabWidth = 160, Size = UDim2.fromOffset(580, 460),
-    Acrylic = false, Theme = "Darker", MinimizeKey = Enum.KeyCode.LeftControl
+    Title = "Slow Hub", 
+    SubTitle = "v1.0", 
+    TabWidth = 160, 
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false,
+    Theme = "Darker", 
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
+
+pcall(function()
+    Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+end)
 
 _G.SlowHub.Window = Window
 
--- --- ADICIONANDO BOTÃO MOBILE ---
 local function CreateMobileUI()
     local ScreenGui = Instance.new("ScreenGui")
     local ImageButton = Instance.new("ImageButton")
     local UICorner = Instance.new("UICorner")
 
     ScreenGui.Name = "SlowHubMobileButton"
-    -- Tenta colocar no CoreGui (mais seguro), se falhar coloca no PlayerGui
     if pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end) then
     else ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
 
     ImageButton.Parent = ScreenGui
     ImageButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    ImageButton.BackgroundTransparency = 0.5 -- Fundo semi-transparente
-    ImageButton.Position = UDim2.new(0.9, -60, 0.4, 0) -- Posição inicial (Lado direito)
-    ImageButton.Size = UDim2.new(0, 50, 0, 50) -- Tamanho do botão
-    ImageButton.Image = "rbxassetid://116746146580891" -- Foto que você pediu
-    ImageButton.Draggable = true -- Permite arrastar o botão
+    ImageButton.BackgroundTransparency = 0.5 
+    ImageButton.Position = UDim2.new(0.9, -60, 0.4, 0)
+    ImageButton.Size = UDim2.new(0, 50, 0, 50)
+    ImageButton.Image = "rbxassetid://116746146580891"
+    ImageButton.Draggable = true
     ImageButton.Active = true
 
-    UICorner.CornerRadius = UDim.new(1, 0) -- Deixa o botão redondo
+    UICorner.CornerRadius = UDim.new(1, 0)
     UICorner.Parent = ImageButton
 
-    -- Função de Clique
     ImageButton.MouseButton1Click:Connect(function()
-        -- Simula o aperto da tecla LeftControl para abrir/fechar o Fluent
         local vim = game:GetService("VirtualInputManager")
         vim:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
     end)
 end
 
 CreateMobileUI()
--- ------------------------------
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
@@ -216,12 +222,23 @@ _G.MiscTab = Tabs.Misc
 _G.Fluent = Fluent
 _G.Options = Fluent.Options
 
--- Carregando os scripts externos
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
+
+local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
+local ThemeDropdown = SettingsTab:AddDropdown("Theme", {
+    Title = "Theme",
+    Description = "If it is not black enough, re-select Darker here.",
+    Values = Fluent.Themes,
+    Default = Fluent.Theme,
+    Callback = function(Value)
+        Fluent:SetTheme(Value)
+        pcall(function() Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0) end)
+    end
+})
 
 task.spawn(function()
     while task.wait(30) do
