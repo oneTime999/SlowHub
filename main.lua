@@ -25,12 +25,8 @@ LRM_INIT_SCRIPT(function()
     local function CreateAuthWindow()
         local Window = Fluent:CreateWindow({
             Title = "Slow Hub", SubTitle = "Key System", TabWidth = 160, Size = UDim2.fromOffset(500, 350),
-            Acrylic = false, Theme = "Darker", MinimizeKey = Enum.KeyCode.LeftControl
+            Acrylic = true, Theme = "Darker", MinimizeKey = Enum.KeyCode.LeftControl
         })
-        
-        pcall(function()
-            Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        end)
         
         local Tab = Window:AddTab({ Title = "Auth", Icon = "key" })
         local enteredKey = ""
@@ -117,7 +113,8 @@ _G.SlowHub = {
     NPC = false,
     Stats = false,
     AntiAFK = false,
-    SelectedWeapon = nil
+    SelectedWeapon = nil,
+    Theme = "Darker"
 }
 
 local configFolder = "SlowHub"
@@ -136,7 +133,8 @@ local function SaveConfig()
             AutoObservation = _G.SlowHub.AutoObservation,
             AutoSummon = _G.SlowHub.AutoSummon,
             AutoFarmMiniBosses = _G.SlowHub.AutoFarmMiniBosses,
-            AutoChest = _G.SlowHub.AutoChest
+            AutoChest = _G.SlowHub.AutoChest,
+            Theme = _G.SlowHub.Theme
         }
         writefile(configFile, HttpService:JSONEncode(data))
     end)
@@ -155,6 +153,7 @@ local function LoadConfig()
         _G.SlowHub.AutoSummon = data.AutoSummon or false
         _G.SlowHub.AutoFarmMiniBosses = data.AutoFarmMiniBosses or false
         _G.SlowHub.AutoChest = data.AutoChest or false
+        _G.SlowHub.Theme = data.Theme or "Darker"
     end)
 end
 
@@ -166,14 +165,10 @@ local Window = Fluent:CreateWindow({
     SubTitle = "v1.0", 
     TabWidth = 160, 
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = false,
-    Theme = "Darker", 
+    Acrylic = true,
+    Theme = _G.SlowHub.Theme, 
     MinimizeKey = Enum.KeyCode.LeftControl
 })
-
-pcall(function()
-    Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-end)
 
 _G.SlowHub.Window = Window
 
@@ -183,6 +178,7 @@ local function CreateMobileUI()
     local UICorner = Instance.new("UICorner")
 
     ScreenGui.Name = "SlowHubMobileButton"
+    
     if pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end) then
     else ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
 
@@ -201,6 +197,8 @@ local function CreateMobileUI()
     ImageButton.MouseButton1Click:Connect(function()
         local vim = game:GetService("VirtualInputManager")
         vim:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+        task.wait(0.05)
+        vim:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
     end)
 end
 
@@ -222,21 +220,30 @@ _G.MiscTab = Tabs.Misc
 _G.Fluent = Fluent
 _G.Options = Fluent.Options
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"))()
+local tabsToLoad = {
+    "https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/main.lua",
+    "https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/bosses.lua",
+    "https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/shop.lua",
+    "https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/stats.lua",
+    "https://raw.githubusercontent.com/oneTime999/SlowHub/main/tabs/misc.lua"
+}
+
+for _, url in ipairs(tabsToLoad) do
+    task.spawn(function()
+        pcall(loadstring(game:HttpGet(url)))
+    end)
+end
 
 local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
-local ThemeDropdown = SettingsTab:AddDropdown("Theme", {
-    Title = "Theme",
-    Description = "If it is not black enough, re-select Darker here.",
-    Values = Fluent.Themes,
-    Default = Fluent.Theme,
+
+SettingsTab:AddDropdown("Theme", {
+    Title = "Select Theme",
+    Values = {"Dark", "Darker", "Light", "Aqua", "Amethyst", "Rose"},
+    Default = _G.SlowHub.Theme,
     Callback = function(Value)
         Fluent:SetTheme(Value)
-        pcall(function() Window.Instance.BackgroundColor3 = Color3.fromRGB(0, 0, 0) end)
+        _G.SlowHub.Theme = Value
+        SaveConfig()
     end
 })
 
