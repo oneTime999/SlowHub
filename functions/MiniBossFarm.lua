@@ -14,31 +14,31 @@ local MiniBossConfig = {
 
 local miniBossList = {"ThiefBoss", "MonkeyBoss", "DesertBoss", "SnowBoss", "PandaMiniBoss"}
 
--- --- COORDENADAS SAFE ZONES (TP INICIAL) ---
 local MiniBossSafeZones = {
-    ["ThiefBoss"]     = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),   -- Area Thief
-    ["MonkeyBoss"]    = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),    -- Area Monkey
-    ["DesertBoss"]    = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),     -- Area Desert
-    ["SnowBoss"]      = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),     -- Area Frost
-    ["PandaMiniBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)     -- Area Panda (Sorcerer)
+    ["ThiefBoss"]     = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
+    ["MonkeyBoss"]    = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
+    ["DesertBoss"]    = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
+    ["SnowBoss"]      = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
+    ["PandaMiniBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
 }
--- -------------------------------------------
 
 local autoFarmMiniBossConnection = nil
 local questConnection = nil
-local selectedMiniBoss = "ThiefBoss"
+local selectedMiniBoss = nil
 local isRunning = false
-local lastSelectedMiniBoss = nil -- Controle de troca
-local hasVisitedSafeZone = false -- Controle de TP
+local lastSelectedMiniBoss = nil
+local hasVisitedSafeZone = false
 
 if not _G.SlowHub.MiniBossFarmDistance then _G.SlowHub.MiniBossFarmDistance = 6 end
 if not _G.SlowHub.MiniBossFarmHeight then _G.SlowHub.MiniBossFarmHeight = 4 end
 
 local function getConfig()
-    return MiniBossConfig[selectedMiniBoss] or MiniBossConfig["ThiefBoss"]
+    if not selectedMiniBoss then return nil end
+    return MiniBossConfig[selectedMiniBoss]
 end
 
 local function getMiniBoss()
+    if not selectedMiniBoss then return nil end
     return workspace.NPCs:FindFirstChild(selectedMiniBoss)
 end
 
@@ -110,12 +110,12 @@ local function startAutoFarmMiniBoss()
         task.wait(0.3)
     end
     
+    local config = getConfig()
+    if not config then return end
+
     isRunning = true
     _G.SlowHub.AutoFarmMiniBosses = true
     
-    local config = getConfig()
-    
-    -- Loop de aceitar missão
     questConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmMiniBosses or not isRunning then
             return
@@ -134,7 +134,6 @@ local function startAutoFarmMiniBoss()
             return
         end
         
-        -- LÓGICA SAFE ZONE
         if selectedMiniBoss ~= lastSelectedMiniBoss then
             lastSelectedMiniBoss = selectedMiniBoss
             hasVisitedSafeZone = false
@@ -151,20 +150,18 @@ local function startAutoFarmMiniBoss()
                     playerRoot.CFrame = safeCFrame
                 end)
                 hasVisitedSafeZone = true
-                return -- Espera chegar
+                return
             else
                 hasVisitedSafeZone = true
             end
         end
 
-        -- LÓGICA FARM
         local miniBoss = getMiniBoss()
         
         if miniBoss and miniBoss.Parent then
             local bossHumanoid = miniBoss:FindFirstChild("Humanoid")
             
             if bossHumanoid and bossHumanoid.Health <= 0 then
-                -- Boss morto, não precisa esperar 1s parado, apenas retorna
                 return
             end
             
@@ -194,7 +191,7 @@ end
 local Dropdown = Tab:AddDropdown("SelectMiniBoss", {
     Title = "Select Mini Boss",
     Values = miniBossList,
-    Default = 1,
+    Default = nil,
     Callback = function(Value)
         local wasRunning = isRunning
         
@@ -217,7 +214,13 @@ local Toggle = Tab:AddToggle("AutoFarmMiniBoss", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma!", Duration = 3})
+                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon!", Duration = 3})
+                if Toggle then Toggle:SetValue(false) end
+                return
+            end
+
+            if not selectedMiniBoss then
+                _G.Fluent:Notify({Title = "Error", Content = "Select a Mini Boss first!", Duration = 3})
                 if Toggle then Toggle:SetValue(false) end
                 return
             end
@@ -258,7 +261,7 @@ local HeightSlider = Tab:AddSlider("MiniBossHeight", {
     end
 })
 
-if _G.SlowHub.AutoFarmMiniBosses and _G.SlowHub.SelectedWeapon then
+if _G.SlowHub.AutoFarmMiniBosses and _G.SlowHub.SelectedWeapon and selectedMiniBoss then
     task.wait(2)
     startAutoFarmMiniBoss()
 end
