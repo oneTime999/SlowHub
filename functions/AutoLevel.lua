@@ -4,7 +4,6 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local MainTab = _G.MainTab
-local BossTab = _G.BossesTab
 
 local LevelConfig = {
     {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief", count = 5},
@@ -22,11 +21,6 @@ local NPCSafeZones = {
     ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
     ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
     ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
-}
-
-local bossList = {
-    "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss"
 }
 
 local BossSafeZones = {
@@ -281,18 +275,6 @@ MainTab:AddSlider("FarmHeight", {
     Min = 1, Max = 10, Default = 4, Rounding = 0,
     Callback = function(Value) _G.SlowHub.FarmHeight = Value end
 })
-
-BossTab:AddParagraph({Title = "Boss Settings", Content = "Select bosses to farm automatically"})
-
-for _, bossName in ipairs(bossList) do
-    BossTab:AddToggle("SelectBoss_" .. bossName, {
-        Title = bossName,
-        Default = false,
-        Callback = function(Value)
-            _G.SlowHub.SelectedBosses[bossName] = Value
-        end
-    })
-end
 
 if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
     task.wait(1)
