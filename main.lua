@@ -96,6 +96,7 @@ LRM_INIT_SCRIPT(function()
 end)
 
 local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 _G.SlowHub = {
@@ -113,8 +114,6 @@ _G.SlowHub = {
     NPC = false,
     Stats = false,
     AntiAFK = false,
-    Rejoin = false,
-    ServerHop = false,
     SelectedWeapon = nil,
     Theme = "Darker"
 }
@@ -197,14 +196,15 @@ local function CreateMobileUI()
     UICorner.Parent = ImageButton
 
     ImageButton.MouseButton1Click:Connect(function()
-        local vim = game:GetService("VirtualInputManager")
-        vim:SendKeyEvent(true, Enum.KeyCode.K, false, game)
-        task.wait(0.05)
-        vim:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+        if Window then
+            Window:Minimize()
+        end
     end)
 end
 
-CreateMobileUI()
+if UserInputService.TouchEnabled then
+    CreateMobileUI()
+end
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
@@ -249,12 +249,6 @@ SettingsTab:AddDropdown("Theme", {
         SaveConfig()
     end
 })
-
-local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
-SettingsTab:AddParagraph({ Title = "Config", Content = "" })
-loadstring(game:HttpGet(githubBase .. "AntiAFK.lua"))()
-loadstring(game:HttpGet(githubBase .. "Rejoin.lua"))()
-loadstring(game:HttpGet(githubBase .. "ServerHop.lua"))()
 
 task.spawn(function()
     while task.wait(30) do
