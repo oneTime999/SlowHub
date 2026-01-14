@@ -15,7 +15,7 @@ local ChestConfig = {
 local chestList = {"Common Chest", "Rare Chest", "Epic Chest", "Legendary Chest", "Mythical Chest"}
 
 local autoChestConnection = nil
-local selectedChest = "Common Chest"
+local selectedChest = nil
 local isChestRunning = false
 local AutoChest = false
 local lastChestTime = 0
@@ -49,13 +49,15 @@ local function startAutoChest()
         
         local currentTime = tick()
         if currentTime - lastChestTime >= CHEST_DELAY then
-            local chestName = ChestConfig[selectedChest]
-            
-            pcall(function()
-                ReplicatedStorage.Remotes.UseItem:FireServer("Use", chestName, 1)
-            end)
-            
-            lastChestTime = currentTime
+            if selectedChest then
+                local chestName = ChestConfig[selectedChest]
+                
+                pcall(function()
+                    ReplicatedStorage.Remotes.UseItem:FireServer("Use", chestName, 1)
+                end)
+                
+                lastChestTime = currentTime
+            end
         end
     end)
 end
@@ -63,7 +65,7 @@ end
 local Dropdown = Tab:AddDropdown("SelectChest", {
     Title = "Select Chest",
     Values = chestList,
-    Default = 1, -- Common Chest é o primeiro
+    Default = nil,
     Callback = function(Value)
         selectedChest = tostring(Value)
     end
@@ -71,11 +73,16 @@ local Dropdown = Tab:AddDropdown("SelectChest", {
 
 local Toggle = Tab:AddToggle("AutoChest", {
     Title = "Auto Chest",
-    Default = AutoChest,
+    Default = false,
     Callback = function(Value)
-        AutoChest = Value
-        
         if Value then
+            if not selectedChest then
+                _G.Fluent:Notify({Title = "Error", Content = "Select a Chest first!", Duration = 3})
+                if Toggle then Toggle:SetValue(false) end
+                return
+            end
+            
+            AutoChest = true
             startAutoChest()
         else
             stopAutoChest()
