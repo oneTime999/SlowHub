@@ -11,7 +11,7 @@ local SwordNPCs = {
     ["Katana"] = function() return workspace.ServiceNPCs:FindFirstChild("Katana") end
 }
 
-_G.SlowHub.SelectedSwordNPC = _G.SlowHub.SelectedSwordNPC or "Aizen"
+_G.SlowHub.SelectedSwordNPC = nil
 
 local function getModelRoot(model)
     if not model then return nil end
@@ -55,7 +55,7 @@ end
 local Dropdown = Tab:AddDropdown("SelectSwordNPC", {
     Title = "Select Sword NPC",
     Values = {"Aizen", "Ragna", "Jinwoo", "Saber", "Dark Blade", "Katana"},
-    Default = 1, -- Aizen é o primeiro
+    Default = nil,
     Callback = function(Value)
         pcall(function()
             _G.SlowHub.SelectedSwordNPC = tostring(Value)
