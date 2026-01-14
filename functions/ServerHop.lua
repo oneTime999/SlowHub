@@ -1,4 +1,4 @@
-local Tab = _G.MiscTab
+local Tab = _G.SettingsTab
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Player = game:GetService("Players").LocalPlayer
