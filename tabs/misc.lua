@@ -28,8 +28,10 @@ loadstring(game:HttpGet(githubBase .. "Codes.lua"))()
 
 -- AFK Section
 Tab:AddParagraph({
-    Title = "AFK",
+    Title = "Config",
     Content = ""
 })
 
 loadstring(game:HttpGet(githubBase .. "AntiAFK.lua"))()
+loadstring(game:HttpGet(githubBase .. "Rejoin.lua"))()
+loadstring(game:HttpGet(githubBase .. "ServerHop.lua"))()
