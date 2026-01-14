@@ -4,6 +4,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
+local TargetBosses = {
+    "Thunder God",
+    "Sand Crocodile",
+    "Ice Admiral", 
+    "Dark Beard",
+    "Sea Beast"
+}
+
 local LevelConfig = {
     {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief", count = 5},
     {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey", count = 5},
@@ -30,6 +38,7 @@ local hasVisitedSafeZone = false
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
+if not _G.SlowHub.AutoFarmPriority then _G.SlowHub.AutoFarmPriority = false end
 
 local function GetPlayerLevel()
     local success, level = pcall(function()
@@ -58,6 +67,18 @@ end
 
 local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
+end
+
+local function getBoss()
+    local enemies = workspace:FindFirstChild("Enemies") or workspace:FindFirstChild("Mobs") or workspace:FindFirstChild("Entities")
+    if enemies then
+        for _, enemy in pairs(enemies:GetChildren()) do
+            if table.find(TargetBosses, enemy.Name) and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                return enemy
+            end
+        end
+    end
+    return nil
 end
 
 local function getNPCRootPart(npc)
@@ -124,9 +145,17 @@ local function startQuestLoop()
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmLevel do
             local config = GetCurrentConfig()
-            pcall(function()
-                ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
-            end)
+            
+            local activeBoss = nil
+            if _G.SlowHub.AutoFarmPriority then
+                activeBoss = getBoss()
+            end
+
+            if not activeBoss then
+                pcall(function()
+                    ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
+                end)
+            end
             task.wait(2)
         end
     end)
@@ -153,57 +182,24 @@ local function startAutoLevel()
             return
         end
         
-        local config = GetCurrentConfig()
-        local now = tick()
-        
-        if config.npc ~= lastTargetNPCName then
-            lastTargetNPCName = config.npc
-            hasVisitedSafeZone = false
-        end
-
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
-
-        if not hasVisitedSafeZone then
-            local safeCFrame = NPCSafeZones[config.npc]
-            if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
-                pcall(function()
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    playerRoot.CFrame = safeCFrame
-                end)
-                hasVisitedSafeZone = true
-                return
-            else
-                hasVisitedSafeZone = true
-            end
+        
+        local now = tick()
+        local activeBoss = nil
+        
+        if _G.SlowHub.AutoFarmPriority then
+            activeBoss = getBoss()
         end
 
-        local npc = getNPC(config.npc, currentNPCIndex)
-        local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
-        
-        if not npcAlive then
-            if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
-                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
-                lastNPCSwitch = now
-                return
-            end
-        else
-            lastNPCSwitch = now
-            
-            local npcRoot = getNPCRootPart(npc)
-            local humanoid = Player.Character:FindFirstChild("Humanoid")
-            
-            if npcRoot and npcRoot.Parent and humanoid and humanoid.Health > 0 then
+        if activeBoss then
+            local bossRoot = activeBoss:FindFirstChild("HumanoidRootPart")
+            if bossRoot then
                 pcall(function()
                     playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     
-                    local targetCFrame = npcRoot.CFrame
-                    local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
-                    
-                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                    if distance > 3 or distance < 1 then
-                        playerRoot.CFrame = offsetPosition
-                    end
+                    local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, 0)
+                    playerRoot.CFrame = targetCFrame
                     
                     EquipWeapon()
                     
@@ -212,6 +208,63 @@ local function startAutoLevel()
                         lastAttack = now
                     end
                 end)
+            end
+        else
+            local config = GetCurrentConfig()
+            
+            if config.npc ~= lastTargetNPCName then
+                lastTargetNPCName = config.npc
+                hasVisitedSafeZone = false
+            end
+
+            if not hasVisitedSafeZone then
+                local safeCFrame = NPCSafeZones[config.npc]
+                if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
+                    pcall(function()
+                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        playerRoot.CFrame = safeCFrame
+                    end)
+                    hasVisitedSafeZone = true
+                    return
+                else
+                    hasVisitedSafeZone = true
+                end
+            end
+
+            local npc = getNPC(config.npc, currentNPCIndex)
+            local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
+            
+            if not npcAlive then
+                if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
+                    currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
+                    lastNPCSwitch = now
+                    return
+                end
+            else
+                lastNPCSwitch = now
+                
+                local npcRoot = getNPCRootPart(npc)
+                
+                if npcRoot then
+                    pcall(function()
+                        playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        
+                        local targetCFrame = npcRoot.CFrame
+                        local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
+                        
+                        local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
+                        if distance > 3 or distance < 1 then
+                            playerRoot.CFrame = offsetPosition
+                        end
+                        
+                        EquipWeapon()
+                        
+                        if (now - lastAttack) > 0.15 then
+                            ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                            lastAttack = now
+                        end
+                    end)
+                end
             end
         end
     end)
@@ -234,6 +287,18 @@ local Toggle = Tab:AddToggle("AutoFarmLevel", {
         end
         
         _G.SlowHub.AutoFarmLevel = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
+})
+
+local PriorityToggle = Tab:AddToggle("AutoFarmPriority", {
+    Title = "Prioritize Bosses",
+    Description = "Stops farming level to kill Bosses when they spawn",
+    Default = _G.SlowHub.AutoFarmPriority,
+    Callback = function(Value)
+        _G.SlowHub.AutoFarmPriority = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
