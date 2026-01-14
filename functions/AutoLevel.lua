@@ -3,11 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- Unificando as Tabs (Assumindo que sua Window já foi criada antes)
 local MainTab = _G.MainTab
 local BossTab = _G.BossesTab
-
--- ================= CONFIGURAÇÕES ================= --
 
 local LevelConfig = {
     {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief", count = 5},
@@ -42,20 +39,16 @@ local BossSafeZones = {
     ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
 }
 
--- Globais do SlowHub
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
 if not _G.SlowHub.SelectedBosses then _G.SlowHub.SelectedBosses = {} end
 
--- Variáveis de Controle
 local autoLevelConnection = nil
 local questLoopActive = false
 local currentNPCIndex = 1
-local lastTargetName = nil -- Agora serve tanto para Boss quanto NPC
+local lastTargetName = nil
 local hasVisitedSafeZone = false
-local isBossMode = false -- Indica se estamos matando boss no momento
-
--- ================= FUNÇÕES AUXILIARES ================= --
+local isBossMode = false
 
 local function GetPlayerLevel()
     local success, level = pcall(function()
@@ -84,7 +77,6 @@ local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
--- Função para verificar se existe algum Boss Selecionado e Vivo
 local function getAliveBoss()
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
@@ -138,7 +130,6 @@ local function startQuestLoop()
     questLoopActive = true
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmLevel do
-            -- Só aceita missão se NÃO estiver matando Boss
             if not isBossMode then
                 local config = GetCurrentConfig()
                 pcall(function()
@@ -149,8 +140,6 @@ local function startQuestLoop()
         end
     end)
 end
-
--- ================= LOGICA PRINCIPAL UNIFICADA ================= --
 
 local function startAutoLevel()
     if autoLevelConnection then stopAutoLevel() end
@@ -171,35 +160,28 @@ local function startAutoLevel()
 
         local now = tick()
         
-        -----------------------------------------------------
-        -- PASSO 1: VERIFICA SE TEM BOSS (PRIORIDADE)
-        -----------------------------------------------------
         local targetBoss = getAliveBoss()
         
         if targetBoss then
-            -- MODO BOSS ATIVO
             isBossMode = true
             
-            -- Se acabou de trocar de NPC para Boss, reseta SafeZone
             if lastTargetName ~= targetBoss.Name then
                 lastTargetName = targetBoss.Name
                 hasVisitedSafeZone = false
             end
             
-            -- Lógica de SafeZone do Boss
             if not hasVisitedSafeZone then
                 local safeCFrame = BossSafeZones[targetBoss.Name]
                 if safeCFrame then
                     playerRoot.CFrame = safeCFrame
                     playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
                     hasVisitedSafeZone = true
-                    return -- Espera um frame no SafeZone antes de ir pro ataque
+                    return
                 else
                     hasVisitedSafeZone = true
                 end
             end
             
-            -- Ataque ao Boss
             local bossRoot = targetBoss:FindFirstChild("HumanoidRootPart")
             if bossRoot then
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
@@ -213,26 +195,18 @@ local function startAutoLevel()
                     lastAttack = now
                 end
             end
-            
-            -- Pula o resto do código (não farma nível enquanto mata boss)
             return 
         else
             isBossMode = false
         end
 
-        -----------------------------------------------------
-        -- PASSO 2: FARM DE NIVEL (SE NÃO TIVER BOSS)
-        -----------------------------------------------------
-        
         local config = GetCurrentConfig()
         
-        -- Se trocou de Boss de volta para NPC, ou mudou de NPC
         if lastTargetName ~= config.npc then
             lastTargetName = config.npc
             hasVisitedSafeZone = false
         end
 
-        -- Lógica de SafeZone do NPC
         if not hasVisitedSafeZone then
             local safeCFrame = NPCSafeZones[config.npc]
             if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
@@ -249,7 +223,7 @@ local function startAutoLevel()
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
         if not npcAlive then
-            if (now - lastNPCSwitch) > 0 then -- Delay removido para ser instantâneo
+            if (now - lastNPCSwitch) > 0 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCSwitch = now
             end
@@ -278,10 +252,8 @@ local function startAutoLevel()
     end)
 end
 
--- ================= UI ELEMENTS (MAIN TAB) ================= --
-
 MainTab:AddToggle("AutoFarmLevel", {
-    Title = "Auto Farm Level (Prioritizes Bosses)",
+    Title = "Auto Farm Level",
     Default = _G.SlowHub.AutoFarmLevel,
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
@@ -300,19 +272,17 @@ MainTab:AddToggle("AutoFarmLevel", {
 
 MainTab:AddSlider("FarmDistance", {
     Title = "Farm Distance",
-    Min = 1, Max = 15, Default = 8, Rounding = 0,
+    Min = 1, Max = 10, Default = 8, Rounding = 0,
     Callback = function(Value) _G.SlowHub.FarmDistance = Value end
 })
 
 MainTab:AddSlider("FarmHeight", {
     Title = "Farm Height",
-    Min = 1, Max = 15, Default = 4, Rounding = 0,
+    Min = 1, Max = 10, Default = 4, Rounding = 0,
     Callback = function(Value) _G.SlowHub.FarmHeight = Value end
 })
 
--- ================= UI ELEMENTS (BOSS TAB) ================= --
-
-BossTab:AddParagraph({Title = "Priority System", Content = "Select bosses below. If 'Auto Farm Level' is ON and a selected Boss spawns, the script will pause the level farm, kill the boss, and then return to level farming."})
+BossTab:AddParagraph({Title = "Boss Settings", Content = "Select bosses to farm automatically"})
 
 for _, bossName in ipairs(bossList) do
     BossTab:AddToggle("SelectBoss_" .. bossName, {
@@ -324,7 +294,6 @@ for _, bossName in ipairs(bossList) do
     })
 end
 
--- Inicialização automática se já estiver ativo
 if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
     task.wait(1)
     startAutoLevel()
