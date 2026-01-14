@@ -237,6 +237,7 @@ for _, url in ipairs(tabsToLoad) do
 end
 
 local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
+_G.SettingsTab = SettingsTab
 
 SettingsTab:AddDropdown("Theme", {
     Title = "Select Theme",
@@ -248,6 +249,12 @@ SettingsTab:AddDropdown("Theme", {
         SaveConfig()
     end
 })
+
+local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
+SettingsTab:AddParagraph({ Title = "Config", Content = "" })
+loadstring(game:HttpGet(githubBase .. "AntiAFK.lua"))()
+loadstring(game:HttpGet(githubBase .. "Rejoin.lua"))()
+loadstring(game:HttpGet(githubBase .. "ServerHop.lua"))()
 
 task.spawn(function()
     while task.wait(30) do
