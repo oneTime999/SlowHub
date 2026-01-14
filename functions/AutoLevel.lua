@@ -1,4 +1,4 @@
-Local Tab = _G.MainTab
+local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -14,12 +14,12 @@ local LevelConfig = {
 }
 
 local NPCSafeZones = {
-    ["Thief"]        = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
-    ["Monkey"]       = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
+    ["Thief"] = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
+    ["Monkey"] = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
     ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
-    ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
-    ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
+    ["FrostRogue"] = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
+    ["Sorcerer"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
+    ["Hollow"] = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
 }
 
 local autoLevelConnection = nil
@@ -27,6 +27,7 @@ local questLoopActive = false
 local currentNPCIndex = 1
 local lastTargetNPCName = nil
 local hasVisitedSafeZone = false
+local farmPausedByBoss = false
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
@@ -50,9 +51,7 @@ end
 
 local function getNextNPC(current, maxCount)
     local next = current + 1
-    if next > maxCount then
-        return 1
-    end
+    if next > maxCount then return 1 end
     return next
 end
 
@@ -64,34 +63,37 @@ local function getNPCRootPart(npc)
     if npc and npc:FindFirstChild("HumanoidRootPart") then
         return npc.HumanoidRootPart
     end
-    return nil
 end
 
 local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return false end
-    
-    local success = pcall(function()
+    if not _G.SlowHub.SelectedWeapon then return end
+    pcall(function()
         local backpack = Player:FindFirstChild("Backpack")
         local character = Player.Character
-        
-        if not character or not character:FindFirstChild("Humanoid") then
-            return false
-        end
-        
-        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-            return true
-        end
-        
-        if backpack then
-            local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-            if weapon then
-                character.Humanoid:EquipTool(weapon)
-                task.wait(0.1)
+        if character and character:FindFirstChild("Humanoid") then
+            if not character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
+                local weapon = backpack and backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
+                if weapon then
+                    character.Humanoid:EquipTool(weapon)
+                end
             end
         end
     end)
-    
-    return success
+end
+
+local function IsAnyBossAlive()
+    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+        if isSelected then
+            local boss = workspace.NPCs:FindFirstChild(bossName)
+            if boss then
+                local hum = boss:FindFirstChild("Humanoid")
+                if hum and hum.Health > 0 then
+                    return true
+                end
+            end
+        end
+    end
+    return false
 end
 
 local function stopAutoLevel()
@@ -99,19 +101,16 @@ local function stopAutoLevel()
         autoLevelConnection:Disconnect()
         autoLevelConnection = nil
     end
-    
     questLoopActive = false
-    _G.SlowHub.AutoFarmLevel = false
     currentNPCIndex = 1
     lastTargetNPCName = nil
     hasVisitedSafeZone = false
-    
     pcall(function()
         if Player.Character then
-            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-            if playerRoot then
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                playerRoot.Anchored = false
+            local root = Player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                root.Anchored = false
             end
         end
     end)
@@ -120,102 +119,91 @@ end
 local function startQuestLoop()
     if questLoopActive then return end
     questLoopActive = true
-    
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmLevel do
             local config = GetCurrentConfig()
-            pcall(function()
-                ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
-            end)
+            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
             task.wait(2)
         end
     end)
 end
 
 local function startAutoLevel()
-    if autoLevelConnection then
-        stopAutoLevel()
-    end
-    
+    if autoLevelConnection then stopAutoLevel() end
     _G.SlowHub.AutoFarmLevel = true
     currentNPCIndex = 1
-    
     startQuestLoop()
     EquipWeapon()
-    
     local lastNPCSwitch = 0
-    local NPC_SWITCH_DELAY = 0
     local lastAttack = 0
-    
+
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
             stopAutoLevel()
             return
         end
-        
+
+        if _G.SlowHub.AutoFarmBosses and IsAnyBossAlive() then
+            farmPausedByBoss = true
+            stopAutoLevel()
+            return
+        end
+
         local config = GetCurrentConfig()
         local now = tick()
-        
+
         if config.npc ~= lastTargetNPCName then
             lastTargetNPCName = config.npc
             hasVisitedSafeZone = false
         end
 
-        local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-        if not playerRoot then return end
+        local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
 
         if not hasVisitedSafeZone then
-            local safeCFrame = NPCSafeZones[config.npc]
-            if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
-                pcall(function()
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    playerRoot.CFrame = safeCFrame
-                end)
+            local safe = NPCSafeZones[config.npc]
+            if safe then
+                root.CFrame = safe
                 hasVisitedSafeZone = true
                 return
-            else
-                hasVisitedSafeZone = true
             end
+            hasVisitedSafeZone = true
         end
 
         local npc = getNPC(config.npc, currentNPCIndex)
-        local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
-        
-        if not npcAlive then
-            if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
+        local alive = npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
+
+        if not alive then
+            if now - lastNPCSwitch > 0 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
                 lastNPCSwitch = now
-                return
             end
-        else
-            lastNPCSwitch = now
-            
-            local npcRoot = getNPCRootPart(npc)
-            local humanoid = Player.Character:FindFirstChild("Humanoid")
-            
-            if npcRoot and npcRoot.Parent and humanoid and humanoid.Health > 0 then
-                pcall(function()
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    
-                    local targetCFrame = npcRoot.CFrame
-                    local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
-                    
-                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                    if distance > 3 or distance < 1 then
-                        playerRoot.CFrame = offsetPosition
-                    end
-                    
-                    EquipWeapon()
-                    
-                    if (now - lastAttack) > 0.15 then
-                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                        lastAttack = now
-                    end
-                end)
+            return
+        end
+
+        local npcRoot = getNPCRootPart(npc)
+        local humanoid = Player.Character:FindFirstChild("Humanoid")
+
+        if npcRoot and humanoid and humanoid.Health > 0 then
+            local target = npcRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
+            root.CFrame = target
+            EquipWeapon()
+            if now - lastAttack > 0.15 then
+                ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                lastAttack = now
             end
         end
     end)
 end
+
+RunService.Heartbeat:Connect(function()
+    if farmPausedByBoss and _G.SlowHub.AutoFarmBosses and not IsAnyBossAlive() then
+        farmPausedByBoss = false
+        if _G.SlowHub.AutoFarmLevel then
+            startAutoLevel()
+        end
+    end
+end)
 
 local Toggle = Tab:AddToggle("AutoFarmLevel", {
     Title = "Auto Farm Level",
@@ -223,50 +211,38 @@ local Toggle = Tab:AddToggle("AutoFarmLevel", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+                _G.Fluent:Notify({Title="Error",Content="Select a weapon first",Duration=3})
+                Toggle:SetValue(false)
                 return
             end
-            
             startAutoLevel()
         else
             stopAutoLevel()
         end
-        
         _G.SlowHub.AutoFarmLevel = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
 local DistanceSlider = Tab:AddSlider("FarmDistance", {
-    Title = "Farm Distance (studs)",
+    Title = "Farm Distance",
     Min = 1,
     Max = 10,
     Default = _G.SlowHub.FarmDistance,
-    Rounding = 0,
-    Callback = function(Value)
-        _G.SlowHub.FarmDistance = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+    Callback = function(v)
+        _G.SlowHub.FarmDistance = v
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
 local HeightSlider = Tab:AddSlider("FarmHeight", {
-    Title = "Farm Height (studs)",
+    Title = "Farm Height",
     Min = 1,
     Max = 10,
     Default = _G.SlowHub.FarmHeight,
-    Rounding = 0,
-    Callback = function(Value)
-        _G.SlowHub.FarmHeight = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+    Callback = function(v)
+        _G.SlowHub.FarmHeight = v
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
