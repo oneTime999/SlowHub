@@ -16,7 +16,7 @@ local NPCs = {
     ["ArtifactMilestoneNPC"] = function() return workspace.ServiceNPCs:FindFirstChild("ArtifactMilestoneNPC") end
 }
 
-_G.SlowHub.SelectedNPC = _G.SlowHub.SelectedNPC or "EnchantNPC"
+_G.SlowHub.SelectedNPC = nil
 
 local function getModelRoot(model)
     if not model then return nil end
@@ -72,7 +72,7 @@ local Dropdown = Tab:AddDropdown("SelectNPC", {
         "ArtifactsUnlocker",
         "ArtifactMilestoneNPC"
     },
-    Default = 1, -- EnchantNPC é o primeiro
+    Default = nil,
     Callback = function(Value)
         pcall(function()
             _G.SlowHub.SelectedNPC = tostring(Value)
