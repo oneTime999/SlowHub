@@ -32,6 +32,6 @@ Tab:AddParagraph({
     Content = ""
 })
 
-loadstring(game:HttpGet(githubBase .. "Anti-AFK.lua"))()
+loadstring(game:HttpGet(githubBase .. "AntiAFK.lua"))()
 loadstring(game:HttpGet(githubBase .. "Rejoin.lua"))()
 loadstring(game:HttpGet(githubBase .. "ServerHop.lua"))()
