@@ -43,7 +43,7 @@ local currentNPCIndex = 1
 local lastTargetName = nil
 local hasVisitedSafeZone = false
 local isBossMode = false
-local activeBoss = nil -- LOCK VARIABLE
+local activeBoss = nil
 
 local function GetPlayerLevel()
     local success, level = pcall(function()
@@ -93,7 +93,6 @@ local function EquipWeapon()
         local character = Player.Character
         if not character or not character:FindFirstChild("Humanoid") then return end
         if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
-        
         local backpack = Player:FindFirstChild("Backpack")
         if backpack then
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
@@ -113,7 +112,8 @@ local function stopAutoLevel()
     _G.SlowHub.AutoFarmLevel = false
     isBossMode = false
     activeBoss = nil
-    
+    lastTargetName = nil
+    hasVisitedSafeZone = false
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0,0,0)
@@ -140,99 +140,79 @@ end
 
 local function startAutoLevel()
     if autoLevelConnection then stopAutoLevel() end
-    
     _G.SlowHub.AutoFarmLevel = true
     currentNPCIndex = 1
     activeBoss = nil
+    lastTargetName = nil
+    hasVisitedSafeZone = false
     startQuestLoop()
-    
     local lastNPCSwitch = 0
     local lastAttack = 0
-    
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then stopAutoLevel() return end
-        
-        local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = Player.Character and Player.Character:FindFirstChild("Humanoid")
+        local character = Player.Character
+        local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character and character:FindFirstChild("Humanoid")
         if not playerRoot or not humanoid or humanoid.Health <= 0 then return end
-
         local now = tick()
-        
-        -- BOSS LOGIC START
         if activeBoss then
             if not activeBoss.Parent or not activeBoss:FindFirstChild("Humanoid") or activeBoss.Humanoid.Health <= 0 then
                 activeBoss = nil
             end
         end
-        
         if not activeBoss then
             activeBoss = getNewBossTarget()
-            if activeBoss then
-                hasVisitedSafeZone = false
-            end
         end
-        
         if activeBoss then
             isBossMode = true
-            
             if lastTargetName ~= activeBoss.Name then
                 lastTargetName = activeBoss.Name
                 hasVisitedSafeZone = false
             end
-            
             if not hasVisitedSafeZone then
                 local safeCFrame = BossSafeZones[activeBoss.Name]
                 if safeCFrame then
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     playerRoot.CFrame = safeCFrame
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
                     hasVisitedSafeZone = true
                     return
                 else
                     hasVisitedSafeZone = true
                 end
             end
-            
             local bossRoot = activeBoss:FindFirstChild("HumanoidRootPart")
             if bossRoot then
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
                 playerRoot.CFrame = targetCFrame
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 EquipWeapon()
-                
                 if (now - lastAttack) > 0.15 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     lastAttack = now
                 end
             end
-            return -- Exit loop, focus on boss
+            return
         else
             isBossMode = false
         end
-        -- BOSS LOGIC END
-
         local config = GetCurrentConfig()
-        
         if lastTargetName ~= config.npc then
             lastTargetName = config.npc
             hasVisitedSafeZone = false
         end
-
         if not hasVisitedSafeZone then
             local safeCFrame = NPCSafeZones[config.npc]
-            if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
+            if safeCFrame then
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 playerRoot.CFrame = safeCFrame
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 hasVisitedSafeZone = true
                 return
             else
                 hasVisitedSafeZone = true
             end
         end
-
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
-        
         if not npcAlive then
             if (now - lastNPCSwitch) > 0 then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
@@ -241,19 +221,13 @@ local function startAutoLevel()
         else
             lastNPCSwitch = now
             local npcRoot = npc:FindFirstChild("HumanoidRootPart")
-            
             if npcRoot then
                 local targetCFrame = npcRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
-                
-                local distance = (playerRoot.Position - targetCFrame.Position).Magnitude
-                if distance > 2 then
+                if (playerRoot.Position - targetCFrame.Position).Magnitude > 2 then
                     playerRoot.CFrame = targetCFrame
                 end
-                
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                
                 EquipWeapon()
-                
                 if (now - lastAttack) > 0.15 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     lastAttack = now
@@ -271,7 +245,6 @@ MainTab:AddToggle("AutoFarmLevel", {
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
-                _G.SlowHub.AutoFarmLevel = false
                 return
             end
             startAutoLevel()
