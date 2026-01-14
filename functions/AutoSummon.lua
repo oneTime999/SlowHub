@@ -11,9 +11,8 @@ local BossList = {
 
 local autoSummonBossConnection = nil
 local isSummoningBoss = false
-local selectedBoss = "QinShiBoss"
+local selectedBoss = nil
 
--- Função para verificar se o boss está vivo
 local function isBossAlive(bossName)
     pcall(function()
         for _, obj in pairs(workspace:GetChildren()) do
@@ -51,34 +50,35 @@ local function startAutoSummonBoss()
             return
         end
         
-        -- Verifica se o boss já está vivo
         if isBossAlive(selectedBoss) then
-            return -- Continua o loop, só para se desativar manualmente
+            return 
         end
         
-        -- Faz o summon continuamente
         pcall(function()
             ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss)
         end)
     end)
 end
 
--- Dropdown para selecionar Boss
 local Dropdown = Tab:AddDropdown("SelectBossSummon", {
     Title = "Select Boss",
     Values = BossList,
-    Default = 1, -- QinShiBoss é o primeiro
+    Default = nil,
     Callback = function(Value)
         selectedBoss = tostring(Value)
     end
 })
 
--- Toggle Auto Summon Boss (LOOP CONTÍNUO)
 local Toggle = Tab:AddToggle("AutoSummonBoss", {
     Title = "Auto Summon Boss",
     Default = false,
     Callback = function(Value)
         if Value then
+            if not selectedBoss then
+                _G.Fluent:Notify({Title = "Error", Content = "Select a Boss to summon first!", Duration = 3})
+                if Toggle then Toggle:SetValue(false) end
+                return
+            end
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
@@ -91,8 +91,7 @@ local Toggle = Tab:AddToggle("AutoSummonBoss", {
     end
 })
 
--- Auto start se estava ativo
-if _G.SlowHub.AutoSummonBoss then
+if _G.SlowHub.AutoSummonBoss and selectedBoss then
     task.wait(2)
     startAutoSummonBoss()
 end
