@@ -1,8 +1,9 @@
-local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
+
+local Tab = _G.BossesTab
 
 local MiniBossConfig = {
     ["ThiefBoss"] = {quest = "QuestNPC2"},
@@ -22,15 +23,28 @@ local MiniBossSafeZones = {
     ["PandaMiniBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
 }
 
+local BossSafeZones = {
+    ["AizenBoss"]  = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875),
+    ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
+    ["SaberBoss"]  = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
+    ["RagnaBoss"]  = CFrame.new(282.7808837890625, -2.7751426696777344, -1479.363525390625),
+    ["JinwooBoss"] = CFrame.new(235.1376190185547, 3.1064343452453613, 659.7340698242188),
+    ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
+    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
+}
+
 local autoFarmMiniBossConnection = nil
 local questConnection = nil
 local selectedMiniBoss = nil
 local isRunning = false
-local lastSelectedMiniBoss = nil
+local lastTargetName = nil
 local hasVisitedSafeZone = false
+local activeBoss = nil
+local isBossMode = false
 
 if not _G.SlowHub.MiniBossFarmDistance then _G.SlowHub.MiniBossFarmDistance = 6 end
 if not _G.SlowHub.MiniBossFarmHeight then _G.SlowHub.MiniBossFarmHeight = 4 end
+if not _G.SlowHub.SelectedBosses then _G.SlowHub.SelectedBosses = {} end
 
 local function getConfig()
     if not selectedMiniBoss then return nil end
@@ -49,6 +63,21 @@ local function getMiniBossRootPart(miniBoss)
     return nil
 end
 
+local function getNewBossTarget()
+    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+        if isSelected then
+            local boss = workspace.NPCs:FindFirstChild(bossName)
+            if boss and boss.Parent then
+                local humanoid = boss:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    return boss
+                end
+            end
+        end
+    end
+    return nil
+end
+
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     
@@ -56,13 +85,8 @@ local function EquipWeapon()
         local backpack = Player:FindFirstChild("Backpack")
         local character = Player.Character
         
-        if not character or not character:FindFirstChild("Humanoid") then
-            return false
-        end
-        
-        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-            return true
-        end
+        if not character or not character:FindFirstChild("Humanoid") then return false end
+        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return true end
         
         if backpack then
             local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
@@ -72,14 +96,15 @@ local function EquipWeapon()
             end
         end
     end)
-    
     return success
 end
 
 local function stopAutoFarmMiniBoss()
     isRunning = false
-    lastSelectedMiniBoss = nil
+    lastTargetName = nil
     hasVisitedSafeZone = false
+    activeBoss = nil
+    isBossMode = false
     
     if autoFarmMiniBossConnection then
         autoFarmMiniBossConnection:Disconnect()
@@ -115,18 +140,21 @@ local function startAutoFarmMiniBoss()
 
     isRunning = true
     _G.SlowHub.AutoFarmMiniBosses = true
+    activeBoss = nil
     
     questConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmMiniBosses or not isRunning then
-            return
-        end
+        if not _G.SlowHub.AutoFarmMiniBosses or not isRunning then return end
         
-        pcall(function()
-            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
-        end)
+        if not isBossMode then
+            pcall(function()
+                ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
+            end)
+        end
     end)
     
     EquipWeapon()
+    
+    local lastAttack = 0
     
     autoFarmMiniBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmMiniBosses or not isRunning then
@@ -134,13 +162,66 @@ local function startAutoFarmMiniBoss()
             return
         end
         
-        if selectedMiniBoss ~= lastSelectedMiniBoss then
-            lastSelectedMiniBoss = selectedMiniBoss
-            hasVisitedSafeZone = false
-        end
-
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
+        
+        local now = tick()
+        
+        if activeBoss then
+            if not activeBoss.Parent or not activeBoss:FindFirstChild("Humanoid") or activeBoss.Humanoid.Health <= 0 then
+                activeBoss = nil
+            end
+        end
+        
+        if not activeBoss then
+            activeBoss = getNewBossTarget()
+            if activeBoss then
+                hasVisitedSafeZone = false
+            end
+        end
+        
+        if activeBoss then
+            isBossMode = true
+            
+            if lastTargetName ~= activeBoss.Name then
+                lastTargetName = activeBoss.Name
+                hasVisitedSafeZone = false
+            end
+            
+            if not hasVisitedSafeZone then
+                local safeCFrame = BossSafeZones[activeBoss.Name]
+                if safeCFrame then
+                    playerRoot.CFrame = safeCFrame
+                    playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    hasVisitedSafeZone = true
+                    return
+                else
+                    hasVisitedSafeZone = true
+                end
+            end
+            
+            local bossRoot = activeBoss:FindFirstChild("HumanoidRootPart")
+            if bossRoot then
+                local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.MiniBossFarmHeight, _G.SlowHub.MiniBossFarmDistance)
+                playerRoot.CFrame = targetCFrame
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                
+                EquipWeapon()
+                
+                if (now - lastAttack) > 0.15 then
+                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                    lastAttack = now
+                end
+            end
+            return
+        else
+            isBossMode = false
+        end
+        
+        if selectedMiniBoss ~= lastTargetName then
+            lastTargetName = selectedMiniBoss
+            hasVisitedSafeZone = false
+        end
 
         if not hasVisitedSafeZone then
             local safeCFrame = MiniBossSafeZones[selectedMiniBoss]
@@ -161,9 +242,7 @@ local function startAutoFarmMiniBoss()
         if miniBoss and miniBoss.Parent then
             local bossHumanoid = miniBoss:FindFirstChild("Humanoid")
             
-            if bossHumanoid and bossHumanoid.Health <= 0 then
-                return
-            end
+            if bossHumanoid and bossHumanoid.Health <= 0 then return end
             
             local bossRoot = getMiniBossRootPart(miniBoss)
             local humanoid = Player.Character:FindFirstChild("Humanoid")
@@ -181,7 +260,11 @@ local function startAutoFarmMiniBoss()
                     end
                     
                     EquipWeapon()
-                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                    
+                    if (now - lastAttack) > 0.15 then
+                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        lastAttack = now
+                    end
                 end)
             end
         end
