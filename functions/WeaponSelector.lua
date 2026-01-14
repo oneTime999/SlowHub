@@ -81,7 +81,7 @@ end
 local WeaponDropdown = Tab:AddDropdown("SelectWeapon", {
     Title = "Select Weapon",
     Values = GetWeapons(),
-    Default = 1,
+    Default = nil,
     Callback = function(Value)
         local weapon = tostring(Value)
         
@@ -100,10 +100,10 @@ local RefreshButton = Tab:AddButton({
     Callback = function()
         local newWeapons = GetWeapons()
         
-        -- Atualiza o dropdown com a nova lista de armas
         pcall(function()
             if _G.Options and _G.Options.SelectWeapon then
                 _G.Options.SelectWeapon:SetValues(newWeapons)
+                _G.Options.SelectWeapon:SetValue(nil)
             end
         end)
     end
