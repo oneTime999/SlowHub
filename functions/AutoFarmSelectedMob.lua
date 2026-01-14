@@ -14,24 +14,21 @@ local QuestConfig = {
     ["Hollow"] = "QuestNPC11"
 }
 
--- --- COORDENADAS DOS TP INICIAIS (SAFE ZONES) ---
 local MobSafeZones = {
     ["Thief"]        = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
     ["Monkey"]       = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
     ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
     ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
     ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875) -- Mesma do Aizen
+    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
 }
--- ------------------------------------------------
 
 local autoFarmSelectedConnection = nil
-local autoQuestLoop = nil
-local selectedMob = "Thief"
+local questLoopActive = false
+local selectedMob = nil
 local currentNPCIndex = 1
-local isRunning = false
-local lastSelectedMobForSafeZone = nil -- Controle de troca de mob
-local hasVisitedSafeZone = false       -- Controle do TP inicial
+local lastSelectedMobForSafeZone = nil
+local hasVisitedSafeZone = false
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
@@ -95,17 +92,13 @@ local function EquipWeapon()
 end
 
 local function stopAutoFarmSelectedMob()
-    isRunning = false
     if autoFarmSelectedConnection then
         autoFarmSelectedConnection:Disconnect()
         autoFarmSelectedConnection = nil
     end
-    if autoQuestLoop then
-        autoQuestLoop:Disconnect()
-        autoQuestLoop = nil
-    end
+    
+    questLoopActive = false
     _G.SlowHub.AutoFarmSelectedMob = false
-    _G.SlowHub.AutoQuestSelectedMob = false
     currentNPCIndex = 1
     lastSelectedMobForSafeZone = nil
     hasVisitedSafeZone = false
@@ -121,25 +114,20 @@ local function stopAutoFarmSelectedMob()
     end)
 end
 
-local function startAutoQuestLoop(questName)
-    if autoQuestLoop then return end
+local function startQuestLoop(questName)
+    if questLoopActive then return end
+    questLoopActive = true
     
-    autoQuestLoop = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
-            return
+    task.spawn(function()
+        while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
+            if _G.SlowHub.AutoQuestSelectedMob then
+                pcall(function()
+                    ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
+                end)
+            end
+            task.wait(2)
         end
-        
-        pcall(function()
-            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
-        end)
     end)
-end
-
-local function stopAutoQuestLoop()
-    if autoQuestLoop then
-        autoQuestLoop:Disconnect()
-        autoQuestLoop = nil
-    end
 end
 
 local function startAutoFarmSelectedMob()
@@ -147,23 +135,20 @@ local function startAutoFarmSelectedMob()
         stopAutoFarmSelectedMob()
     end
     
-    isRunning = true
     _G.SlowHub.AutoFarmSelectedMob = true
     currentNPCIndex = 1
     
     local config = getMobConfig(selectedMob)
     EquipWeapon()
     
-    -- Inicia loop de quest SE ativado
-    if _G.SlowHub.AutoQuestSelectedMob then
-        startAutoQuestLoop(config.quest)
-    end
+    startQuestLoop(config.quest)
     
     local lastNPCSwitch = 0
     local NPC_SWITCH_DELAY = 0
+    local lastAttack = 0
     
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmSelectedMob or not isRunning then
+        if not _G.SlowHub.AutoFarmSelectedMob then
             stopAutoFarmSelectedMob()
             return
         end
@@ -171,8 +156,6 @@ local function startAutoFarmSelectedMob()
         local config = getMobConfig(selectedMob)
         local now = tick()
         
-        -- LÓGICA DE SAFE ZONE
-        -- Se o mob mudou (ou ligou o script agora), reseta o flag
         if selectedMob ~= lastSelectedMobForSafeZone then
             lastSelectedMobForSafeZone = selectedMob
             hasVisitedSafeZone = false
@@ -181,7 +164,6 @@ local function startAutoFarmSelectedMob()
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
-        -- Se ainda não foi na Safe Zone deste mob, vai agora
         if not hasVisitedSafeZone then
             local safeCFrame = MobSafeZones[selectedMob]
             if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
@@ -190,19 +172,15 @@ local function startAutoFarmSelectedMob()
                     playerRoot.CFrame = safeCFrame
                 end)
                 hasVisitedSafeZone = true
-                return -- Espera o próximo frame
+                return
             else
                 hasVisitedSafeZone = true
             end
         end
 
-        -- LÓGICA DE FARM (Só roda se hasVisitedSafeZone for true)
-        
-        -- Procura NPC atual
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
-        -- SE NPC não existe OU está morto → TROCA IMEDIATAMENTE
         if not npcAlive then
             if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
@@ -210,7 +188,6 @@ local function startAutoFarmSelectedMob()
                 return
             end
         else
-            -- NPC vivo → ataca
             lastNPCSwitch = now
             
             local npcRoot = getNPCRootPart(npc)
@@ -230,8 +207,9 @@ local function startAutoFarmSelectedMob()
                     
                     EquipWeapon()
                     
-                    if math.random() > 0.6 then
+                    if (now - lastAttack) > 0.15 then
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        lastAttack = now
                     end
                 end)
             end
@@ -242,9 +220,9 @@ end
 local Dropdown = Tab:AddDropdown("SelectMob", {
     Title = "Select Mob",
     Values = MobList,
-    Default = 1, -- Thief é o primeiro
+    Default = nil,
     Callback = function(Value)
-        local wasRunning = isRunning
+        local wasRunning = _G.SlowHub.AutoFarmSelectedMob
         
         if wasRunning then
             stopAutoFarmSelectedMob()
@@ -266,7 +244,13 @@ local Toggle = Tab:AddToggle("AutoFarmSelectedMob", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma primeiro!", Duration = 3})
+                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
+                if Toggle then Toggle:SetValue(false) end
+                return
+            end
+            
+            if not selectedMob then
+                _G.Fluent:Notify({Title = "Error", Content = "Select a Mob first!", Duration = 3})
                 if Toggle then Toggle:SetValue(false) end
                 return
             end
@@ -288,16 +272,6 @@ local QuestToggle = Tab:AddToggle("AutoQuestSelectedMob", {
     Default = false,
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
-        
-        if _G.SlowHub.AutoFarmSelectedMob and isRunning then
-            local config = getMobConfig(selectedMob)
-            if Value then
-                startAutoQuestLoop(config.quest)
-            else
-                stopAutoQuestLoop()
-            end
-        end
-        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
