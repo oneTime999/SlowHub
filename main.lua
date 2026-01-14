@@ -25,7 +25,7 @@ LRM_INIT_SCRIPT(function()
     local function CreateAuthWindow()
         local Window = Fluent:CreateWindow({
             Title = "Slow Hub", SubTitle = "Key System", TabWidth = 160, Size = UDim2.fromOffset(500, 350),
-            Acrylic = true, Theme = "Darker", MinimizeKey = Enum.KeyCode.LeftControl
+            Acrylic = true, Theme = "Darker", MinimizeKey = Enum.KeyCode.K
         })
         
         local Tab = Window:AddTab({ Title = "Auth", Icon = "key" })
@@ -167,7 +167,7 @@ local Window = Fluent:CreateWindow({
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
     Theme = _G.SlowHub.Theme, 
-    MinimizeKey = Enum.KeyCode.LeftControl
+    MinimizeKey = Enum.KeyCode.K
 })
 
 _G.SlowHub.Window = Window
@@ -196,9 +196,9 @@ local function CreateMobileUI()
 
     ImageButton.MouseButton1Click:Connect(function()
         local vim = game:GetService("VirtualInputManager")
-        vim:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+        vim:SendKeyEvent(true, Enum.KeyCode.K, false, game)
         task.wait(0.05)
-        vim:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+        vim:SendKeyEvent(false, Enum.KeyCode.K, false, game)
     end)
 end
 
