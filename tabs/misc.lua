@@ -25,3 +25,13 @@ Tab:AddParagraph({
 })
 
 loadstring(game:HttpGet(githubBase .. "Codes.lua"))()
+
+-- Config Section
+Tab:AddParagraph({
+    Title = "Config",
+    Content = ""
+})
+
+loadstring(game:HttpGet(githubBase .. "Anti-AFK.lua"))()
+loadstring(game:HttpGet(githubBase .. "Rejoin.lua"))()
+loadstring(game:HttpGet(githubBase .. "ServerHop.lua"))()
