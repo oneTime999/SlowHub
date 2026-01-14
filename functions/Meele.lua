@@ -8,7 +8,7 @@ local MeeleNPCs = {
     ["Gojo"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end
 }
 
-_G.SlowHub.SelectedMeeleNPC = _G.SlowHub.SelectedMeeleNPC or "Qin Shi"
+_G.SlowHub.SelectedMeeleNPC = nil
 
 local function getModelRoot(model)
     if not model then return nil end
@@ -52,7 +52,7 @@ end
 local Dropdown = Tab:AddDropdown("SelectMeeleNPC", {
     Title = "Select Meele NPC",
     Values = {"Qin Shi", "Sukuna", "Gojo"},
-    Default = 1, -- Qin Shi é o primeiro
+    Default = nil,
     Callback = function(Value)
         pcall(function()
             _G.SlowHub.SelectedMeeleNPC = tostring(Value)
