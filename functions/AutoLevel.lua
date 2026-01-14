@@ -43,6 +43,7 @@ local currentNPCIndex = 1
 local lastTargetName = nil
 local hasVisitedSafeZone = false
 local isBossMode = false
+local activeBoss = nil -- LOCK VARIABLE
 
 local function GetPlayerLevel()
     local success, level = pcall(function()
@@ -71,7 +72,7 @@ local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
-local function getAliveBoss()
+local function getNewBossTarget()
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
             local boss = workspace.NPCs:FindFirstChild(bossName)
@@ -110,6 +111,8 @@ local function stopAutoLevel()
     end
     questLoopActive = false
     _G.SlowHub.AutoFarmLevel = false
+    isBossMode = false
+    activeBoss = nil
     
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
@@ -140,6 +143,7 @@ local function startAutoLevel()
     
     _G.SlowHub.AutoFarmLevel = true
     currentNPCIndex = 1
+    activeBoss = nil
     startQuestLoop()
     
     local lastNPCSwitch = 0
@@ -154,18 +158,30 @@ local function startAutoLevel()
 
         local now = tick()
         
-        local targetBoss = getAliveBoss()
+        -- BOSS LOGIC START
+        if activeBoss then
+            if not activeBoss.Parent or not activeBoss:FindFirstChild("Humanoid") or activeBoss.Humanoid.Health <= 0 then
+                activeBoss = nil
+            end
+        end
         
-        if targetBoss then
+        if not activeBoss then
+            activeBoss = getNewBossTarget()
+            if activeBoss then
+                hasVisitedSafeZone = false
+            end
+        end
+        
+        if activeBoss then
             isBossMode = true
             
-            if lastTargetName ~= targetBoss.Name then
-                lastTargetName = targetBoss.Name
+            if lastTargetName ~= activeBoss.Name then
+                lastTargetName = activeBoss.Name
                 hasVisitedSafeZone = false
             end
             
             if not hasVisitedSafeZone then
-                local safeCFrame = BossSafeZones[targetBoss.Name]
+                local safeCFrame = BossSafeZones[activeBoss.Name]
                 if safeCFrame then
                     playerRoot.CFrame = safeCFrame
                     playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
@@ -176,7 +192,7 @@ local function startAutoLevel()
                 end
             end
             
-            local bossRoot = targetBoss:FindFirstChild("HumanoidRootPart")
+            local bossRoot = activeBoss:FindFirstChild("HumanoidRootPart")
             if bossRoot then
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
                 playerRoot.CFrame = targetCFrame
@@ -189,10 +205,11 @@ local function startAutoLevel()
                     lastAttack = now
                 end
             end
-            return 
+            return -- Exit loop, focus on boss
         else
             isBossMode = false
         end
+        -- BOSS LOGIC END
 
         local config = GetCurrentConfig()
         
