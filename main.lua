@@ -113,6 +113,8 @@ _G.SlowHub = {
     NPC = false,
     Stats = false,
     AntiAFK = false,
+    Rejoin = false,
+    ServerHop = false,
     SelectedWeapon = nil,
     Theme = "Darker"
 }
