@@ -13,22 +13,20 @@ local LevelConfig = {
     {minLevel = 5500, maxLevel = 99999, quest = "QuestNPC11", npc = "Hollow", count = 5}
 }
 
--- --- COORDENADAS DOS TP INICIAIS (SAFE ZONES) ---
 local NPCSafeZones = {
     ["Thief"]        = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
     ["Monkey"]       = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
     ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
     ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
     ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875) -- Mesma do Aizen
+    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
 }
--- ------------------------------------------------
 
 local autoLevelConnection = nil
-local autoLevelQuestLoop = nil
+local questLoopActive = false
 local currentNPCIndex = 1
-local lastTargetNPCName = nil   -- Para saber quando trocou de mob
-local hasVisitedSafeZone = false -- Controle do TP inicial
+local lastTargetNPCName = nil
+local hasVisitedSafeZone = false
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
@@ -101,10 +99,8 @@ local function stopAutoLevel()
         autoLevelConnection:Disconnect()
         autoLevelConnection = nil
     end
-    if autoLevelQuestLoop then
-        autoLevelQuestLoop:Disconnect()
-        autoLevelQuestLoop = nil
-    end
+    
+    questLoopActive = false
     _G.SlowHub.AutoFarmLevel = false
     currentNPCIndex = 1
     lastTargetNPCName = nil
@@ -121,6 +117,21 @@ local function stopAutoLevel()
     end)
 end
 
+local function startQuestLoop()
+    if questLoopActive then return end
+    questLoopActive = true
+    
+    task.spawn(function()
+        while questLoopActive and _G.SlowHub.AutoFarmLevel do
+            local config = GetCurrentConfig()
+            pcall(function()
+                ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
+            end)
+            task.wait(2)
+        end
+    end)
+end
+
 local function startAutoLevel()
     if autoLevelConnection then
         stopAutoLevel()
@@ -129,51 +140,30 @@ local function startAutoLevel()
     _G.SlowHub.AutoFarmLevel = true
     currentNPCIndex = 1
     
-    local config = GetCurrentConfig()
-    
+    startQuestLoop()
     EquipWeapon()
     
-    -- Loop de Quest
-    autoLevelQuestLoop = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmLevel then
-            if autoLevelQuestLoop then
-                autoLevelQuestLoop:Disconnect()
-                autoLevelQuestLoop = nil
-            end
-            return
-        end
-        
-        config = GetCurrentConfig()
-        
-        pcall(function()
-            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(config.quest)
-        end)
-    end)
-    
     local lastNPCSwitch = 0
-    local NPC_SWITCH_DELAY = 0  -- Troca instantânea
+    local NPC_SWITCH_DELAY = 0
+    local lastAttack = 0
     
-    -- Loop Principal de Movimento/Ataque
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then
             stopAutoLevel()
             return
         end
         
-        config = GetCurrentConfig()
+        local config = GetCurrentConfig()
         local now = tick()
         
-        -- LÓGICA DE SAFE ZONE (Igual do Boss)
-        -- Verifica se trocamos de mob (ex: upei do level 249 pro 250)
         if config.npc ~= lastTargetNPCName then
             lastTargetNPCName = config.npc
-            hasVisitedSafeZone = false -- Reseta para obrigar a ir no TP inicial
+            hasVisitedSafeZone = false
         end
 
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
-        -- Se ainda não foi na Safe Zone deste mob, vai agora
         if not hasVisitedSafeZone then
             local safeCFrame = NPCSafeZones[config.npc]
             if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
@@ -182,19 +172,15 @@ local function startAutoLevel()
                     playerRoot.CFrame = safeCFrame
                 end)
                 hasVisitedSafeZone = true
-                return -- Espera o próximo frame para começar a caçar
+                return
             else
-                hasVisitedSafeZone = true -- Se não tem coordenada, libera direto
+                hasVisitedSafeZone = true
             end
         end
 
-        -- LÓGICA DE FARM (Só roda se hasVisitedSafeZone for true)
-        
-        -- Tenta encontrar NPC atual
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
-        -- Se NPC não existe ou está morto, troca INSTANTANEAMENTE
         if not npcAlive then
             if (now - lastNPCSwitch) > NPC_SWITCH_DELAY then
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
@@ -202,7 +188,6 @@ local function startAutoLevel()
                 return
             end
         else
-            -- NPC encontrado e vivo, ataca
             lastNPCSwitch = now
             
             local npcRoot = getNPCRootPart(npc)
@@ -222,8 +207,9 @@ local function startAutoLevel()
                     
                     EquipWeapon()
                     
-                    if math.random() > 0.6 then -- Kill Aura
+                    if (now - lastAttack) > 0.15 then
                         ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                        lastAttack = now
                     end
                 end)
             end
@@ -237,7 +223,7 @@ local Toggle = Tab:AddToggle("AutoFarmLevel", {
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Erro", Content = "Selecione uma arma primeiro!", Duration = 3})
+                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
                 if Toggle then Toggle:SetValue(false) end
                 return
             end
