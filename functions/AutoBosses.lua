@@ -133,7 +133,7 @@ local function startAutoFarmBoss()
     end)
 end
 
-Tab:AddParagraph({Title = "Select Bosses", Content = "Enable Boss Farm AND Auto Level together."})
+Tab:AddParagraph({Title = "Select Bosses", Content = ""})
 
 for _, bossName in ipairs(bossList) do
     Tab:AddToggle("SelectBoss_" .. bossName, {
@@ -149,7 +149,7 @@ end
 Tab:AddParagraph({Title = "Farm Control", Content = ""})
 
 local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Auto Farm Selected Bosses (Priority)",
+    Title = "Auto Farm Selected Bosses",
     Default = false,
     Callback = function(Value)
         if Value then
