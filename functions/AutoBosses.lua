@@ -5,13 +5,8 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local bossList = {
-    "AizenBoss",
-    "QinShiBoss",
-    "RagnaBoss",
-    "JinwooBoss",
-    "SukunaBoss",
-    "GojoBoss",
-    "SaberBoss"
+    "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
+    "SukunaBoss", "GojoBoss", "SaberBoss"
 }
 
 local BossSafeZones = {
@@ -25,14 +20,13 @@ local BossSafeZones = {
 }
 
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
+if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
+if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
 local autoFarmBossConnection = nil
 local isRunning = false
 local lastTargetBoss = nil
 local hasVisitedSafeZone = false
-
-if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
-if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
 local function getAliveBoss()
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
@@ -49,73 +43,37 @@ local function getAliveBoss()
     return nil
 end
 
-local function getBossRootPart(boss)
-    if boss and boss:FindFirstChild("HumanoidRootPart") then
-        return boss.HumanoidRootPart
-    end
-    return nil
-end
-
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
-    
-    local success = pcall(function()
-        local backpack = Player:FindFirstChild("Backpack")
+    pcall(function()
         local character = Player.Character
-        
-        if not character or not character:FindFirstChild("Humanoid") then
-            return false
-        end
-        
-        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
-            return true
-        end
-        
-        if backpack then
-            local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-            if weapon then
-                character.Humanoid:EquipTool(weapon)
-                task.wait(0.1)
+        if character and character:FindFirstChild("Humanoid") and not character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
+            local backpack = Player:FindFirstChild("Backpack")
+            if backpack then
+                local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
+                if weapon then character.Humanoid:EquipTool(weapon) end
             end
         end
     end)
-    
-    return success
 end
 
 local function stopAutoFarmBoss()
     isRunning = false
     lastTargetBoss = nil
     hasVisitedSafeZone = false
+    _G.SlowHub.IsAttackingBoss = false -- Libera o Auto Level
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
         autoFarmBossConnection = nil
     end
-    
     _G.SlowHub.AutoFarmBosses = false
-    
-    pcall(function()
-        if Player.Character then
-            local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
-            if playerRoot then
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                playerRoot.Anchored = false
-            end
-        end
-    end)
 end
 
 local function startAutoFarmBoss()
-    if isRunning then
-        stopAutoFarmBoss()
-        task.wait(0.3)
-    end
-    
+    if isRunning then stopAutoFarmBoss() task.wait(0.2) end
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
-    
-    EquipWeapon()
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
@@ -125,17 +83,20 @@ local function startAutoFarmBoss()
         
         local boss = getAliveBoss()
         
-        if not boss then
+        -- === LÓGICA DE PRIORIDADE ===
+        if boss then
+            -- Se tem Boss, avisamos o sistema global e assumimos o controle
+            _G.SlowHub.IsAttackingBoss = true
+        else
+            -- Se não tem Boss, liberamos o sistema para o Auto Level
+            _G.SlowHub.IsAttackingBoss = false
+            -- Resetamos o SafeZone para quando o próximo boss aparecer
             lastTargetBoss = nil
             hasVisitedSafeZone = false
-            return 
+            return -- Sai da função e deixa o Auto Level trabalhar
         end
-        
-        local bossHumanoid = boss:FindFirstChild("Humanoid")
-        if not bossHumanoid or bossHumanoid.Health <= 0 then
-            return
-        end
-        
+        -- ===========================
+
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
             hasVisitedSafeZone = false
@@ -147,10 +108,8 @@ local function startAutoFarmBoss()
         if not hasVisitedSafeZone then
             local safeCFrame = BossSafeZones[boss.Name]
             if safeCFrame then
-                pcall(function()
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    playerRoot.CFrame = safeCFrame
-                end)
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                playerRoot.CFrame = safeCFrame
                 hasVisitedSafeZone = true 
                 return
             else
@@ -158,126 +117,69 @@ local function startAutoFarmBoss()
             end
         end
 
-        local bossRoot = getBossRootPart(boss)
-        
-        if bossRoot and bossRoot.Parent then
-            local humanoid = Player.Character:FindFirstChild("Humanoid")
-            
-            if humanoid and humanoid.Health > 0 then
-                pcall(function()
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    
-                    local targetCFrame = bossRoot.CFrame
-                    local offsetPosition = targetCFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
-                    
-                    local distance = (playerRoot.Position - offsetPosition.Position).Magnitude
-                    if distance > 3 or distance < 1 then
-                        playerRoot.CFrame = offsetPosition
-                    end
-                    
-                    EquipWeapon()
-                    
-                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                end)
-            end
+        local bossRoot = boss:FindFirstChild("HumanoidRootPart")
+        if bossRoot then
+            pcall(function()
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                
+                -- Usa os Sliders da aba BOSS (separados do Level)
+                local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
+                playerRoot.CFrame = targetCFrame
+                
+                EquipWeapon()
+                ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+            end)
         end
     end)
 end
 
-Tab:AddParagraph({
-    Title = "Select Bosses",
-    Content = "Choose which bosses to farm"
-})
+Tab:AddParagraph({Title = "Select Bosses", Content = "Enable Boss Farm AND Auto Level together."})
 
 for _, bossName in ipairs(bossList) do
-    local Toggle = Tab:AddToggle("SelectBoss_" .. bossName, {
+    Tab:AddToggle("SelectBoss_" .. bossName, {
         Title = bossName,
         Default = false,
         Callback = function(Value)
             _G.SlowHub.SelectedBosses[bossName] = Value
-            
-            if _G.SaveConfig then
-                _G.SaveConfig()
-            end
+            if _G.SaveConfig then _G.SaveConfig() end
         end
     })
 end
 
-Tab:AddParagraph({
-    Title = "Farm Control",
-    Content = ""
-})
+Tab:AddParagraph({Title = "Farm Control", Content = ""})
 
 local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Auto Farm Selected Bosses",
+    Title = "Auto Farm Selected Bosses (Priority)",
     Default = false,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 _G.SlowHub.AutoFarmBosses = false
-                if FarmToggle then
-                    FarmToggle:SetValue(false)
-                end
+                if FarmToggle then FarmToggle:SetValue(false) end
                 _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
                 return
             end
-            
-            local hasSelected = false
-            for _, selected in pairs(_G.SlowHub.SelectedBosses) do
-                if selected then
-                    hasSelected = true
-                    break
-                end
-            end
-            
-            if not hasSelected then
-                _G.SlowHub.AutoFarmBosses = false
-                if FarmToggle then
-                    FarmToggle:SetValue(false)
-                end
-                _G.Fluent:Notify({Title = "Error", Content = "Select at least one Boss!", Duration = 3})
-                return
-            end
-            
             startAutoFarmBoss()
         else
             stopAutoFarmBoss()
         end
-        
         _G.SlowHub.AutoFarmBosses = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
-local DistanceSlider = Tab:AddSlider("BossFarmDistance", {
+Tab:AddSlider("BossFarmDistance", {
     Title = "Boss Farm Distance (studs)",
-    Min = 1,
-    Max = 10,
-    Default = _G.SlowHub.BossFarmDistance,
-    Rounding = 0,
+    Min = 1, Max = 10, Default = _G.SlowHub.BossFarmDistance, Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.BossFarmDistance = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
-local HeightSlider = Tab:AddSlider("BossFarmHeight", {
+Tab:AddSlider("BossFarmHeight", {
     Title = "Boss Farm Height (studs)",
-    Min = 1,
-    Max = 10,
-    Default = _G.SlowHub.BossFarmHeight,
-    Rounding = 0,
+    Min = 1, Max = 10, Default = _G.SlowHub.BossFarmHeight, Rounding = 0,
     Callback = function(Value)
         _G.SlowHub.BossFarmHeight = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
