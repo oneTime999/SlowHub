@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.MainTab
+local Tab = _G.MainTab -- Ou a aba onde você coloca este script
 
 local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", "Hollow"}
 local QuestConfig = {
@@ -24,28 +24,16 @@ local MobSafeZones = {
     ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
 }
 
-local BossSafeZones = {
-    ["AizenBoss"]  = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875),
-    ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
-    ["SaberBoss"]  = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
-    ["RagnaBoss"]  = CFrame.new(282.7808837890625, -2.7751426696777344, -1479.363525390625),
-    ["JinwooBoss"] = CFrame.new(235.1376190185547, 3.1064343452453613, 659.7340698242188),
-    ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
-}
-
 local autoFarmSelectedConnection = nil
 local questLoopActive = false
 local selectedMob = nil
 local currentNPCIndex = 1
 local lastTargetName = nil
 local hasVisitedSafeZone = false
-local isBossMode = false
-local activeBoss = nil -- LOCK VARIABLE
+local wasAttackingBoss = false -- Variável de controle de retorno
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
-if not _G.SlowHub.SelectedBosses then _G.SlowHub.SelectedBosses = {} end
 
 local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
@@ -74,21 +62,6 @@ local function getMobConfig(mobName)
         quest = getQuestForMob(mobName),
         count = 5 
     }
-end
-
-local function getNewBossTarget()
-    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-        if isSelected then
-            local boss = workspace.NPCs:FindFirstChild(bossName)
-            if boss and boss.Parent then
-                local humanoid = boss:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    return boss
-                end
-            end
-        end
-    end
-    return nil
 end
 
 local function EquipWeapon()
@@ -123,15 +96,14 @@ local function stopAutoFarmSelectedMob()
     currentNPCIndex = 1
     lastTargetName = nil
     hasVisitedSafeZone = false
-    isBossMode = false
-    activeBoss = nil
+    wasAttackingBoss = false
     
     pcall(function()
         if Player.Character then
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             if playerRoot then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                playerRoot.Anchored = false
+                -- playerRoot.Anchored = false
             end
         end
     end)
@@ -143,7 +115,8 @@ local function startQuestLoop(questName)
     
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
-            if _G.SlowHub.AutoQuestSelectedMob and not isBossMode then
+            -- Só pega quest se estiver ativado E NÃO estiver matando Boss
+            if _G.SlowHub.AutoQuestSelectedMob and not _G.SlowHub.IsAttackingBoss then
                 pcall(function()
                     ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
                 end)
@@ -160,7 +133,7 @@ local function startAutoFarmSelectedMob()
     
     _G.SlowHub.AutoFarmSelectedMob = true
     currentNPCIndex = 1
-    activeBoss = nil
+    wasAttackingBoss = false
     
     local config = getMobConfig(selectedMob)
     EquipWeapon()
@@ -176,72 +149,33 @@ local function startAutoFarmSelectedMob()
             stopAutoFarmSelectedMob()
             return
         end
+
+        -- === LÓGICA DE PRIORIDADE DO BOSS ===
+        if _G.SlowHub.IsAttackingBoss then
+            wasAttackingBoss = true
+            return -- Pausa o farm de Mob e deixa o Boss Farm agir
+        end
+
+        -- Retorno seguro: Se estava no Boss, reseta Safe Zone
+        if wasAttackingBoss then
+            hasVisitedSafeZone = false
+            wasAttackingBoss = false
+        end
+        -- ===================================
         
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
         
         local now = tick()
-        
-        -- BOSS LOGIC START
-        if activeBoss then
-            if not activeBoss.Parent or not activeBoss:FindFirstChild("Humanoid") or activeBoss.Humanoid.Health <= 0 then
-                activeBoss = nil -- Boss dead or gone
-            end
-        end
-        
-        if not activeBoss then
-            activeBoss = getNewBossTarget()
-            if activeBoss then
-                hasVisitedSafeZone = false -- Reset safezone for new boss
-            end
-        end
-        
-        if activeBoss then
-            isBossMode = true
-            
-            if lastTargetName ~= activeBoss.Name then
-                lastTargetName = activeBoss.Name
-                hasVisitedSafeZone = false
-            end
-            
-            if not hasVisitedSafeZone then
-                local safeCFrame = BossSafeZones[activeBoss.Name]
-                if safeCFrame then
-                    playerRoot.CFrame = safeCFrame
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                    hasVisitedSafeZone = true
-                    return
-                else
-                    hasVisitedSafeZone = true
-                end
-            end
-            
-            local bossRoot = activeBoss:FindFirstChild("HumanoidRootPart")
-            if bossRoot then
-                local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
-                playerRoot.CFrame = targetCFrame
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                
-                EquipWeapon()
-                
-                if (now - lastAttack) > 0.15 then
-                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                    lastAttack = now
-                end
-            end
-            return -- Exit loop, focus on boss
-        else
-            isBossMode = false
-        end
-        -- BOSS LOGIC END
-
         local config = getMobConfig(selectedMob)
         
+        -- Reset de SafeZone se trocar o mob no menu
         if selectedMob ~= lastTargetName then
             lastTargetName = selectedMob
             hasVisitedSafeZone = false
         end
 
+        -- Ir para SafeZone primeiro
         if not hasVisitedSafeZone then
             local safeCFrame = MobSafeZones[selectedMob]
             if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
@@ -250,12 +184,13 @@ local function startAutoFarmSelectedMob()
                     playerRoot.CFrame = safeCFrame
                 end)
                 hasVisitedSafeZone = true
-                return
+                return -- Espera um frame
             else
                 hasVisitedSafeZone = true
             end
         end
 
+        -- Lógica de atacar o NPC
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
@@ -295,6 +230,7 @@ local function startAutoFarmSelectedMob()
     end)
 end
 
+-- UI ELEMENTS
 local Dropdown = Tab:AddDropdown("SelectMob", {
     Title = "Select Mob",
     Values = MobList,
