@@ -241,21 +241,6 @@ local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
-local function getNewBossTarget()
-    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-        if isSelected then
-            local boss = workspace.NPCs:FindFirstChild(bossName)
-            if boss and boss.Parent then
-                local humanoid = boss:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    return boss
-                end
-            end
-        end
-    end
-    return nil
-end
-
 local function stopAutoLevel()
     if autoLevelConnection then
         autoLevelConnection:Disconnect()
@@ -308,14 +293,17 @@ local function startAutoLevel()
         local humanoid = character and character:FindFirstChild("Humanoid")
         if not playerRoot or not humanoid or humanoid.Health <= 0 then return end
         local now = tick()
+        
         if activeBoss then
             if not activeBoss.Parent or not activeBoss:FindFirstChild("Humanoid") or activeBoss.Humanoid.Health <= 0 then
                 activeBoss = nil
             end
         end
+        
         if not activeBoss then
-            activeBoss = getNewBossTarget()
+            activeBoss = getAliveBoss()
         end
+        
         if activeBoss then
             isBossMode = true
             if lastTargetName ~= activeBoss.Name then
@@ -348,6 +336,7 @@ local function startAutoLevel()
         else
             isBossMode = false
         end
+        
         local config = GetCurrentConfig()
         if lastTargetName ~= config.npc then
             lastTargetName = config.npc
