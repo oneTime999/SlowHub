@@ -204,7 +204,7 @@ local function startAutoFarmMiniBoss()
 end
 
 -- UI ELEMENTS
-Tab:AddParagraph({Title = "Mini Bosses", Content = "Farms Mini Bosses. Pauses for Main Bosses."})
+Tab:AddParagraph({Title = "Mini Bosses", Content = ""})
 
 local Dropdown = Tab:AddDropdown("SelectMiniBoss", {
     Title = "Select Mini Boss",
