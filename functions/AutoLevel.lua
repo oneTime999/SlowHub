@@ -5,7 +5,6 @@ local Player = Players.LocalPlayer
 
 local MainTab = _G.MainTab
 
--- Configuração de Níveis
 local LevelConfig = {
     {minLevel = 1, maxLevel = 249, quest = "QuestNPC1", npc = "Thief", count = 5},
     {minLevel = 250, maxLevel = 749, quest = "QuestNPC3", npc = "Monkey", count = 5},
@@ -27,7 +26,7 @@ local NPCSafeZones = {
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
 
--- Variável de controle global (iniciada como falsa)
+-- Variável Global de controle
 _G.SlowHub.IsAttackingBoss = false
 
 local autoLevelConnection = nil
@@ -35,6 +34,7 @@ local questLoopActive = false
 local currentNPCIndex = 1
 local lastTargetName = nil
 local hasVisitedSafeZone = false
+local wasAttackingBoss = false -- Nova variável para detectar o retorno
 
 local function GetPlayerLevel()
     local success, level = pcall(function() return Player.Data.Level.Value end)
@@ -92,7 +92,6 @@ local function startQuestLoop()
     questLoopActive = true
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmLevel do
-            -- Só pega quest se NÃO estiver atacando Boss
             if not _G.SlowHub.IsAttackingBoss then
                 local config = GetCurrentConfig()
                 pcall(function()
@@ -110,6 +109,7 @@ local function startAutoLevel()
     currentNPCIndex = 1
     lastTargetName = nil
     hasVisitedSafeZone = false
+    wasAttackingBoss = false
     
     startQuestLoop()
     
@@ -119,12 +119,17 @@ local function startAutoLevel()
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then stopAutoLevel() return end
         
-        -- === AQUI ESTÁ A MÁGICA ===
-        -- Se o script de Boss disser que está ocupado, o Level Farm PAUSA o movimento
+        -- Se estiver atacando Boss, apenas marca que estava ocupado e pausa
         if _G.SlowHub.IsAttackingBoss then
+            wasAttackingBoss = true
             return 
         end
-        -- ==========================
+
+        -- Se acabou de voltar de um Boss, força a SafeZone do NPC atual
+        if wasAttackingBoss then
+            hasVisitedSafeZone = false
+            wasAttackingBoss = false
+        end
 
         local character = Player.Character
         local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
@@ -135,23 +140,26 @@ local function startAutoLevel()
         local now = tick()
         local config = GetCurrentConfig()
         
+        -- Se mudou de mob (por nível), reseta SafeZone
         if lastTargetName ~= config.npc then
             lastTargetName = config.npc
             hasVisitedSafeZone = false
         end
         
+        -- Lógica de ir para a SafeZone
         if not hasVisitedSafeZone then
             local safeCFrame = NPCSafeZones[config.npc]
             if safeCFrame then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 playerRoot.CFrame = safeCFrame
                 hasVisitedSafeZone = true
-                return
+                return -- Espera um frame na SafeZone antes de ir bater
             else
                 hasVisitedSafeZone = true
             end
         end
         
+        -- Lógica de atacar o NPC
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
