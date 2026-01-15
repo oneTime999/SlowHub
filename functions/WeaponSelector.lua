@@ -87,7 +87,7 @@ local WeaponDropdown = Tab:AddDropdown("SelectWeapon", {
         
         if weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
-            print("Weapon selected:", weapon)
+            -- Print removido daqui
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
