@@ -6,7 +6,7 @@ local Player = Players.LocalPlayer
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss"
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss" -- Adicionado YujiBoss
 }
 
 local BossSafeZones = {
@@ -16,7 +16,9 @@ local BossSafeZones = {
     ["RagnaBoss"]  = CFrame.new(282.7808837890625, -2.7751426696777344, -1479.363525390625),
     ["JinwooBoss"] = CFrame.new(235.1376190185547, 3.1064343452453613, 659.7340698242188),
     ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
+    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
+    -- YujiBoss usando a mesma SafeZone do Sukuna/Gojo
+    ["YujiBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
 }
 
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
