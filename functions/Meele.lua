@@ -5,7 +5,8 @@ local Player = Players.LocalPlayer
 local MeeleNPCs = {
     ["Qin Shi"] = function() return workspace:FindFirstChild("SukunaMovesetNPC") end,
     ["Sukuna"] = function() return workspace:FindFirstChild("GojoMovesetNPC") end,
-    ["Gojo"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end
+    ["Gojo"] = function() return workspace.ServiceNPCs:FindFirstChild("ExchangeNPC") end,
+    ["Yuji"] = function() return workspace.ServiceNPCs:FindFirstChild("YujiBuyerNPC") end -- Adicionado
 }
 
 _G.SlowHub.SelectedMeeleNPC = nil
@@ -51,7 +52,7 @@ end
 
 local Dropdown = Tab:AddDropdown("SelectMeeleNPC", {
     Title = "Select Meele NPC",
-    Values = {"Qin Shi", "Sukuna", "Gojo"},
+    Values = {"Qin Shi", "Sukuna", "Gojo", "Yuji"}, -- Adicionado na lista
     Default = nil,
     Callback = function(Value)
         pcall(function()
