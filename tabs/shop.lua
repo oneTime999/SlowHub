@@ -1,6 +1,13 @@
 local Tab = _G.ShopTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
+Tab:AddParagraph({
+    Title = "Merchant",
+    Content = ""
+})
+
+loadstring(game:HttpGet(githubBase .. "Merchant.lua"))()
+
 -- NPCs Section
 Tab:AddParagraph({
     Title = "NPCs",
