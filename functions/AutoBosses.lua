@@ -6,9 +6,10 @@ local Player = Players.LocalPlayer
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss" -- Adicionado YujiBoss
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss" -- Yuji Adicionado
 }
 
+-- SafeZones configuradas
 local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875),
     ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
@@ -63,7 +64,7 @@ local function stopAutoFarmBoss()
     isRunning = false
     lastTargetBoss = nil
     hasVisitedSafeZone = false
-    _G.SlowHub.IsAttackingBoss = false -- Libera o Auto Level
+    _G.SlowHub.IsAttackingBoss = false -- Libera o Farm de Level/Mob
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -85,19 +86,16 @@ local function startAutoFarmBoss()
         
         local boss = getAliveBoss()
         
-        -- === LÓGICA DE PRIORIDADE ===
+        -- === PRIORIDADE GLOBAL ===
         if boss then
-            -- Se tem Boss, avisamos o sistema global e assumimos o controle
-            _G.SlowHub.IsAttackingBoss = true
+            _G.SlowHub.IsAttackingBoss = true -- Pausa os outros farms e assume controle
         else
-            -- Se não tem Boss, liberamos o sistema para o Auto Level
-            _G.SlowHub.IsAttackingBoss = false
-            -- Resetamos o SafeZone para quando o próximo boss aparecer
+            _G.SlowHub.IsAttackingBoss = false -- Libera os outros farms
             lastTargetBoss = nil
             hasVisitedSafeZone = false
-            return -- Sai da função e deixa o Auto Level trabalhar
+            return 
         end
-        -- ===========================
+        -- =========================
 
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
@@ -124,7 +122,6 @@ local function startAutoFarmBoss()
             pcall(function()
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 
-                -- Usa os Sliders da aba BOSS (separados do Level)
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                 playerRoot.CFrame = targetCFrame
                 
@@ -135,7 +132,8 @@ local function startAutoFarmBoss()
     end)
 end
 
-Tab:AddParagraph({Title = "Select Bosses", Content = ""})
+-- Interface Gráfica
+Tab:AddParagraph({Title = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
 
 for _, bossName in ipairs(bossList) do
     Tab:AddToggle("SelectBoss_" .. bossName, {
@@ -151,7 +149,7 @@ end
 Tab:AddParagraph({Title = "Farm Control", Content = ""})
 
 local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Auto Farm Selected Bosses",
+    Title = "Auto Farm Selected Bosses (Priority)",
     Default = false,
     Callback = function(Value)
         if Value then
@@ -185,6 +183,7 @@ Tab:AddSlider("BossFarmHeight", {
     end
 })
 
+-- Auto Start se já estiver ativado nas configs salvas
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
