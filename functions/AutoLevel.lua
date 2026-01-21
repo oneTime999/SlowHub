@@ -20,7 +20,7 @@ local NPCSafeZones = {
     ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
     ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
     ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
+    ["Hollow"] = CFrame.new(-365.12628173828125, -0.44140613079071045, 1097.683349609375)
 }
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
