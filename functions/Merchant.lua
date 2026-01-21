@@ -29,11 +29,11 @@ task.spawn(function()
                         ReplicatedStorage.Remotes.MerchantRemotes.PurchaseMerchantItem:InvokeServer(itemName)
                     end)
                     
-                    task.wait(0.3)
+                    task.wait(0)
                 end
             end
         end
-        task.wait(0.5)
+        task.wait(0)
     end
 end)
 
