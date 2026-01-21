@@ -1,4 +1,4 @@
-Local Tab = _G.BossesTab
+local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -6,9 +6,10 @@ local Player = Players.LocalPlayer
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss" -- Yuji Adicionado
 }
 
+-- SafeZones atualizadas com as novas coordenadas
 local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-567.2230834960938, 2.5787253379821777, 1228.4903564453125),
     ["QinShiBoss"] = CFrame.new(828.1129150390625, -0.39719152450561523, -1130.7666015625),
@@ -62,7 +63,7 @@ local function stopAutoFarmBoss()
     isRunning = false
     lastTargetBoss = nil
     hasVisitedSafeZone = false
-    _G.SlowHub.IsAttackingBoss = false 
+    _G.SlowHub.IsAttackingBoss = false -- Libera o Farm de Level/Mob
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -84,14 +85,16 @@ local function startAutoFarmBoss()
         
         local boss = getAliveBoss()
         
+        -- === PRIORIDADE GLOBAL ===
         if boss then
-            _G.SlowHub.IsAttackingBoss = true 
+            _G.SlowHub.IsAttackingBoss = true -- Pausa os outros farms e assume controle
         else
-            _G.SlowHub.IsAttackingBoss = false 
+            _G.SlowHub.IsAttackingBoss = false -- Libera os outros farms
             lastTargetBoss = nil
             hasVisitedSafeZone = false
             return 
         end
+        -- =========================
 
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
@@ -128,6 +131,7 @@ local function startAutoFarmBoss()
     end)
 end
 
+-- Interface Gráfica
 Tab:AddParagraph({Title = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
 
 for _, bossName in ipairs(bossList) do
@@ -178,6 +182,7 @@ Tab:AddSlider("BossFarmHeight", {
     end
 })
 
+-- Auto Start se já estiver ativado nas configs salvas
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
