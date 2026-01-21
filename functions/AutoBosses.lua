@@ -85,7 +85,7 @@ local function startAutoFarmBoss()
         local boss = getAliveBoss()
         
         if boss then
-            _G.SlowHub.IsAttackingBoss = true
+            _G.SlowHub.IsAttackingBoss = true 
         else
             _G.SlowHub.IsAttackingBoss = false 
             lastTargetBoss = nil
