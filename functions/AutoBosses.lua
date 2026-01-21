@@ -1,4 +1,4 @@
-local Tab = _G.BossesTab
+Local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -6,20 +6,18 @@ local Player = Players.LocalPlayer
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss" -- Yuji Adicionado
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
 }
 
--- SafeZones configuradas
 local BossSafeZones = {
-    ["AizenBoss"]  = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875),
-    ["QinShiBoss"] = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
-    ["SaberBoss"]  = CFrame.new(667.6900024414062, -1.5378512144088745, -1125.218994140625),
-    ["RagnaBoss"]  = CFrame.new(282.7808837890625, -2.7751426696777344, -1479.363525390625),
-    ["JinwooBoss"] = CFrame.new(235.1376190185547, 3.1064343452453613, 659.7340698242188),
-    ["SukunaBoss"] = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["GojoBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    -- YujiBoss usando a mesma SafeZone do Sukuna/Gojo
-    ["YujiBoss"]   = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875)
+    ["AizenBoss"]  = CFrame.new(-567.2230834960938, 2.5787253379821777, 1228.4903564453125),
+    ["QinShiBoss"] = CFrame.new(828.1129150390625, -0.39719152450561523, -1130.7666015625),
+    ["SaberBoss"]  = CFrame.new(828.1129150390625, -0.39719152450561523, -1130.7666015625),
+    ["RagnaBoss"]  = CFrame.new(340.0000915527344, 2.613438606262207, -1688.000244140625),
+    ["JinwooBoss"] = CFrame.new(248.741516, 12.0932379, 927.542053, -0.156446099, 0, 0.987686574, 0, 1, 0, -0.987686574, 0, -0.156446099),
+    ["SukunaBoss"] = CFrame.new(1571.26672, 77.2205429, -34.1126976, 0.142485321, 0, 0.989796937, 0, 1, 0, -0.989796937, 0, 0.142485321),
+    ["GojoBoss"]   = CFrame.new(1858.32666, 12.9861355, 338.140015, 0.96272552, -0, -0.270480245, 0, 1, -0, 0.270480245, 0, 0.96272552),
+    ["YujiBoss"]   = CFrame.new(1537.9287109375, 12.986135482788086, 226.10824584960938)
 }
 
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
@@ -64,7 +62,7 @@ local function stopAutoFarmBoss()
     isRunning = false
     lastTargetBoss = nil
     hasVisitedSafeZone = false
-    _G.SlowHub.IsAttackingBoss = false -- Libera o Farm de Level/Mob
+    _G.SlowHub.IsAttackingBoss = false 
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -86,16 +84,14 @@ local function startAutoFarmBoss()
         
         local boss = getAliveBoss()
         
-        -- === PRIORIDADE GLOBAL ===
         if boss then
-            _G.SlowHub.IsAttackingBoss = true -- Pausa os outros farms e assume controle
+            _G.SlowHub.IsAttackingBoss = true
         else
-            _G.SlowHub.IsAttackingBoss = false -- Libera os outros farms
+            _G.SlowHub.IsAttackingBoss = false 
             lastTargetBoss = nil
             hasVisitedSafeZone = false
             return 
         end
-        -- =========================
 
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
@@ -132,7 +128,6 @@ local function startAutoFarmBoss()
     end)
 end
 
--- Interface Gráfica
 Tab:AddParagraph({Title = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
 
 for _, bossName in ipairs(bossList) do
@@ -183,7 +178,6 @@ Tab:AddSlider("BossFarmHeight", {
     end
 })
 
--- Auto Start se já estiver ativado nas configs salvas
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
