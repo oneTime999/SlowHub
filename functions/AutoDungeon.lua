@@ -3,15 +3,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local MainTab = _G.MainTab -- Certifique-se que sua UI Library usa isso
+local MainTab = _G.MainTab
 
--- Configurações padrão se não existirem
-if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
-if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
+-- Configurações padrão separadas para Dungeon
+if not _G.SlowHub.DungeonFarmDistance then _G.SlowHub.DungeonFarmDistance = 4 end
+if not _G.SlowHub.DungeonFarmHeight then _G.SlowHub.DungeonFarmHeight = 9 end
 
 local dungeonConnection = nil
 
--- Função para Equipar Arma (Mesma do seu script original)
+-- Função para Equipar Arma
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     pcall(function()
@@ -57,7 +57,6 @@ local function stopDungeonFarm()
         dungeonConnection = nil
     end
     _G.SlowHub.AutoFarmDungeon = false
-    -- Para o boneco ao desligar
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0,0,0)
@@ -80,35 +79,33 @@ local function startDungeonFarm()
 
         if not playerRoot or not humanoid or humanoid.Health <= 0 then return end
 
-        -- Busca o alvo
         local target = GetClosestDungeonEnemy()
 
         if target then
             local targetRoot = target:FindFirstChild("HumanoidRootPart")
             if targetRoot then
-                -- Teleporta para Perto (Cima/Trás)
-                local targetCFrame = targetRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
+                -- Usa as variáveis específicas da Dungeon
+                local targetCFrame = targetRoot.CFrame * CFrame.new(0, _G.SlowHub.DungeonFarmHeight, _G.SlowHub.DungeonFarmDistance)
                 
-                -- Movimentação
-                playerRoot.CFrame = targetCFrame
-                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Tira a gravidade/inércia
+                if (playerRoot.Position - targetCFrame.Position).Magnitude > 2 then
+                    playerRoot.CFrame = targetCFrame
+                end
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
 
-                -- Ataque
                 EquipWeapon()
                 local now = tick()
-                if (now - lastAttack) > 0.15 then -- Delay de ataque igual ao original
+                if (now - lastAttack) > 0.15 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     lastAttack = now
                 end
             end
         else
-            -- (Opcional) Se não tiver NPC vivo, fica parado esperando spawnar
             playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         end
     end)
 end
 
--- Adiciona o Toggle na Interface
+-- Toggle
 MainTab:AddToggle("AutoFarmDungeon", {
     Title = "Auto Farm Dungeon (Activate only inside the Dungeon)",
     Default = false,
@@ -116,7 +113,6 @@ MainTab:AddToggle("AutoFarmDungeon", {
         _G.SlowHub.AutoFarmDungeon = Value
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                -- Assumindo que você tem o Fluent UI carregado baseado no script anterior
                 if _G.Fluent then
                     _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
                 end
@@ -127,4 +123,17 @@ MainTab:AddToggle("AutoFarmDungeon", {
             stopDungeonFarm()
         end
     end
+})
+
+-- Sliders específicos para Dungeon
+MainTab:AddSlider("DungeonFarmDistance", {
+    Title = "Dungeon Farm Distance",
+    Min = 1, Max = 10, Default = 4, Rounding = 0,
+    Callback = function(Value) _G.SlowHub.DungeonFarmDistance = Value end
+})
+
+MainTab:AddSlider("DungeonFarmHeight", {
+    Title = "Dungeon Farm Height",
+    Min = 1, Max = 10, Default = 9, Rounding = 0,
+    Callback = function(Value) _G.SlowHub.DungeonFarmHeight = Value end
 })
