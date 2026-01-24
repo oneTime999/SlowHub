@@ -110,7 +110,7 @@ end
 
 -- Adiciona o Toggle na Interface
 MainTab:AddToggle("AutoFarmDungeon", {
-    Title = "Auto Farm Dungeon (Kill All)",
+    Title = "Auto Farm Dungeon (Activate only inside the Dungeon)",
     Default = false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
