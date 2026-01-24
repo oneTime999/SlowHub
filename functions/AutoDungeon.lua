@@ -38,7 +38,6 @@ local function GetClosestDungeonEnemy()
     local npcFolder = workspace:FindFirstChild("NPCs")
     if npcFolder then
         for _, npc in pairs(npcFolder:GetChildren()) do
-            -- Verifica se o NPC é valido (tem vida e Humanoid)
             if npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") and npc.Humanoid.Health > 0 then
                 local distance = (rootPart.Position - npc.HumanoidRootPart.Position).Magnitude
                 if distance < shortestDistance then
@@ -84,17 +83,18 @@ local function startDungeonFarm()
         if target then
             local targetRoot = target:FindFirstChild("HumanoidRootPart")
             if targetRoot then
-                -- Usa as variáveis específicas da Dungeon
-                local targetCFrame = targetRoot.CFrame * CFrame.new(0, _G.SlowHub.DungeonFarmHeight, _G.SlowHub.DungeonFarmDistance)
+                local now = tick()
                 
-                if (playerRoot.Position - targetCFrame.Position).Magnitude > 2 then
-                    playerRoot.CFrame = targetCFrame
-                end
+                -- Teleporta SEMPRE, sem verificação de distância
+                local targetCFrame = targetRoot.CFrame * CFrame.new(0, _G.SlowHub.DungeonFarmHeight, _G.SlowHub.DungeonFarmDistance)
+                playerRoot.CFrame = targetCFrame
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
 
+                -- Equipa arma
                 EquipWeapon()
-                local now = tick()
-                if (now - lastAttack) > 0.15 then
+                
+                -- Ataque com delay menor (mais rápido)
+                if (now - lastAttack) > 0.1 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     lastAttack = now
                 end
@@ -134,6 +134,6 @@ MainTab:AddSlider("DungeonFarmDistance", {
 
 MainTab:AddSlider("DungeonFarmHeight", {
     Title = "Dungeon Farm Height",
-    Min = 1, Max = 10, Default = 9, Rounding = 0,
+    Min = 1, Max = 10, Default = 7, Rounding = 0,
     Callback = function(Value) _G.SlowHub.DungeonFarmHeight = Value end
 })
