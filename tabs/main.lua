@@ -25,6 +25,15 @@ Tab:AddParagraph({
 
 loadstring(game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua"))()
 
+-- Auto Dungeon Section
+Tab:AddParagraph({
+    Title = "Auto Dungeon",
+    Content = ""
+})
+
+loadstring(game:HttpGet(githubBase .. "AutoDungeon.lua"))()
+
+
 -- Auto Chest Section
 Tab:AddParagraph({
     Title = "Auto Chest",
