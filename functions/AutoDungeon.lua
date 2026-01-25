@@ -5,13 +5,13 @@ local Player = Players.LocalPlayer
 
 local MainTab = _G.MainTab
 
--- Configurações padrão separadas para Dungeon
 if not _G.SlowHub.DungeonFarmDistance then _G.SlowHub.DungeonFarmDistance = 4 end
 if not _G.SlowHub.DungeonFarmHeight then _G.SlowHub.DungeonFarmHeight = 9 end
 
 local dungeonConnection = nil
+local voteLoopActive = false
+local replayLoopActive = false
 
--- Função para Equipar Arma
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     pcall(function()
@@ -26,7 +26,6 @@ local function EquipWeapon()
     end)
 end
 
--- Função para encontrar o NPC mais próximo dentro da Dungeon
 local function GetClosestDungeonEnemy()
     local closestEnemy = nil
     local shortestDistance = math.huge
@@ -48,6 +47,42 @@ local function GetClosestDungeonEnemy()
         end
     end
     return closestEnemy
+end
+
+local function startVoteLoop()
+    if voteLoopActive then return end
+    voteLoopActive = true
+    task.spawn(function()
+        while voteLoopActive and _G.SlowHub.AutoVoteDungeon do
+            pcall(function()
+                ReplicatedStorage.Remotes.DungeonWaveVote:FireServer(_G.SlowHub.DungeonVoteDifficulty)
+            end)
+            task.wait(5)
+        end
+    end)
+end
+
+local function stopVoteLoop()
+    voteLoopActive = false
+    _G.SlowHub.AutoVoteDungeon = false
+end
+
+local function startReplayLoop()
+    if replayLoopActive then return end
+    replayLoopActive = true
+    task.spawn(function()
+        while replayLoopActive and _G.SlowHub.AutoReplayDungeon do
+            pcall(function()
+                ReplicatedStorage.Remotes.DungeonWaveReplayVote:FireServer("sponsor")
+            end)
+            task.wait(5)
+        end
+    end)
+end
+
+local function stopReplayLoop()
+    replayLoopActive = false
+    _G.SlowHub.AutoReplayDungeon = false
 end
 
 local function stopDungeonFarm()
@@ -85,15 +120,12 @@ local function startDungeonFarm()
             if targetRoot then
                 local now = tick()
                 
-                -- Teleporta SEMPRE, sem verificação de distância
                 local targetCFrame = targetRoot.CFrame * CFrame.new(0, _G.SlowHub.DungeonFarmHeight, _G.SlowHub.DungeonFarmDistance)
                 playerRoot.CFrame = targetCFrame
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
 
-                -- Equipa arma
                 EquipWeapon()
                 
-                -- Ataque com delay menor (mais rápido)
                 if (now - lastAttack) > 0.1 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     lastAttack = now
@@ -105,7 +137,6 @@ local function startDungeonFarm()
     end)
 end
 
--- Toggle
 MainTab:AddToggle("AutoFarmDungeon", {
     Title = "Auto Farm Dungeon (Activate only inside the Dungeon)",
     Default = false,
@@ -125,7 +156,6 @@ MainTab:AddToggle("AutoFarmDungeon", {
     end
 })
 
--- Sliders específicos para Dungeon
 MainTab:AddSlider("DungeonFarmDistance", {
     Title = "Dungeon Farm Distance",
     Min = 1, Max = 10, Default = 6, Rounding = 0,
@@ -136,4 +166,38 @@ MainTab:AddSlider("DungeonFarmHeight", {
     Title = "Dungeon Farm Height",
     Min = 1, Max = 10, Default = 6, Rounding = 0,
     Callback = function(Value) _G.SlowHub.DungeonFarmHeight = Value end
+})
+
+MainTab:AddDropdown("AutoVoteDungeonDifficulty", {
+    Title = "Auto Vote Dungeon",
+    Values = {"Easy", "Medium", "Hard", "Extreme"},
+    Callback = function(Value)
+        _G.SlowHub.DungeonVoteDifficulty = Value
+    end
+})
+
+MainTab:AddToggle("AutoVoteDungeon", {
+    Title = "Enable Auto Vote",
+    Default = false,
+    Callback = function(Value)
+        _G.SlowHub.AutoVoteDungeon = Value
+        if Value then
+            startVoteLoop()
+        else
+            stopVoteLoop()
+        end
+    end
+})
+
+MainTab:AddToggle("AutoReplayDungeon", {
+    Title = "Auto Replay (Need the Dungeon Key)",
+    Default = false,
+    Callback = function(Value)
+        _G.SlowHub.AutoReplayDungeon = Value
+        if Value then
+            startReplayLoop()
+        else
+            stopReplayLoop()
+        end
+    end
 })
