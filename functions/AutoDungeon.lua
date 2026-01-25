@@ -134,6 +134,6 @@ MainTab:AddSlider("DungeonFarmDistance", {
 
 MainTab:AddSlider("DungeonFarmHeight", {
     Title = "Dungeon Farm Height",
-    Min = 1, Max = 10, Default = 8, Rounding = 0,
+    Min = 1, Max = 10, Default = 7, Rounding = 0,
     Callback = function(Value) _G.SlowHub.DungeonFarmHeight = Value end
 })
