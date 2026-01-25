@@ -6,7 +6,7 @@ local MerchantItemsList = {
     "Trait Reroll",
     "Boss Key",
     "Boss Ticket",
-    "Dungeon Ticket",
+    "Dungeon Key",
     "Haki Color Reroll",
     "Common Chest",
     "Rare Chest",
