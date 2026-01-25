@@ -128,12 +128,12 @@ MainTab:AddToggle("AutoFarmDungeon", {
 -- Sliders específicos para Dungeon
 MainTab:AddSlider("DungeonFarmDistance", {
     Title = "Dungeon Farm Distance",
-    Min = 1, Max = 10, Default = 4, Rounding = 0,
+    Min = 1, Max = 10, Default = 6, Rounding = 0,
     Callback = function(Value) _G.SlowHub.DungeonFarmDistance = Value end
 })
 
 MainTab:AddSlider("DungeonFarmHeight", {
     Title = "Dungeon Farm Height",
-    Min = 1, Max = 10, Default = 7, Rounding = 0,
+    Min = 1, Max = 10, Default = 9, Rounding = 0,
     Callback = function(Value) _G.SlowHub.DungeonFarmHeight = Value end
 })
