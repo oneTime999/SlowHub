@@ -2,7 +2,7 @@ local Tab = _G.MiscTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 -- Hakis Section
-Tab:CreateParagraph("HakisSection", {
+Tab:AddParagraph({
     Title = "Hakis",
     Content = ""
 })
@@ -11,7 +11,7 @@ loadstring(game:HttpGet(githubBase .. "AutoHaki.lua"))()
 loadstring(game:HttpGet(githubBase .. "AutoObservation.lua"))()
 
 -- Auto Skill Section
-Tab:CreateParagraph("AutoSkillSection", {
+Tab:AddParagraph({
     Title = "Auto Skill",
     Content = ""
 })
@@ -19,7 +19,7 @@ Tab:CreateParagraph("AutoSkillSection", {
 loadstring(game:HttpGet(githubBase .. "AutoSkill.lua"))()
 
 -- Codes Section
-Tab:CreateParagraph("CodesSection", {
+Tab:AddParagraph({
     Title = "Codes",
     Content = ""
 })
@@ -27,7 +27,7 @@ Tab:CreateParagraph("CodesSection", {
 loadstring(game:HttpGet(githubBase .. "Codes.lua"))()
 
 -- Config Section
-Tab:CreateParagraph("ConfigSection", {
+Tab:AddParagraph({
     Title = "Config",
     Content = ""
 })
