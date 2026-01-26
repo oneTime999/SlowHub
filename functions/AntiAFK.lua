@@ -1,4 +1,3 @@
-local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
 local RunService = game:GetService("RunService")
@@ -47,9 +46,10 @@ local function startAntiAfk()
     end)
 end
 
-local Toggle = Tab:AddToggle("AntiAFK", {
-    Title = "Anti AFK",
-    Default = _G.SlowHub.AntiAFK,
+local Toggle = _G.MiscTab:CreateToggle({
+    Name = "Anti AFK",
+    CurrentValue = _G.SlowHub.AntiAFK,
+    Flag = "AntiAFK",
     Callback = function(Value)
         if Value then
             startAntiAfk()
