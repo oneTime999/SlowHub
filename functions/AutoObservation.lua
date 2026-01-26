@@ -18,7 +18,7 @@ local function isObservationActive()
     local mainFrame = dodgeUI:FindFirstChild("MainFrame")
     if not mainFrame then return false end
     
-    return mainFrame.Visible  -- ✅ true = ATIVADO, false = DESATIVADO
+    return mainFrame.Visible
 end
 
 local function toggleObservation()
@@ -52,9 +52,8 @@ local function startAutoObservation()
 
         local now = tick()
 
-        -- ✅ CORRETO: Só ativa SE não estiver ativo (Visible=false ou UI não existe)
         if now - lastToggleTime >= COOLDOWN_TIME then
-            if not isObservationActive() then  -- Visible=false OU UI não existe
+            if not isObservationActive() then
                 toggleObservation()
                 lastToggleTime = now
             end
@@ -62,9 +61,10 @@ local function startAutoObservation()
     end)
 end
 
-local Toggle = Tab:AddToggle("AutoObservation", {
-    Title = "Auto Observation Haki",
-    Default = _G.SlowHub.AutoObservation,
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Observation Haki",
+    CurrentValue = _G.SlowHub.AutoObservation,
+    Flag = "AutoObservation",
     Callback = function(Value)
         if Value then
             startAutoObservation()
