@@ -2,7 +2,7 @@ local Tab = _G.BossesTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 -- Boss Farm Section
-Tab:CreateParagraph("BossFarmSection", {
+Tab:AddParagraph({
     Title = "Boss Farm",
     Content = ""
 })
@@ -10,7 +10,7 @@ Tab:CreateParagraph("BossFarmSection", {
 loadstring(game:HttpGet(githubBase .. "AutoBosses.lua"))()
 
 -- Summon Section
-Tab:CreateParagraph("SummonSection", {
+Tab:AddParagraph({
     Title = "Summon",
     Content = ""
 })
@@ -18,7 +18,7 @@ Tab:CreateParagraph("SummonSection", {
 loadstring(game:HttpGet(githubBase .. "AutoSummon.lua"))()
 
 -- Mini Boss Farm Section
-Tab:CreateParagraph("MiniBossFarmSection", {
+Tab:AddParagraph({
     Title = "Mini Boss Farm",
     Content = ""
 })
