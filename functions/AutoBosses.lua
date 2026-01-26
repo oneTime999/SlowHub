@@ -6,10 +6,9 @@ local Player = Players.LocalPlayer
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss" -- Yuji Adicionado
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
 }
 
--- SafeZones atualizadas com as novas coordenadas
 local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-567.2230834960938, 2.5787253379821777, 1228.4903564453125),
     ["QinShiBoss"] = CFrame.new(828.1129150390625, -0.39719152450561523, -1130.7666015625),
@@ -63,7 +62,7 @@ local function stopAutoFarmBoss()
     isRunning = false
     lastTargetBoss = nil
     hasVisitedSafeZone = false
-    _G.SlowHub.IsAttackingBoss = false -- Libera o Farm de Level/Mob
+    _G.SlowHub.IsAttackingBoss = false
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -85,16 +84,14 @@ local function startAutoFarmBoss()
         
         local boss = getAliveBoss()
         
-        -- === PRIORIDADE GLOBAL ===
         if boss then
-            _G.SlowHub.IsAttackingBoss = true -- Pausa os outros farms e assume controle
+            _G.SlowHub.IsAttackingBoss = true
         else
-            _G.SlowHub.IsAttackingBoss = false -- Libera os outros farms
+            _G.SlowHub.IsAttackingBoss = false
             lastTargetBoss = nil
             hasVisitedSafeZone = false
             return 
         end
-        -- =========================
 
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
@@ -131,13 +128,13 @@ local function startAutoFarmBoss()
     end)
 end
 
--- Interface Gráfica
-Tab:AddParagraph({Title = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
+Tab:CreateParagraph({Name = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
 
 for _, bossName in ipairs(bossList) do
-    Tab:AddToggle("SelectBoss_" .. bossName, {
-        Title = bossName,
-        Default = false,
+    Tab:CreateToggle({
+        Name = bossName,
+        CurrentValue = false,
+        Flag = "SelectBoss_" .. bossName,
         Callback = function(Value)
             _G.SlowHub.SelectedBosses[bossName] = Value
             if _G.SaveConfig then _G.SaveConfig() end
@@ -145,17 +142,23 @@ for _, bossName in ipairs(bossList) do
     })
 end
 
-Tab:AddParagraph({Title = "Farm Control", Content = ""})
+Tab:CreateParagraph({Name = "Farm Control", Content = ""})
 
-local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
-    Title = "Auto Farm Selected Bosses (Priority)",
-    Default = false,
+local FarmToggle = Tab:CreateToggle({
+    Name = "Auto Farm Selected Bosses (Priority)",
+    CurrentValue = false,
+    Flag = "AutoFarmBoss",
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 _G.SlowHub.AutoFarmBosses = false
-                if FarmToggle then FarmToggle:SetValue(false) end
-                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
+                if FarmToggle then FarmToggle:Set(false) end
+                Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a weapon first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
                 return
             end
             startAutoFarmBoss()
@@ -166,23 +169,28 @@ local FarmToggle = Tab:AddToggle("AutoFarmBoss", {
     end
 })
 
-Tab:AddSlider("BossFarmDistance", {
-    Title = "Boss Farm Distance (studs)",
-    Min = 1, Max = 10, Default = _G.SlowHub.BossFarmDistance, Rounding = 0,
+Tab:CreateSlider({
+    Name = "Boss Farm Distance (studs)",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.BossFarmDistance,
+    Flag = "BossFarmDistance",
     Callback = function(Value)
         _G.SlowHub.BossFarmDistance = Value
     end
 })
 
-Tab:AddSlider("BossFarmHeight", {
-    Title = "Boss Farm Height (studs)",
-    Min = 1, Max = 10, Default = _G.SlowHub.BossFarmHeight, Rounding = 0,
+Tab:CreateSlider({
+    Name = "Boss Farm Height (studs)",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.BossFarmHeight,
+    Flag = "BossFarmHeight",
     Callback = function(Value)
         _G.SlowHub.BossFarmHeight = Value
     end
 })
 
--- Auto Start se já estiver ativado nas configs salvas
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
