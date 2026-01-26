@@ -3,9 +3,8 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local Player = Players.LocalPlayer
 
-Tab:AddButton({
-    Title = "Rejoin Server",
-    Description = "Reconnects you to the current server",
+Tab:CreateButton({
+    Name = "Rejoin Server",
     Callback = function()
         if #Players:GetPlayers() <= 1 then
             Player:Kick("\nRejoining...")
