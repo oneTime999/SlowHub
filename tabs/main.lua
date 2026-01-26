@@ -2,7 +2,7 @@ local Tab = _G.MainTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 -- Settings Section
-Tab:AddParagraph({
+Tab:CreateParagraph("SettingsSection", {
     Title = "Settings",
     Content = ""
 })
@@ -10,7 +10,7 @@ Tab:AddParagraph({
 loadstring(game:HttpGet(githubBase .. "WeaponSelector.lua"))()
 
 -- Auto Farm Section
-Tab:AddParagraph({
+Tab:CreateParagraph("AutoFarmSection", {
     Title = "Auto Farm",
     Content = ""
 })
@@ -18,7 +18,7 @@ Tab:AddParagraph({
 loadstring(game:HttpGet(githubBase .. "AutoLevel.lua"))()
 
 -- Auto Farm Selected Section
-Tab:AddParagraph({
+Tab:CreateParagraph("AutoFarmSelectedSection", {
     Title = "Auto Farm Selected",
     Content = ""
 })
@@ -26,16 +26,15 @@ Tab:AddParagraph({
 loadstring(game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua"))()
 
 -- Auto Dungeon Section
-Tab:AddParagraph({
+Tab:CreateParagraph("AutoDungeonSection", {
     Title = "Auto Dungeon",
     Content = ""
 })
 
 loadstring(game:HttpGet(githubBase .. "AutoDungeon.lua"))()
 
-
 -- Auto Chest Section
-Tab:AddParagraph({
+Tab:CreateParagraph("AutoChestSection", {
     Title = "Auto Chest",
     Content = ""
 })
