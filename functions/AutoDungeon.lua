@@ -137,16 +137,20 @@ local function startDungeonFarm()
     end)
 end
 
-MainTab:AddToggle("AutoFarmDungeon", {
-    Title = "Auto Farm Dungeon (Activate only inside the Dungeon)",
-    Default = false,
+MainTab:CreateToggle({
+    Name = "Auto Farm Dungeon (Activate only inside the Dungeon)",
+    CurrentValue = false,
+    Flag = "AutoFarmDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                if _G.Fluent then
-                    _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
-                end
+                Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a weapon first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
                 return
             end
             startDungeonFarm()
@@ -156,29 +160,42 @@ MainTab:AddToggle("AutoFarmDungeon", {
     end
 })
 
-MainTab:AddSlider("DungeonFarmDistance", {
-    Title = "Dungeon Farm Distance",
-    Min = 1, Max = 10, Default = 6, Rounding = 0,
-    Callback = function(Value) _G.SlowHub.DungeonFarmDistance = Value end
+MainTab:CreateSlider({
+    Name = "Dungeon Farm Distance",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.DungeonFarmDistance,
+    Flag = "DungeonFarmDistance",
+    Callback = function(Value)
+        _G.SlowHub.DungeonFarmDistance = Value
+    end
 })
 
-MainTab:AddSlider("DungeonFarmHeight", {
-    Title = "Dungeon Farm Height",
-    Min = 1, Max = 10, Default = 6, Rounding = 0,
-    Callback = function(Value) _G.SlowHub.DungeonFarmHeight = Value end
+MainTab:CreateSlider({
+    Name = "Dungeon Farm Height",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.DungeonFarmHeight,
+    Flag = "DungeonFarmHeight",
+    Callback = function(Value)
+        _G.SlowHub.DungeonFarmHeight = Value
+    end
 })
 
-MainTab:AddDropdown("AutoVoteDungeonDifficulty", {
-    Title = "Auto Vote Dungeon",
-    Values = {"Easy", "Medium", "Hard", "Extreme"},
+MainTab:CreateDropdown({
+    Name = "Auto Vote Dungeon",
+    Options = {"Easy", "Medium", "Hard", "Extreme"},
+    CurrentOption = nil,
+    Flag = "AutoVoteDungeonDifficulty",
     Callback = function(Value)
         _G.SlowHub.DungeonVoteDifficulty = Value
     end
 })
 
-MainTab:AddToggle("AutoVoteDungeon", {
-    Title = "Enable Auto Vote",
-    Default = false,
+MainTab:CreateToggle({
+    Name = "Enable Auto Vote",
+    CurrentValue = false,
+    Flag = "AutoVoteDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoVoteDungeon = Value
         if Value then
@@ -189,9 +206,10 @@ MainTab:AddToggle("AutoVoteDungeon", {
     end
 })
 
-MainTab:AddToggle("AutoReplayDungeon", {
-    Title = "Auto Replay (Need the Dungeon Key)",
-    Default = false,
+MainTab:CreateToggle({
+    Name = "Auto Replay (Need the Dungeon Key)",
+    CurrentValue = false,
+    Flag = "AutoReplayDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoReplayDungeon = Value
         if Value then
