@@ -1,119 +1,121 @@
 local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
 
--- Certifique-se de que _G.MainTab está definido antes deste script rodar!
-local Tab = _G.MainTab 
+local Tab = _G.MainTab -- Certifique-se que sua Tab do Rayfield está criada
 
 _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedWeapon = nil
 _G.SlowHub.EquipLoop = false
 
--- Função para obter armas (Backpack + Character)
-local function GetWeapons()
-    local weapons = {}
-    local seen = {} -- Evita duplicatas na lista
+-- Função para pegar nomes das armas (Inventário + Mão)
+local function GetWeaponNames()
+    local weaponNames = {}
+    local seen = {}
 
-    local function scan(container)
+    local function addTools(container)
         for _, item in ipairs(container:GetChildren()) do
             if item:IsA("Tool") and not seen[item.Name] then
                 seen[item.Name] = true
-                table.insert(weapons, item.Name)
+                table.insert(weaponNames, item.Name)
             end
         end
     end
 
-    pcall(function()
-        if Player.Backpack then scan(Player.Backpack) end
-        if Player.Character then scan(Player.Character) end
-    end)
+    if Player.Backpack then addTools(Player.Backpack) end
+    if Player.Character then addTools(Player.Character) end
 
-    -- Rayfield precisa de pelo menos uma opção para não bugar visualmente
-    return #weapons > 0 and weapons or {"Nenhuma arma encontrada"}
+    if #weaponNames == 0 then
+        return {"Nenhuma arma encontrada (Clique Refresh)"}
+    end
+    
+    return weaponNames
 end
 
--- Função para equipar a arma selecionada
-local function EquipSelectedTool()
-    local weaponName = _G.SlowHub.SelectedWeapon
+-- Função principal de equipar
+local function EquipWeapon(weaponName)
+    if not weaponName or weaponName == "" or string.find(weaponName, "Nenhuma arma") then return end
     
-    -- Verificações de segurança
-    if not weaponName or weaponName == "" or weaponName == "Nenhuma arma encontrada" then return end
-    if not Player.Character or not Player.Character:FindFirstChild("Humanoid") then return end
+    local Character = Player.Character
+    if not Character then return end
+    
+    local Humanoid = Character:FindFirstChild("Humanoid")
+    if not Humanoid or Humanoid.Health <= 0 then return end
 
-    local Humanoid = Player.Character:FindFirstChild("Humanoid")
-    if Humanoid.Health <= 0 then return end -- Não tenta equipar se estiver morto
+    -- 1. Verifica se JÁ ESTÁ equipada na mão (Character)
+    local equippedTool = Character:FindFirstChild(weaponName)
+    if equippedTool then
+        -- Se já está na mão, não faz nada (evita spam de animação)
+        return 
+    end
 
-    -- Verifica se já está equipada
-    local currentTool = Player.Character:FindFirstChild(weaponName)
-    if currentTool then return end -- Já está na mão
-
-    -- Procura na Backpack e equipa
-    local backpack = Player:FindFirstChild("Backpack")
-    if backpack then
-        local tool = backpack:FindFirstChild(weaponName)
-        if tool then
-            Humanoid:EquipTool(tool)
+    -- 2. Procura na Backpack para equipar
+    local Backpack = Player:FindFirstChild("Backpack")
+    if Backpack then
+        local ToolToEquip = Backpack:FindFirstChild(weaponName)
+        
+        if ToolToEquip then
+            Humanoid:EquipTool(ToolToEquip)
+            print("Equipando: " .. weaponName) -- Debug no F9
+        else
+            -- Se não achou na backpack nem na mão, a arma sumiu ou mudou de nome
+            -- print("Arma não encontrada no inventário: " .. weaponName)
         end
     end
 end
 
--- Criação do Dropdown
+-- Dropdown
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Selecionar Arma",
-    Options = GetWeapons(),
-    CurrentOption = {"Nenhuma arma encontrada"}, -- Rayfield V2 geralmente espera uma tabela aqui
+    Options = GetWeaponNames(),
+    CurrentOption = {""},
     MultipleOptions = false,
-    Flag = "SelectWeapon",
+    Flag = "WeaponSelectFlag",
     Callback = function(Option)
-        -- CORREÇÃO CRÍTICA: Rayfield retorna uma tabela { "NomeDaArma" }
-        local weaponName = (type(Option) == "table" and Option[1]) or Option
+        -- Rayfield retorna tabela { "Nome" }, tratamos isso aqui:
+        local selected = (type(Option) == "table" and Option[1]) or Option
         
-        print("Arma Selecionada:", weaponName) -- Debug para ver se está funcionando
-
-        if weaponName and weaponName ~= "Nenhuma arma encontrada" then
-            _G.SlowHub.SelectedWeapon = weaponName
-            EquipSelectedTool()
-        else
-            _G.SlowHub.SelectedWeapon = nil
-        end
+        print("Opção selecionada: ", selected) -- Debug
+        _G.SlowHub.SelectedWeapon = selected
+        
+        -- Tenta equipar imediatamente ao selecionar
+        EquipWeapon(selected)
     end
 })
 
--- Botão de Refresh
+-- Botão Refresh (Caso você ganhe itens novos)
 Tab:CreateButton({
-    Name = "Atualizar Lista de Armas",
+    Name = "Atualizar Lista (Refresh)",
     Callback = function()
-        -- Atualiza as opções do dropdown existente
-        WeaponDropdown:Refresh(GetWeapons())
+        WeaponDropdown:Refresh(GetWeaponNames())
     end
 })
 
--- Toggle do Loop Equip
+-- Toggle do Loop
 Tab:CreateToggle({
-    Name = "Loop Equip (Equipar Automaticamente)",
+    Name = "Equipar Automaticamente (Loop)",
     CurrentValue = false,
-    Flag = "LoopEquipTool",
+    Flag = "AutoEquipFlag",
     Callback = function(Value)
         _G.SlowHub.EquipLoop = Value
         
         if Value then
             task.spawn(function()
                 while _G.SlowHub.EquipLoop do
-                    EquipSelectedTool()
-                    task.wait(0.5) -- Um delay pequeno evita lag
+                    if _G.SlowHub.SelectedWeapon then
+                        EquipWeapon(_G.SlowHub.SelectedWeapon)
+                    end
+                    task.wait(0.5) -- Verifica a cada 0.5s
                 end
             end)
         end
     end
 })
 
--- Reconectar ao morrer/renascer
-Player.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid")
-    char:WaitForChild("Backpack") -- Espera carregar o inventário
-    task.wait(1)
-    
-    if _G.SlowHub.EquipLoop then
-        EquipSelectedTool()
+-- Reconexão ao morrer (Garante que o loop continue funcionando após resetar)
+Player.CharacterAdded:Connect(function(newChar)
+    task.wait(1.5) -- Espera o jogo carregar o inventário
+    if _G.SlowHub.EquipLoop and _G.SlowHub.SelectedWeapon then
+        EquipWeapon(_G.SlowHub.SelectedWeapon)
     end
 end)
