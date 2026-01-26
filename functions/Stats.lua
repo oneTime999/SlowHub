@@ -63,32 +63,35 @@ local function stopStatLoop()
     end)
 end
 
-local Dropdown = Tab:AddDropdown("SelectStat", {
-    Title = "Select Stat",
-    Values = {"Melee", "Defense", "Sword", "Power"},
-    Default = nil,
+local Dropdown = Tab:CreateDropdown({
+    Name = "Select Stat",
+    Options = {"Melee", "Defense", "Sword", "Power"},
+    CurrentOption = "Select a Stat",
+    Flag = "SelectStat",
     Callback = function(Value)
-        pcall(function()
-            _G.SlowHub.SelectedStat = tostring(Value)
-        end)
+        _G.SlowHub.SelectedStat = Value
     end
 })
 
-local Toggle = Tab:AddToggle("StatLoop", {
-    Title = "Enable Stat Loop",
-    Default = false,
+local Toggle = Tab:CreateToggle({
+    Name = "Enable Stat Loop",
+    CurrentValue = false,
+    Flag = "StatLoop",
     Callback = function(Value)
-        pcall(function()
-            if Value then
-                if not _G.SlowHub.SelectedStat then
-                    _G.Fluent:Notify({Title = "Error", Content = "Select a Stat first!", Duration = 3})
-                    if Toggle then Toggle:SetValue(false) end
-                    return
-                end
-                startStatLoop()
-            else
-                stopStatLoop()
+        if Value then
+            if not _G.SlowHub.SelectedStat or _G.SlowHub.SelectedStat == "Select a Stat" then
+                _G.Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a Stat first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                Toggle:Set(false)
+                return
             end
-        end)
+            startStatLoop()
+        else
+            stopStatLoop()
+        end
     end
 })
