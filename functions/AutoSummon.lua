@@ -1,8 +1,6 @@
 local Tab = _G.BossesTab
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Player = Players.LocalPlayer
 
 local BossList = {
     "QinShiBoss",
@@ -14,17 +12,18 @@ local isSummoningBoss = false
 local selectedBoss = nil
 
 local function isBossAlive(bossName)
+    local found = false
     pcall(function()
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name:find(bossName) or obj.Name == bossName then
+        for _, obj in pairs(workspace.NPCs:GetChildren()) do
+            if obj.Name == bossName then
                 local humanoid = obj:FindFirstChild("Humanoid")
                 if humanoid and humanoid.Health > 0 then
-                    return true
+                    found = true
                 end
             end
         end
     end)
-    return false
+    return found
 end
 
 local function stopAutoSummonBoss()
@@ -37,9 +36,7 @@ local function stopAutoSummonBoss()
 end
 
 local function startAutoSummonBoss()
-    if autoSummonBossConnection then
-        stopAutoSummonBoss()
-    end
+    if autoSummonBossConnection then stopAutoSummonBoss() end
     
     isSummoningBoss = true
     _G.SlowHub.AutoSummonBoss = true
@@ -60,45 +57,39 @@ local function startAutoSummonBoss()
     end)
 end
 
-local Dropdown = Tab:CreateDropdown({
-    Name = "Select Boss",
+-- UI RAYFIELD
+Tab:CreateDropdown({
+    Name = "Select Boss to Summon",
     Options = BossList,
-    CurrentOption = "Select a Boss",
+    CurrentOption = {""},
+    MultipleOptions = false,
     Flag = "SelectBossSummon",
     Callback = function(Value)
-        selectedBoss = Value
+        -- Correção para Tabela vs String
+        local val = (type(Value) == "table" and Value[1]) or Value
+        selectedBoss = val
     end
 })
 
-local Toggle = Tab:CreateToggle({
+Tab:CreateToggle({
     Name = "Auto Summon Boss",
     CurrentValue = false,
     Flag = "AutoSummonBoss",
     Callback = function(Value)
         if Value then
-            if not selectedBoss or selectedBoss == "Select a Boss" then
-                _G.Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Select a Boss to summon first!",
+            if not selectedBoss or selectedBoss == "" then
+                Rayfield:Notify({
+                    Title = "Erro",
+                    Content = "Selecione um Boss para invocar!",
                     Duration = 3,
-                    Image = 4483362458
+                    Image = 4483362458,
                 })
-                Toggle:Set(false)
                 return
             end
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
         end
-        
         _G.SlowHub.AutoSummonBoss = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
-
-if _G.SlowHub.AutoSummonBoss and selectedBoss then
-    task.wait(2)
-    startAutoSummonBoss()
-end
