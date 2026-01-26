@@ -3,9 +3,8 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Player = game:GetService("Players").LocalPlayer
 
-Tab:AddButton({
-    Title = "Server Hop",
-    Description = "Search and join a different server",
+Tab:CreateButton({
+    Name = "Server Hop",
     Callback = function()
         local PlaceId = game.PlaceId
         local function GetServers()
@@ -45,7 +44,12 @@ Tab:AddButton({
             local RandomServer = ServerList[math.random(1, #ServerList)]
             TeleportService:TeleportToPlaceInstance(PlaceId, RandomServer, Player)
         else
-            _G.Fluent:Notify({Title = "Server Hop", Content = "No other servers found!", Duration = 3})
+            _G.Rayfield:Notify({
+                Title = "Server Hop",
+                Content = "No other servers found!",
+                Duration = 3,
+                Image = 4483362458
+            })
         end
     end
 })
