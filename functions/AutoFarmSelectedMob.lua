@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.MainTab -- Ou a aba onde você coloca este script
+local Tab = _G.MainTab
 
 local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", "Hollow"}
 local QuestConfig = {
@@ -30,7 +30,7 @@ local selectedMob = nil
 local currentNPCIndex = 1
 local lastTargetName = nil
 local hasVisitedSafeZone = false
-local wasAttackingBoss = false -- Variável de controle de retorno
+local wasAttackingBoss = false
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
@@ -103,7 +103,6 @@ local function stopAutoFarmSelectedMob()
             local playerRoot = Player.Character:FindFirstChild("HumanoidRootPart")
             if playerRoot then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                -- playerRoot.Anchored = false
             end
         end
     end)
@@ -115,7 +114,6 @@ local function startQuestLoop(questName)
     
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
-            -- Só pega quest se estiver ativado E NÃO estiver matando Boss
             if _G.SlowHub.AutoQuestSelectedMob and not _G.SlowHub.IsAttackingBoss then
                 pcall(function()
                     ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
@@ -150,18 +148,15 @@ local function startAutoFarmSelectedMob()
             return
         end
 
-        -- === LÓGICA DE PRIORIDADE DO BOSS ===
         if _G.SlowHub.IsAttackingBoss then
             wasAttackingBoss = true
-            return -- Pausa o farm de Mob e deixa o Boss Farm agir
+            return
         end
 
-        -- Retorno seguro: Se estava no Boss, reseta Safe Zone
         if wasAttackingBoss then
             hasVisitedSafeZone = false
             wasAttackingBoss = false
         end
-        -- ===================================
         
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
@@ -169,13 +164,11 @@ local function startAutoFarmSelectedMob()
         local now = tick()
         local config = getMobConfig(selectedMob)
         
-        -- Reset de SafeZone se trocar o mob no menu
         if selectedMob ~= lastTargetName then
             lastTargetName = selectedMob
             hasVisitedSafeZone = false
         end
 
-        -- Ir para SafeZone primeiro
         if not hasVisitedSafeZone then
             local safeCFrame = MobSafeZones[selectedMob]
             if safeCFrame and safeCFrame.Position ~= Vector3.new(0,0,0) then
@@ -184,13 +177,12 @@ local function startAutoFarmSelectedMob()
                     playerRoot.CFrame = safeCFrame
                 end)
                 hasVisitedSafeZone = true
-                return -- Espera um frame
+                return
             else
                 hasVisitedSafeZone = true
             end
         end
 
-        -- Lógica de atacar o NPC
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
@@ -230,11 +222,11 @@ local function startAutoFarmSelectedMob()
     end)
 end
 
--- UI ELEMENTS
-local Dropdown = Tab:AddDropdown("SelectMob", {
-    Title = "Select Mob",
-    Values = MobList,
-    Default = nil,
+local Dropdown = Tab:CreateDropdown({
+    Name = "Select Mob",
+    Options = MobList,
+    CurrentOption = nil,
+    Flag = "SelectMob",
     Callback = function(Value)
         local wasRunning = _G.SlowHub.AutoFarmSelectedMob
         
@@ -252,20 +244,31 @@ local Dropdown = Tab:AddDropdown("SelectMob", {
     end
 })
 
-local Toggle = Tab:AddToggle("AutoFarmSelectedMob", {
-    Title = "Auto Farm Selected Mob",
-    Default = false,
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Farm Selected Mob",
+    CurrentValue = false,
+    Flag = "AutoFarmSelectedMob",
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+                Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a weapon first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                if Toggle then Toggle:Set(false) end
                 return
             end
             
             if not selectedMob then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a Mob first!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+                Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a Mob first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                if Toggle then Toggle:Set(false) end
                 return
             end
             
@@ -281,9 +284,10 @@ local Toggle = Tab:AddToggle("AutoFarmSelectedMob", {
     end
 })
 
-local QuestToggle = Tab:AddToggle("AutoQuestSelectedMob", {
-    Title = "Auto Quest Selected Mob",
-    Default = false,
+local QuestToggle = Tab:CreateToggle({
+    Name = "Auto Quest Selected Mob",
+    CurrentValue = false,
+    Flag = "AutoQuestSelectedMob",
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         if _G.SaveConfig then
@@ -292,12 +296,12 @@ local QuestToggle = Tab:AddToggle("AutoQuestSelectedMob", {
     end
 })
 
-local DistanceSlider = Tab:AddSlider("FarmDistance", {
-    Title = "Farm Distance (studs)",
-    Min = 1,
-    Max = 10,
-    Default = _G.SlowHub.FarmDistance,
-    Rounding = 0,
+local DistanceSlider = Tab:CreateSlider({
+    Name = "Farm Distance (studs)",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.FarmDistance,
+    Flag = "FarmDistance",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         if _G.SaveConfig then
@@ -306,12 +310,12 @@ local DistanceSlider = Tab:AddSlider("FarmDistance", {
     end
 })
 
-local HeightSlider = Tab:AddSlider("FarmHeight", {
-    Title = "Farm Height (studs)",
-    Min = 1,
-    Max = 10,
-    Default = _G.SlowHub.FarmHeight,
-    Rounding = 0,
+local HeightSlider = Tab:CreateSlider({
+    Name = "Farm Height (studs)",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.FarmHeight,
+    Flag = "FarmHeight",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         if _G.SaveConfig then
