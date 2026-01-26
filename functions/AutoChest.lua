@@ -62,23 +62,30 @@ local function startAutoChest()
     end)
 end
 
-local Dropdown = Tab:AddDropdown("SelectChest", {
-    Title = "Select Chest",
-    Values = chestList,
-    Default = nil,
+local Dropdown = Tab:CreateDropdown({
+    Name = "Select Chest",
+    Options = chestList,
+    CurrentOption = nil,
+    Flag = "SelectChest",
     Callback = function(Value)
         selectedChest = tostring(Value)
     end
 })
 
-local Toggle = Tab:AddToggle("AutoChest", {
-    Title = "Auto Chest",
-    Default = false,
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Chest",
+    CurrentValue = false,
+    Flag = "AutoChest",
     Callback = function(Value)
         if Value then
             if not selectedChest then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a Chest first!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+                Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a Chest first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                if Toggle then Toggle:Set(false) end
                 return
             end
             
