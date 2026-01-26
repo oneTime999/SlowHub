@@ -20,13 +20,12 @@ local NPCSafeZones = {
     ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
     ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
     ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["Hollow"] = CFrame.new(-365.12628173828125, -0.44140613079071045, 1097.683349609375)
+    ["Hollow"]       = CFrame.new(-365.12628173828125, -0.44140613079071045, 1097.683349609375)
 }
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
 
--- Variável Global de controle
 _G.SlowHub.IsAttackingBoss = false
 
 local autoLevelConnection = nil
@@ -34,7 +33,7 @@ local questLoopActive = false
 local currentNPCIndex = 1
 local lastTargetName = nil
 local hasVisitedSafeZone = false
-local wasAttackingBoss = false -- Nova variável para detectar o retorno
+local wasAttackingBoss = false
 
 local function GetPlayerLevel()
     local success, level = pcall(function() return Player.Data.Level.Value end)
@@ -119,13 +118,11 @@ local function startAutoLevel()
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then stopAutoLevel() return end
         
-        -- Se estiver atacando Boss, apenas marca que estava ocupado e pausa
         if _G.SlowHub.IsAttackingBoss then
             wasAttackingBoss = true
             return 
         end
 
-        -- Se acabou de voltar de um Boss, força a SafeZone do NPC atual
         if wasAttackingBoss then
             hasVisitedSafeZone = false
             wasAttackingBoss = false
@@ -140,26 +137,23 @@ local function startAutoLevel()
         local now = tick()
         local config = GetCurrentConfig()
         
-        -- Se mudou de mob (por nível), reseta SafeZone
         if lastTargetName ~= config.npc then
             lastTargetName = config.npc
             hasVisitedSafeZone = false
         end
         
-        -- Lógica de ir para a SafeZone
         if not hasVisitedSafeZone then
             local safeCFrame = NPCSafeZones[config.npc]
             if safeCFrame then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 playerRoot.CFrame = safeCFrame
                 hasVisitedSafeZone = true
-                return -- Espera um frame na SafeZone antes de ir bater
+                return
             else
                 hasVisitedSafeZone = true
             end
         end
         
-        -- Lógica de atacar o NPC
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
         
@@ -187,14 +181,20 @@ local function startAutoLevel()
     end)
 end
 
-MainTab:AddToggle("AutoFarmLevel", {
-    Title = "Auto Farm Level",
-    Default = _G.SlowHub.AutoFarmLevel,
+MainTab:CreateToggle({
+    Name = "Auto Farm Level",
+    CurrentValue = _G.SlowHub.AutoFarmLevel,
+    Flag = "AutoFarmLevel",
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon first!", Duration = 3})
+                Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a weapon first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
                 return
             end
             startAutoLevel()
@@ -204,16 +204,26 @@ MainTab:AddToggle("AutoFarmLevel", {
     end
 })
 
-MainTab:AddSlider("FarmDistance", {
-    Title = "Farm Distance",
-    Min = 1, Max = 10, Default = 8, Rounding = 0,
-    Callback = function(Value) _G.SlowHub.FarmDistance = Value end
+MainTab:CreateSlider({
+    Name = "Farm Distance",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.FarmDistance,
+    Flag = "FarmDistance",
+    Callback = function(Value)
+        _G.SlowHub.FarmDistance = Value
+    end
 })
 
-MainTab:AddSlider("FarmHeight", {
-    Title = "Farm Height",
-    Min = 1, Max = 10, Default = 4, Rounding = 0,
-    Callback = function(Value) _G.SlowHub.FarmHeight = Value end
+MainTab:CreateSlider({
+    Name = "Farm Height",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.FarmHeight,
+    Flag = "FarmHeight",
+    Callback = function(Value)
+        _G.SlowHub.FarmHeight = Value
+    end
 })
 
 if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
