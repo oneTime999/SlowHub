@@ -38,33 +38,30 @@ task.spawn(function()
     end
 end)
 
-local Dropdown = Tab:AddDropdown("SelectMerchantItems", {
-    Title = "Select Merchant Items to Buy",
-    Values = MerchantItemsList,
-    Multi = true,
-    Default = {},
+local Dropdown = Tab:CreateDropdown({
+    Name = "Select Merchant Items to Buy",
+    Options = MerchantItemsList,
+    CurrentOption = {"Select Items"},
+    MultipleOptions = true,
+    Flag = "SelectMerchantItems",
     Callback = function(Value)
-        local selected = {}
-        for item, state in pairs(Value) do
-            if state then
-                table.insert(selected, item)
-            end
-        end
-        _G.SlowHub.SelectedMerchantItems = selected
+        _G.SlowHub.SelectedMerchantItems = Value
     end
 })
 
-local Toggle = Tab:AddToggle("AutoBuyMerchant", {
-    Title = "Auto Buy Selected Items",
-    Default = false,
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Buy Selected Items",
+    CurrentValue = false,
+    Flag = "AutoBuyMerchant",
     Callback = function(Value)
         _G.SlowHub.AutoBuyMerchant = Value
         
         if Value and #_G.SlowHub.SelectedMerchantItems == 0 then
-            _G.Fluent:Notify({
+            _G.Rayfield:Notify({
                 Title = "Warning",
                 Content = "Select at least one item first!",
-                Duration = 3
+                Duration = 3,
+                Image = 4483362458
             })
         end
     end
