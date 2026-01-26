@@ -1,8 +1,7 @@
 local Tab = _G.ShopTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
--- Merchant Section
-Tab:CreateParagraph("MerchantSection", {
+Tab:AddParagraph({
     Title = "Merchant",
     Content = ""
 })
@@ -10,7 +9,7 @@ Tab:CreateParagraph("MerchantSection", {
 loadstring(game:HttpGet(githubBase .. "Merchant.lua"))()
 
 -- NPCs Section
-Tab:CreateParagraph("NPCsSection", {
+Tab:AddParagraph({
     Title = "NPCs",
     Content = ""
 })
@@ -18,7 +17,7 @@ Tab:CreateParagraph("NPCsSection", {
 loadstring(game:HttpGet(githubBase .. "NPC.lua"))()
 
 -- Sword Section
-Tab:CreateParagraph("SwordSection", {
+Tab:AddParagraph({
     Title = "Sword",
     Content = ""
 })
@@ -26,7 +25,7 @@ Tab:CreateParagraph("SwordSection", {
 loadstring(game:HttpGet(githubBase .. "Swords.lua"))()
 
 -- Meele Section
-Tab:CreateParagraph("MeeleSection", {
+Tab:AddParagraph({
     Title = "Meele",
     Content = ""
 })
