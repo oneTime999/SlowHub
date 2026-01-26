@@ -1,19 +1,8 @@
--- Aguardar até que BossesTab exista
-repeat task.wait() until _G.BossesTab
-
 local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
-
--- Verificação de segurança
-if not Tab then
-    warn("[SlowHub] BossesTab não foi inicializada!")
-    return
-end
-
-print("[SlowHub] Inicializando Bosses Tab...")
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
@@ -21,14 +10,14 @@ local bossList = {
 }
 
 local BossSafeZones = {
-    ["AizenBoss"]  = CFrame.new(-567.2230834960938, 2.5787253379821777, 1228.4903564453125),
-    ["QinShiBoss"] = CFrame.new(828.1129150390625, -0.39719152450561523, -1130.7666015625),
-    ["SaberBoss"]  = CFrame.new(828.1129150390625, -0.39719152450561523, -1130.7666015625),
-    ["RagnaBoss"]  = CFrame.new(340.0000915527344, 2.613438606262207, -1688.000244140625),
-    ["JinwooBoss"] = CFrame.new(248.741516, 12.0932379, 927.542053, -0.156446099, 0, 0.987686574, 0, 1, 0, -0.987686574, 0, -0.156446099),
-    ["SukunaBoss"] = CFrame.new(1571.26672, 77.2205429, -34.1126976, 0.142485321, 0, 0.989796937, 0, 1, 0, -0.989796937, 0, 0.142485321),
-    ["GojoBoss"]   = CFrame.new(1858.32666, 12.9861355, 338.140015, 0.96272552, -0, -0.270480245, 0, 1, -0, 0.270480245, 0, 0.96272552),
-    ["YujiBoss"]   = CFrame.new(1537.9287109375, 12.986135482788086, 226.10824584960938)
+    ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
+    ["QinShiBoss"] = CFrame.new(828.11, -0.39, -1130.76),
+    ["SaberBoss"]  = CFrame.new(828.11, -0.39, -1130.76),
+    ["RagnaBoss"]  = CFrame.new(340.00, 2.61, -1688.00),
+    ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
+    ["SukunaBoss"] = CFrame.new(1571.26, 77.22, -34.11),
+    ["GojoBoss"]   = CFrame.new(1858.32, 12.98, 338.14),
+    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10)
 }
 
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
@@ -56,7 +45,7 @@ local function getAliveBoss()
 end
 
 local function EquipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return false end
+    if not _G.SlowHub.SelectedWeapon then return end
     pcall(function()
         local character = Player.Character
         if character and character:FindFirstChild("Humanoid") and not character:FindFirstChild(_G.SlowHub.SelectedWeapon) then
@@ -128,7 +117,6 @@ local function startAutoFarmBoss()
         if bossRoot then
             pcall(function()
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                 playerRoot.CFrame = targetCFrame
                 
@@ -139,8 +127,9 @@ local function startAutoFarmBoss()
     end)
 end
 
--- UI Elements
-Tab:CreateParagraph({Name = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
+-- === UI DO RAYFIELD === --
+
+Tab:CreateParagraph({Title = "Select Bosses", Content = "Selecione quais bosses priorizar sobre o Farm de Level."})
 
 for _, bossName in ipairs(bossList) do
     Tab:CreateToggle({
@@ -149,12 +138,11 @@ for _, bossName in ipairs(bossList) do
         Flag = "SelectBoss_" .. bossName,
         Callback = function(Value)
             _G.SlowHub.SelectedBosses[bossName] = Value
-            if _G.SaveConfig then _G.SaveConfig() end
         end
     })
 end
 
-Tab:CreateParagraph({Name = "Farm Control", Content = "Configure boss farming settings."})
+Tab:CreateSection("Controle de Farm")
 
 local FarmToggle = Tab:CreateToggle({
     Name = "Auto Farm Selected Bosses (Priority)",
@@ -163,16 +151,15 @@ local FarmToggle = Tab:CreateToggle({
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
+                -- Notificação Rayfield
+                Rayfield:Notify({
+                    Title = "Erro",
+                    Content = "Selecione uma arma primeiro!",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+                -- Tenta desligar o toggle visualmente se possível (Rayfield não tem SetValue fácil externo, então apenas paramos a lógica)
                 _G.SlowHub.AutoFarmBosses = false
-                if FarmToggle then FarmToggle:Set(false) end
-                if _G.Rayfield then
-                    _G.Rayfield:Notify({
-                        Title = "Error",
-                        Content = "Select a weapon first!",
-                        Duration = 3,
-                        Image = 4483362458
-                    })
-                end
                 return
             end
             startAutoFarmBoss()
@@ -184,9 +171,10 @@ local FarmToggle = Tab:CreateToggle({
 })
 
 Tab:CreateSlider({
-    Name = "Boss Farm Distance (studs)",
-    Range = {1, 10},
+    Name = "Boss Farm Distance",
+    Range = {1, 20},
     Increment = 1,
+    Suffix = "Studs",
     CurrentValue = _G.SlowHub.BossFarmDistance,
     Flag = "BossFarmDistance",
     Callback = function(Value)
@@ -195,20 +183,13 @@ Tab:CreateSlider({
 })
 
 Tab:CreateSlider({
-    Name = "Boss Farm Height (studs)",
-    Range = {1, 10},
+    Name = "Boss Farm Height",
+    Range = {1, 20},
     Increment = 1,
+    Suffix = "Studs",
     CurrentValue = _G.SlowHub.BossFarmHeight,
     Flag = "BossFarmHeight",
     Callback = function(Value)
         _G.SlowHub.BossFarmHeight = Value
     end
 })
-
--- Auto-iniciar se estava ativo
-if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
-    task.wait(2)
-    startAutoFarmBoss()
-end
-
-print("[SlowHub] Bosses Tab carregada com sucesso!")
