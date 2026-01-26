@@ -60,23 +60,30 @@ local function startAutoSummonBoss()
     end)
 end
 
-local Dropdown = Tab:AddDropdown("SelectBossSummon", {
-    Title = "Select Boss",
-    Values = BossList,
-    Default = nil,
+local Dropdown = Tab:CreateDropdown({
+    Name = "Select Boss",
+    Options = BossList,
+    CurrentOption = "Select a Boss",
+    Flag = "SelectBossSummon",
     Callback = function(Value)
-        selectedBoss = tostring(Value)
+        selectedBoss = Value
     end
 })
 
-local Toggle = Tab:AddToggle("AutoSummonBoss", {
-    Title = "Auto Summon Boss",
-    Default = false,
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Summon Boss",
+    CurrentValue = false,
+    Flag = "AutoSummonBoss",
     Callback = function(Value)
         if Value then
-            if not selectedBoss then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a Boss to summon first!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+            if not selectedBoss or selectedBoss == "Select a Boss" then
+                _G.Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a Boss to summon first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                Toggle:Set(false)
                 return
             end
             startAutoSummonBoss()
