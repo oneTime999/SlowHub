@@ -32,12 +32,3 @@ Tab:AddParagraph({
 })
 
 loadstring(game:HttpGet(githubBase .. "AutoDungeon.lua"))()
-
-
--- Auto Chest Section
-Tab:AddParagraph({
-    Title = "Auto Chest",
-    Content = ""
-})
-
-loadstring(game:HttpGet(githubBase .. "AutoChest.lua"))()
