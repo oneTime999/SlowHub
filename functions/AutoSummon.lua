@@ -57,7 +57,7 @@ local function startAutoSummonBoss()
     end)
 end
 
--- UI RAYFIELD
+-- RAYFIELD UI
 Tab:CreateDropdown({
     Name = "Select Boss to Summon",
     Options = BossList,
@@ -65,7 +65,7 @@ Tab:CreateDropdown({
     MultipleOptions = false,
     Flag = "SelectBossSummon",
     Callback = function(Value)
-        -- Correção para Tabela vs String
+        -- Fix for Table vs String return
         local val = (type(Value) == "table" and Value[1]) or Value
         selectedBoss = val
     end
@@ -79,8 +79,8 @@ Tab:CreateToggle({
         if Value then
             if not selectedBoss or selectedBoss == "" then
                 Rayfield:Notify({
-                    Title = "Erro",
-                    Content = "Selecione um Boss para invocar!",
+                    Title = "Error",
+                    Content = "Please select a Boss to summon!",
                     Duration = 3,
                     Image = 4483362458,
                 })
