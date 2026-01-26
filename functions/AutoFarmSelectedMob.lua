@@ -219,7 +219,7 @@ Tab:CreateToggle({
 
 Tab:CreateSlider({
     Name = "Farm Distance",
-    Range = {1, 15},
+    Range = {1, 10},
     Increment = 1,
     CurrentValue = _G.SlowHub.FarmDistance,
     Flag = "FarmDistance",
@@ -230,7 +230,7 @@ Tab:CreateSlider({
 
 Tab:CreateSlider({
     Name = "Farm Height",
-    Range = {1, 15},
+    Range = {1, 10},
     Increment = 1,
     CurrentValue = _G.SlowHub.FarmHeight,
     Flag = "FarmHeight",
