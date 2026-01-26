@@ -127,9 +127,9 @@ local function startAutoFarmBoss()
     end)
 end
 
--- === UI DO RAYFIELD === --
+-- === RAYFIELD UI === --
 
-Tab:CreateParagraph({Title = "Select Bosses", Content = "Selecione quais bosses priorizar sobre o Farm de Level."})
+Tab:CreateParagraph({Title = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
 
 for _, bossName in ipairs(bossList) do
     Tab:CreateToggle({
@@ -142,7 +142,7 @@ for _, bossName in ipairs(bossList) do
     })
 end
 
-Tab:CreateSection("Controle de Farm")
+Tab:CreateSection("Farm Control")
 
 local FarmToggle = Tab:CreateToggle({
     Name = "Auto Farm Selected Bosses (Priority)",
@@ -151,14 +151,13 @@ local FarmToggle = Tab:CreateToggle({
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                -- Notificação Rayfield
+                -- Rayfield Notification
                 Rayfield:Notify({
-                    Title = "Erro",
-                    Content = "Selecione uma arma primeiro!",
+                    Title = "Error",
+                    Content = "Please select a weapon first!",
                     Duration = 3,
                     Image = 4483362458,
                 })
-                -- Tenta desligar o toggle visualmente se possível (Rayfield não tem SetValue fácil externo, então apenas paramos a lógica)
                 _G.SlowHub.AutoFarmBosses = false
                 return
             end
