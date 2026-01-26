@@ -54,10 +54,12 @@ local function startVoteLoop()
     voteLoopActive = true
     task.spawn(function()
         while voteLoopActive and _G.SlowHub.AutoVoteDungeon do
-            pcall(function()
-                ReplicatedStorage.Remotes.DungeonWaveVote:FireServer(_G.SlowHub.DungeonVoteDifficulty)
-            end)
-            task.wait(5)
+            if _G.SlowHub.DungeonVoteDifficulty then
+                pcall(function()
+                    ReplicatedStorage.Remotes.DungeonWaveVote:FireServer(_G.SlowHub.DungeonVoteDifficulty)
+                end)
+            end
+            task.wait(2)
         end
     end)
 end
@@ -138,19 +140,13 @@ local function startDungeonFarm()
 end
 
 MainTab:CreateToggle({
-    Name = "Auto Farm Dungeon (Activate only inside the Dungeon)",
+    Name = "Auto Farm Dungeon",
     CurrentValue = false,
     Flag = "AutoFarmDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Select a weapon first!",
-                    Duration = 3,
-                    Image = 4483362458
-                })
                 return
             end
             startDungeonFarm()
@@ -161,7 +157,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateSlider({
-    Name = "Dungeon Farm Distance",
+    Name = "Farm Distance",
     Range = {1, 10},
     Increment = 1,
     CurrentValue = _G.SlowHub.DungeonFarmDistance,
@@ -172,7 +168,7 @@ MainTab:CreateSlider({
 })
 
 MainTab:CreateSlider({
-    Name = "Dungeon Farm Height",
+    Name = "Farm Height",
     Range = {1, 10},
     Increment = 1,
     CurrentValue = _G.SlowHub.DungeonFarmHeight,
@@ -183,17 +179,17 @@ MainTab:CreateSlider({
 })
 
 MainTab:CreateDropdown({
-    Name = "Auto Vote Dungeon",
+    Name = "Select Difficulty",
     Options = {"Easy", "Medium", "Hard", "Extreme"},
-    CurrentOption = nil,
-    Flag = "AutoVoteDungeonDifficulty",
-    Callback = function(Value)
-        _G.SlowHub.DungeonVoteDifficulty = Value
+    CurrentOption = "",
+    Flag = "DungeonVoteDifficulty",
+    Callback = function(Option)
+        _G.SlowHub.DungeonVoteDifficulty = Option[1] or Option
     end
 })
 
 MainTab:CreateToggle({
-    Name = "Enable Auto Vote",
+    Name = "Auto Vote Difficulty",
     CurrentValue = false,
     Flag = "AutoVoteDungeon",
     Callback = function(Value)
@@ -207,7 +203,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-    Name = "Auto Replay (Need the Dungeon Key)",
+    Name = "Auto Replay Dungeon",
     CurrentValue = false,
     Flag = "AutoReplayDungeon",
     Callback = function(Value)
