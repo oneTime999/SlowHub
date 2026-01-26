@@ -1,8 +1,19 @@
+-- Aguardar até que BossesTab exista
+repeat task.wait() until _G.BossesTab
+
 local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
+
+-- Verificação de segurança
+if not Tab then
+    warn("[SlowHub] BossesTab não foi inicializada!")
+    return
+end
+
+print("[SlowHub] Inicializando Bosses Tab...")
 
 local bossList = {
     "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
@@ -128,6 +139,7 @@ local function startAutoFarmBoss()
     end)
 end
 
+-- UI Elements
 Tab:CreateParagraph({Name = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
 
 for _, bossName in ipairs(bossList) do
@@ -142,7 +154,7 @@ for _, bossName in ipairs(bossList) do
     })
 end
 
-Tab:CreateParagraph({Name = "Farm Control", Content = ""})
+Tab:CreateParagraph({Name = "Farm Control", Content = "Configure boss farming settings."})
 
 local FarmToggle = Tab:CreateToggle({
     Name = "Auto Farm Selected Bosses (Priority)",
@@ -153,12 +165,14 @@ local FarmToggle = Tab:CreateToggle({
             if not _G.SlowHub.SelectedWeapon then
                 _G.SlowHub.AutoFarmBosses = false
                 if FarmToggle then FarmToggle:Set(false) end
-                Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Select a weapon first!",
-                    Duration = 3,
-                    Image = 4483362458
-                })
+                if _G.Rayfield then
+                    _G.Rayfield:Notify({
+                        Title = "Error",
+                        Content = "Select a weapon first!",
+                        Duration = 3,
+                        Image = 4483362458
+                    })
+                end
                 return
             end
             startAutoFarmBoss()
@@ -191,7 +205,10 @@ Tab:CreateSlider({
     end
 })
 
+-- Auto-iniciar se estava ativo
 if _G.SlowHub.AutoFarmBosses and _G.SlowHub.SelectedWeapon then
     task.wait(2)
     startAutoFarmBoss()
 end
+
+print("[SlowHub] Bosses Tab carregada com sucesso!")
