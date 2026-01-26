@@ -204,36 +204,48 @@ local function startAutoFarmMiniBoss()
 end
 
 -- UI ELEMENTS
-Tab:AddParagraph({Title = "Mini Bosses", Content = ""})
+Tab:CreateLabel("Mini Bosses")
 
-local Dropdown = Tab:AddDropdown("SelectMiniBoss", {
-    Title = "Select Mini Boss",
-    Values = miniBossList,
-    Default = nil,
+local Dropdown = Tab:CreateDropdown({
+    Name = "Select Mini Boss",
+    Options = miniBossList,
+    CurrentOption = "Select a Mini Boss",
+    Flag = "SelectMiniBoss",
     Callback = function(Value)
         local wasRunning = isRunning
         if wasRunning then stopAutoFarmMiniBoss() task.wait(0.3) end
         
-        selectedMiniBoss = tostring(Value)
+        selectedMiniBoss = Value
         
         if wasRunning then startAutoFarmMiniBoss() end
     end
 })
 
-local Toggle = Tab:AddToggle("AutoFarmMiniBoss", {
-    Title = "Auto Farm Mini Boss",
-    Default = _G.SlowHub.AutoFarmMiniBosses or false,
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Farm Mini Boss",
+    CurrentValue = _G.SlowHub.AutoFarmMiniBosses or false,
+    Flag = "AutoFarmMiniBoss",
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a weapon!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+                _G.Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a weapon!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                Toggle:Set(false)
                 return
             end
 
             if not selectedMiniBoss then
-                _G.Fluent:Notify({Title = "Error", Content = "Select a Mini Boss first!", Duration = 3})
-                if Toggle then Toggle:SetValue(false) end
+                _G.Rayfield:Notify({
+                    Title = "Error",
+                    Content = "Select a Mini Boss first!",
+                    Duration = 3,
+                    Image = 4483362458
+                })
+                Toggle:Set(false)
                 return
             end
             
@@ -245,17 +257,23 @@ local Toggle = Tab:AddToggle("AutoFarmMiniBoss", {
     end
 })
 
-Tab:AddSlider("MiniBossDistance", {
-    Title = "Mini Boss Distance (studs)",
-    Min = 1, Max = 10, Default = _G.SlowHub.MiniBossFarmDistance, Rounding = 0,
+Tab:CreateSlider({
+    Name = "Mini Boss Distance (studs)",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.MiniBossFarmDistance,
+    Flag = "MiniBossDistance",
     Callback = function(Value)
         _G.SlowHub.MiniBossFarmDistance = Value
     end
 })
 
-Tab:AddSlider("MiniBossHeight", {
-    Title = "Mini Boss Height (studs)",
-    Min = 1, Max = 10, Default = _G.SlowHub.MiniBossFarmHeight, Rounding = 0,
+Tab:CreateSlider({
+    Name = "Mini Boss Height (studs)",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = _G.SlowHub.MiniBossFarmHeight,
+    Flag = "MiniBossHeight",
     Callback = function(Value)
         _G.SlowHub.MiniBossFarmHeight = Value
     end
