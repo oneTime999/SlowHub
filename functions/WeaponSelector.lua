@@ -78,16 +78,16 @@ local function EquipSelectedTool()
     end)
 end
 
-local WeaponDropdown = Tab:AddDropdown("SelectWeapon", {
-    Title = "Select Weapon",
-    Values = GetWeapons(),
-    Default = nil,
+local WeaponDropdown = Tab:CreateDropdown({
+    Name = "Select Weapon",
+    Options = GetWeapons(),
+    CurrentOption = nil,
+    Flag = "SelectWeapon",
     Callback = function(Value)
         local weapon = tostring(Value)
         
         if weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
-            -- Print removido daqui
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
@@ -95,23 +95,21 @@ local WeaponDropdown = Tab:AddDropdown("SelectWeapon", {
     end
 })
 
-local RefreshButton = Tab:AddButton({
-    Title = "Refresh Weapons",
+local RefreshButton = Tab:CreateButton({
+    Name = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
         
         pcall(function()
-            if _G.Options and _G.Options.SelectWeapon then
-                _G.Options.SelectWeapon:SetValues(newWeapons)
-                _G.Options.SelectWeapon:SetValue(nil)
-            end
+            WeaponDropdown:Refresh(newWeapons)
         end)
     end
 })
 
-local EquipLoopToggle = Tab:AddToggle("LoopEquipTool", {
-    Title = "Loop Equip Tool",
-    Default = false,
+local EquipLoopToggle = Tab:CreateToggle({
+    Name = "Loop Equip Tool",
+    CurrentValue = false,
+    Flag = "LoopEquipTool",
     Callback = function(state)
         _G.SlowHub.EquipLoop = state
 
