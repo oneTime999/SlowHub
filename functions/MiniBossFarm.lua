@@ -144,7 +144,7 @@ local function startAutoFarmMiniBoss()
     end)
 end
 
--- UI RAYFIELD
+-- RAYFIELD UI
 Tab:CreateSection("Mini Bosses")
 
 Tab:CreateDropdown({
@@ -157,7 +157,7 @@ Tab:CreateDropdown({
         local wasRunning = isRunning
         if wasRunning then stopAutoFarmMiniBoss() end
         
-        -- Correção tabela
+        -- Fix Table vs String
         selectedMiniBoss = (type(Value) == "table" and Value[1]) or Value
         
         if wasRunning then 
@@ -174,11 +174,11 @@ Tab:CreateToggle({
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                Rayfield:Notify({Title = "Erro", Content = "Selecione uma arma!", Duration = 3, Image = 4483362458})
+                Rayfield:Notify({Title = "Error", Content = "Please select a weapon!", Duration = 3, Image = 4483362458})
                 return
             end
             if not selectedMiniBoss or selectedMiniBoss == "" then
-                 Rayfield:Notify({Title = "Erro", Content = "Selecione um Mini Boss!", Duration = 3, Image = 4483362458})
+                 Rayfield:Notify({Title = "Error", Content = "Please select a Mini Boss!", Duration = 3, Image = 4483362458})
                  return
             end
             startAutoFarmMiniBoss()
@@ -193,6 +193,7 @@ Tab:CreateSlider({
     Name = "Mini Boss Distance",
     Range = {1, 15},
     Increment = 1,
+    Suffix = "Studs",
     CurrentValue = _G.SlowHub.MiniBossFarmDistance,
     Flag = "MiniBossDistance",
     Callback = function(Value)
@@ -204,6 +205,7 @@ Tab:CreateSlider({
     Name = "Mini Boss Height",
     Range = {1, 15},
     Increment = 1,
+    Suffix = "Studs",
     CurrentValue = _G.SlowHub.MiniBossFarmHeight,
     Flag = "MiniBossHeight",
     Callback = function(Value)
