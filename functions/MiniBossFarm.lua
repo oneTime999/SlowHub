@@ -16,11 +16,11 @@ local MiniBossConfig = {
 local miniBossList = {"ThiefBoss", "MonkeyBoss", "DesertBoss", "SnowBoss", "PandaMiniBoss"}
 
 local MiniBossSafeZones = {
-    ["ThiefBoss"]     = CFrame.new(-94.74, -1.98, -244.80),
-    ["MonkeyBoss"]    = CFrame.new(-446.58, -3.56, 368.79),
-    ["DesertBoss"]    = CFrame.new(-768.97, -2.13, -361.69),
-    ["SnowBoss"]      = CFrame.new(-223.84, -1.80, -1062.93),
-    ["PandaMiniBoss"] = CFrame.new(1359.47, 10.51, 249.58)
+    ["ThiefBoss"]     = CFrame.new(-66.633, -2.584, -162.471),
+    ["MonkeyBoss"]    = CFrame.new(-494.757, 49.211, 496.788),
+    ["DesertBoss"]    = CFrame.new(-972.217, 2.346, -475.585),
+    ["SnowBoss"]      = CFrame.new(-584.578, 29.429, -1143.482),
+    ["PandaMiniBoss"] = CFrame.new(1697.134, 9.572, 518.390)
 }
 
 if not _G.SlowHub.MiniBossFarmDistance then _G.SlowHub.MiniBossFarmDistance = 6 end
