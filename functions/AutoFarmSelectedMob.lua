@@ -122,24 +122,29 @@ local function startAutoFarmSelectedMob()
     _G.SlowHub.AutoFarmSelectedMob = true
     local config = getMobConfig(selectedMob)
     startQuestLoop(config.quest)
-    local lastNPCSwitch = 0
     local lastAttack = 0
+    
     autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarmSelectedMob() return end
         if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true return end
+        
         if wasAttackingBoss then
             hasVisitedSafeZone = false
             wasAttackingBoss = false
         end
+
         local character = Player.Character
         local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
         if not playerRoot or not character:FindFirstChild("Humanoid") or character.Humanoid.Health <= 0 then return end
+        
         local now = tick()
         local config = getMobConfig(selectedMob)
+
         if selectedMob ~= lastTargetName then
             lastTargetName = selectedMob
             hasVisitedSafeZone = false
         end
+
         if not hasVisitedSafeZone then
             local safeCFrame = MobSafeZones[selectedMob]
             if safeCFrame then
@@ -149,24 +154,27 @@ local function startAutoFarmSelectedMob()
             end
             hasVisitedSafeZone = true
         end
+
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
+
         if not npcAlive then
-            if (now - lastNPCSwitch) > 1 then
-                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
-                lastNPCSwitch = now
-            end
+            currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
         else
             local npcRoot = getNPCRootPart(npc)
             if npcRoot then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 local targetCFrame = npcRoot.CFrame * CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
                 playerRoot.CFrame = targetCFrame
+                
                 EquipWeapon()
+                
                 if (now - lastAttack) > 0.15 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
                     lastAttack = now
                 end
+            else
+                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
             end
         end
     end)
