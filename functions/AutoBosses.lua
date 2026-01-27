@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local bossList = {
-    "AizenBoss", "QinShiBoss", "RagnaBoss", "JinwooBoss", 
+    "AizenBoss", "QinShiBoss", "JinwooBoss", 
     "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
 }
 
@@ -13,7 +13,6 @@ local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
     ["QinShiBoss"] = CFrame.new(828.11, -0.39, -1130.76),
     ["SaberBoss"]  = CFrame.new(828.11, -0.39, -1130.76),
-    ["RagnaBoss"]  = CFrame.new(340.00, 2.61, -1688.00),
     ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["SukunaBoss"] = CFrame.new(1571.26, 77.22, -34.11),
     ["GojoBoss"]   = CFrame.new(1858.32, 12.98, 338.14),
@@ -171,7 +170,7 @@ local FarmToggle = Tab:CreateToggle({
 
 Tab:CreateSlider({
     Name = "Boss Farm Distance",
-    Range = {1, 20},
+    Range = {1, 10},
     Increment = 1,
     Suffix = "Studs",
     CurrentValue = _G.SlowHub.BossFarmDistance,
@@ -183,7 +182,7 @@ Tab:CreateSlider({
 
 Tab:CreateSlider({
     Name = "Boss Farm Height",
-    Range = {1, 20},
+    Range = {1, 10},
     Increment = 1,
     Suffix = "Studs",
     CurrentValue = _G.SlowHub.BossFarmHeight,
