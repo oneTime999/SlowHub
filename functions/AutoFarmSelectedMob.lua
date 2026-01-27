@@ -20,12 +20,12 @@ local QuestConfig = {
 }
 
 local MobSafeZones = {
-    ["Thief"]        = CFrame.new(-94.74494171142578, -1.985839605331421, -244.80184936523438),
-    ["Monkey"]       = CFrame.new(-446.5873107910156, -3.560742139816284, 368.79754638671875),
-    ["DesertBandit"] = CFrame.new(-768.9750366210938, -2.1328823566436768, -361.69775390625),
-    ["FrostRogue"]   = CFrame.new(-223.8474884033203, -1.8019909858703613, -1062.9384765625),
-    ["Sorcerer"]     = CFrame.new(1359.4720458984375, 10.515644073486328, 249.58221435546875),
-    ["Hollow"]       = CFrame.new(-482.868896484375, -2.0586609840393066, 936.237060546875)
+    ["Thief"]        = CFrame.new(177.723, 11.206, -157.246),
+    ["Monkey"]       = CFrame.new(-567.758, -0.874, 399.302),
+    ["DesertBandit"] = CFrame.new(-867.638, -4.222, -446.678),
+    ["FrostRogue"]   = CFrame.new(-398.725, -1.138, -1071.568),
+    ["Sorcerer"]     = CFrame.new(1398.259, 8.486, 488.058),
+    ["Hollow"]       = CFrame.new(-482.868, -2.058, 936.237)
 }
 
 local autoFarmSelectedConnection = nil
