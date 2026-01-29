@@ -5,12 +5,13 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local bossList = {
-    "AizenBoss", "QinShiBoss", "JinwooBoss", 
+    "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss", 
     "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
 }
 
 local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
+    ["AlucardBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["QinShiBoss"] = CFrame.new(828.11, -0.39, -1130.76),
     ["SaberBoss"]  = CFrame.new(828.11, -0.39, -1130.76),
     ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
