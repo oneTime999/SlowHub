@@ -9,23 +9,37 @@ if not _G.SlowHub then _G.SlowHub = {} end
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
 if not _G.SlowHub.FarmHeight then _G.SlowHub.FarmHeight = 4 end
 
-local MobList = {"Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", "Hollow"}
+local MobList = {
+    "Thief", 
+    "Monkey", 
+    "DesertBandit", 
+    "FrostRogue", 
+    "Sorcerer", 
+    "Hollow", 
+    "StrongSorcerer", 
+    "Curse"
+}
+
 local QuestConfig = {
-    ["Thief"] = "QuestNPC1",
-    ["Monkey"] = "QuestNPC3", 
-    ["DesertBandit"] = "QuestNPC5",
-    ["FrostRogue"] = "QuestNPC7",
-    ["Sorcerer"] = "QuestNPC9",
-    ["Hollow"] = "QuestNPC11"
+    ["Thief"]           = "QuestNPC1",
+    ["Monkey"]          = "QuestNPC3", 
+    ["DesertBandit"]    = "QuestNPC5",
+    ["FrostRogue"]      = "QuestNPC7",
+    ["Sorcerer"]        = "QuestNPC9",
+    ["Hollow"]          = "QuestNPC11",
+    ["StrongSorcerer"] = "QuestNPC12",
+    ["Curse"]          = "QuestNPC13"
 }
 
 local MobSafeZones = {
-    ["Thief"]        = CFrame.new(177.723, 11.206, -157.246),
-    ["Monkey"]       = CFrame.new(-567.758, -0.874, 399.302),
-    ["DesertBandit"] = CFrame.new(-867.638, -4.222, -446.678),
-    ["FrostRogue"]   = CFrame.new(-398.725, -1.138, -1071.568),
-    ["Sorcerer"]     = CFrame.new(1398.259, 8.486, 488.058),
-    ["Hollow"]       = CFrame.new(-482.868, -2.058, 936.237)
+    ["Thief"]           = CFrame.new(177.723, 11.206, -157.246),
+    ["Monkey"]          = CFrame.new(-567.758, -0.874, 399.302),
+    ["DesertBandit"]    = CFrame.new(-867.638, -4.222, -446.678),
+    ["FrostRogue"]      = CFrame.new(-398.725, -1.138, -1071.568),
+    ["Sorcerer"]        = CFrame.new(1398.259, 8.486, 488.058),
+    ["Hollow"]          = CFrame.new(-482.868, -2.058, 936.237),
+    ["StrongSorcerer"] = CFrame.new(637.979, 2.376, -1669.440),
+    ["Curse"]          = CFrame.new(-69.846, 1.907, -1857.250)
 }
 
 local autoFarmSelectedConnection = nil
