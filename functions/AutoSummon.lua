@@ -5,8 +5,8 @@ local RunService = game:GetService("RunService")
 local BossList = {
     "QinShiBoss",
     "SaberBoss",
-    "StrongestofTodayBoss", -- Novo
-    "StrongestinHistoryBoss" -- Novo
+    "StrongestofTodayBoss",
+    "StrongestinHistoryBoss"
 }
 
 local DifficultyList = {
@@ -16,13 +16,11 @@ local DifficultyList = {
     "Extreme"
 }
 
--- Configuração padrão
 local autoSummonBossConnection = nil
 local isSummoningBoss = false
 local selectedBoss = nil
-local selectedDifficulty = "Normal" -- Valor padrão
+local selectedDifficulty = "Normal"
 
--- Tabela para identificar quais bosses precisam de sufixo de dificuldade
 local bossesWithDifficulty = {
     ["StrongestofTodayBoss"] = true,
     ["StrongestinHistoryBoss"] = true
@@ -31,7 +29,6 @@ local bossesWithDifficulty = {
 local function isBossAlive(bossName)
     local found = false
     pcall(function()
-        -- Verifica na pasta de NPCs se o boss com o nome EXATO existe
         local boss = workspace.NPCs:FindFirstChild(bossName)
         if boss then
             local humanoid = boss:FindFirstChild("Humanoid")
@@ -64,27 +61,25 @@ local function startAutoSummonBoss()
             return
         end
         
-        -- Formata o nome final do Boss
-        local finalBossName = selectedBoss
+        local workspaceCheckName = selectedBoss
         
-        -- Se o boss selecionado for um dos novos, adiciona a dificuldade (ex: _Extreme)
         if bossesWithDifficulty[selectedBoss] then
-            finalBossName = selectedBoss .. "_" .. selectedDifficulty
+            workspaceCheckName = selectedBoss .. "_" .. selectedDifficulty
         end
         
-        -- Verifica se esse boss específico já está vivo
-        if isBossAlive(finalBossName) then
+        if isBossAlive(workspaceCheckName) then
             return 
         end
         
-        -- Tenta invocar
         pcall(function()
-            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(finalBossName)
+            if bossesWithDifficulty[selectedBoss] then
+                ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss, selectedDifficulty)
+            else
+                ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss)
+            end
         end)
     end)
 end
-
--- === RAYFIELD UI === --
 
 Tab:CreateSection("Summon Settings")
 
@@ -103,7 +98,7 @@ Tab:CreateDropdown({
 Tab:CreateDropdown({
     Name = "Select Difficulty (New Bosses Only)",
     Options = DifficultyList,
-    CurrentOption = {"Normal"}, -- Padrão Normal
+    CurrentOption = {"Normal"},
     MultipleOptions = false,
     Flag = "SelectBossDifficulty",
     Callback = function(Value)
