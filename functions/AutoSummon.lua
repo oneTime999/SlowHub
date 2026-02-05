@@ -2,12 +2,29 @@ local Tab = _G.BossesTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local BossList = {
-    "QinShiBoss",
-    "SaberBoss",
-    "StrongestofTodayBoss",
-    "StrongestinHistoryBoss"
+local BossConfigs = {
+    ["QinShiBoss"] = {
+        Method = "Old",
+        InternalName = "QinShiBoss"
+    },
+    ["SaberBoss"] = {
+        Method = "Old",
+        InternalName = "SaberBoss"
+    },
+    ["StrongestofTodayBoss"] = {
+        Method = "New",
+        InternalName = "StrongestToday"
+    },
+    ["StrongestinHistoryBoss"] = {
+        Method = "New",
+        InternalName = "StrongestHistory"
+    }
 }
+
+local BossList = {}
+for name, _ in pairs(BossConfigs) do
+    table.insert(BossList, name)
+end
 
 local DifficultyList = {
     "Normal",
@@ -20,11 +37,6 @@ local autoSummonBossConnection = nil
 local isSummoningBoss = false
 local selectedBoss = nil
 local selectedDifficulty = "Normal"
-
-local bossesWithDifficulty = {
-    ["StrongestofTodayBoss"] = true,
-    ["StrongestinHistoryBoss"] = true
-}
 
 local function isBossAlive(bossName)
     local found = false
@@ -61,9 +73,11 @@ local function startAutoSummonBoss()
             return
         end
         
+        local config = BossConfigs[selectedBoss]
+        if not config then return end
+
         local workspaceCheckName = selectedBoss
-        
-        if bossesWithDifficulty[selectedBoss] then
+        if config.Method == "New" then
             workspaceCheckName = selectedBoss .. "_" .. selectedDifficulty
         end
         
@@ -72,8 +86,12 @@ local function startAutoSummonBoss()
         end
         
         pcall(function()
-            if bossesWithDifficulty[selectedBoss] then
-                ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss, selectedDifficulty)
+            if config.Method == "New" then
+                local args = {
+                    [1] = config.InternalName,
+                    [2] = selectedDifficulty
+                }
+                ReplicatedStorage.Remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
             else
                 ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(selectedBoss)
             end
