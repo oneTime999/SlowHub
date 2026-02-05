@@ -4,11 +4,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
+-- Lista de nomes base (para o menu)
 local bossList = {
     "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss",
+    "StrongestofTodayBoss", "StrongestinHistoryBoss" -- Novos Bosses
 }
 
+-- Lista de dificuldades para verificar
+local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
+
+-- Configuração inicial das SafeZones
 local BossSafeZones = {
     ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
     ["AlucardBoss"] = CFrame.new(248.74, 12.09, 927.54),
@@ -17,8 +23,22 @@ local BossSafeZones = {
     ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["SukunaBoss"] = CFrame.new(1571.26, 77.22, -34.11),
     ["GojoBoss"]   = CFrame.new(1858.32, 12.98, 338.14),
-    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10)
+    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10),
+    
+    -- Coordenadas base para os novos bosses
+    ["StrongestofTodayBoss"] = CFrame.new(181.69, 5.24, -2446.61),
+    ["StrongestinHistoryBoss"] = CFrame.new(639.29, 3.67, -2273.30)
 }
+
+-- Adiciona automaticamente as variações de dificuldade na tabela de SafeZones
+-- Isso garante que se o script achar o "_Extreme", ele saiba onde ficar
+for _, bossBaseName in ipairs({"StrongestofTodayBoss", "StrongestinHistoryBoss"}) do
+    if BossSafeZones[bossBaseName] then
+        for _, diff in ipairs(difficulties) do
+            BossSafeZones[bossBaseName .. diff] = BossSafeZones[bossBaseName]
+        end
+    end
+end
 
 _G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
@@ -29,14 +49,35 @@ local isRunning = false
 local lastTargetBoss = nil
 local hasVisitedSafeZone = false
 
+-- Função auxiliar para verificar vida
+local function checkHumanoid(model)
+    if model and model.Parent then
+        local humanoid = model:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            return true
+        end
+    end
+    return false
+end
+
 local function getAliveBoss()
+    local npcs = workspace:FindFirstChild("NPCs")
+    if not npcs then return nil end
+
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
-            local boss = workspace.NPCs:FindFirstChild(bossName)
-            if boss and boss.Parent then
-                local humanoid = boss:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    return boss
+            -- 1. Tenta achar o boss com nome exato (Bosses antigos)
+            local exactBoss = npcs:FindFirstChild(bossName)
+            if exactBoss and checkHumanoid(exactBoss) then
+                return exactBoss
+            end
+
+            -- 2. Tenta achar as variações de dificuldade (Bosses novos)
+            for _, diff in ipairs(difficulties) do
+                local variantName = bossName .. diff
+                local variantBoss = npcs:FindFirstChild(variantName)
+                if variantBoss and checkHumanoid(variantBoss) then
+                    return variantBoss
                 end
             end
         end
@@ -101,14 +142,28 @@ local function startAutoFarmBoss()
         local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
+        -- Lógica da SafeZone
         if not hasVisitedSafeZone then
+            -- Procura a SafeZone pelo nome exato do boss (incluindo _Extreme se for o caso)
             local safeCFrame = BossSafeZones[boss.Name]
+            
+            -- Se não achar pelo nome completo, tenta achar pelo nome base (fallback)
+            if not safeCFrame then
+                for baseName, _ in pairs(_G.SlowHub.SelectedBosses) do
+                    if string.find(boss.Name, baseName) then
+                        safeCFrame = BossSafeZones[baseName]
+                        break
+                    end
+                end
+            end
+
             if safeCFrame then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 playerRoot.CFrame = safeCFrame
                 hasVisitedSafeZone = true 
                 return
             else
+                -- Se não tiver SafeZone configurada, ignora e vai atacar
                 hasVisitedSafeZone = true
             end
         end
@@ -151,13 +206,15 @@ local FarmToggle = Tab:CreateToggle({
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                -- Rayfield Notification
-                Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Please select a weapon first!",
-                    Duration = 3,
-                    Image = 4483362458,
-                })
+                -- Rayfield Notification (Assumindo que o Rayfield já está carregado no _G ou localmente)
+                if Rayfield then
+                    Rayfield:Notify({
+                        Title = "Error",
+                        Content = "Please select a weapon first!",
+                        Duration = 3,
+                        Image = 4483362458,
+                    })
+                end
                 _G.SlowHub.AutoFarmBosses = false
                 return
             end
