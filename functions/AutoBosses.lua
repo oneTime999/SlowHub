@@ -6,9 +6,8 @@ local Player = Players.LocalPlayer
 
 -- Lista de nomes base (para o menu)
 local bossList = {
-    "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss", 
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss",
-    "StrongestofTodayBoss", "StrongestinHistoryBoss" -- Novos Bosses
+    "StrongestofTodayBoss", "StrongestinHistoryBoss", "IchigoBoss", "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss", 
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
 }
 
 -- Lista de dificuldades para verificar
@@ -16,6 +15,9 @@ local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
 
 -- Configuração inicial das SafeZones
 local BossSafeZones = {
+    ["StrongestofTodayBoss"] = CFrame.new(181.69, 5.24, -2446.61),
+    ["StrongestinHistoryBoss"] = CFrame.new(639.29, 3.67, -2273.30),
+    ["IchigoBoss"] = CFrame.new(828.11, -0.39, -1130.76),
     ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
     ["AlucardBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["QinShiBoss"] = CFrame.new(828.11, -0.39, -1130.76),
@@ -23,11 +25,7 @@ local BossSafeZones = {
     ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["SukunaBoss"] = CFrame.new(1571.26, 77.22, -34.11),
     ["GojoBoss"]   = CFrame.new(1858.32, 12.98, 338.14),
-    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10),
-    
-    -- Coordenadas base para os novos bosses
-    ["StrongestofTodayBoss"] = CFrame.new(181.69, 5.24, -2446.61),
-    ["StrongestinHistoryBoss"] = CFrame.new(639.29, 3.67, -2273.30)
+    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10)
 }
 
 -- Adiciona automaticamente as variações de dificuldade na tabela de SafeZones
