@@ -6,6 +6,7 @@ Tab:CreateLabel("Hakis and Ascend")
 
 loadstring(game:HttpGet(githubBase .. "AutoHaki.lua"))()
 loadstring(game:HttpGet(githubBase .. "AutoObservation.lua"))()
+loadstring(game:HttpGet(githubBase .. "AutoConq.lua"))()
 loadstring(game:HttpGet(githubBase .. "AutoAscend.lua"))()
 
 -- Auto Skill Section
