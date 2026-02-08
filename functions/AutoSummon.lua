@@ -11,7 +11,7 @@ local BossConfigs = {
         Method = "New",
         InternalName = "StrongestHistory"
     },
-    ["IchigoBoss"]
+    ["IchigoBoss"] = {
         Method = "Old",
         InternalName = "IchigoBoss"
     },
