@@ -3,14 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local BossConfigs = {
-    ["QinShiBoss"] = {
-        Method = "Old",
-        InternalName = "QinShiBoss"
-    },
-    ["SaberBoss"] = {
-        Method = "Old",
-        InternalName = "SaberBoss"
-    },
     ["StrongestofTodayBoss"] = {
         Method = "New",
         InternalName = "StrongestToday"
@@ -18,6 +10,18 @@ local BossConfigs = {
     ["StrongestinHistoryBoss"] = {
         Method = "New",
         InternalName = "StrongestHistory"
+    },
+    ["IchigoBoss"]
+        Method = "Old",
+        InternalName = "IchigoBoss"
+    },
+    ["QinShiBoss"] = {
+        Method = "Old",
+        InternalName = "QinShiBoss"
+    },
+    ["SaberBoss"] = {
+        Method = "Old",
+        InternalName = "SaberBoss"
     }
 }
 
