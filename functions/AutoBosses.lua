@@ -72,7 +72,7 @@ end
 
 local function getBossBaseName(bossName)
     for _, baseName in ipairs(bossList) do
-        if bossName == baseName or string.find(bossName, baseName) then
+        if bossName == baseName or string.find(bossName, baseName) == 1 then
             return baseName
         end
     end
@@ -97,29 +97,24 @@ local function shouldStopFarmingCurrentBoss(boss)
     if not checkHumanoid(boss) then return true end
     
     local bossBaseName = getBossBaseName(boss.Name)
-    local currentPity = getPityCount()
-    local isPityTargetTime = (currentPity >= 24)
-    local pityTarget = _G.SlowHub.PityTargetBoss
     
-    if _G.SlowHub.PriorityPityEnabled then
+    if not isBossSelected(bossBaseName) then
+        return true
+    end
+    
+    if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
+        local currentPity = getPityCount()
+        local isPityTargetTime = (currentPity >= 24)
+        local pityTarget = _G.SlowHub.PityTargetBoss
+        
         if isPityTargetTime then
             if bossBaseName ~= pityTarget then
-                return true
-            end
-            if not isBossSelected(bossBaseName) then
                 return true
             end
         else
             if bossBaseName == pityTarget then
                 return true
             end
-            if not isBossSelected(bossBaseName) then
-                return true
-            end
-        end
-    else
-        if not isBossSelected(bossBaseName) then
-            return true
         end
     end
     
@@ -130,46 +125,48 @@ local function findValidBoss()
     local npcs = workspace:FindFirstChild("NPCs")
     if not npcs then return nil end
     
-    local currentPity = getPityCount()
-    local isPityTargetTime = (currentPity >= 24)
+    local pityEnabled = _G.SlowHub.PriorityPityEnabled
     local pityTarget = _G.SlowHub.PityTargetBoss
     
-    if _G.SlowHub.PriorityPityEnabled and isPityTargetTime and pityTarget ~= "" then
-        if isBossSelected(pityTarget) then
-            local exactBoss = npcs:FindFirstChild(pityTarget)
-            if exactBoss and checkHumanoid(exactBoss) then
-                return exactBoss
-            end
-            
-            for _, diff in ipairs(difficulties) do
-                local variantName = pityTarget .. diff
-                local variantBoss = npcs:FindFirstChild(variantName)
-                if variantBoss and checkHumanoid(variantBoss) then
-                    return variantBoss
-                end
-            end
-        end
-        return nil
-    end
-    
-    if _G.SlowHub.PriorityPityEnabled and not isPityTargetTime then
-        for _, bossName in ipairs(bossList) do
-            if bossName ~= pityTarget and isBossSelected(bossName) then
-                local exactBoss = npcs:FindFirstChild(bossName)
+    if pityEnabled and pityTarget ~= "" then
+        local currentPity = getPityCount()
+        local isPityTargetTime = (currentPity >= 24)
+        
+        if isPityTargetTime then
+            if isBossSelected(pityTarget) then
+                local exactBoss = npcs:FindFirstChild(pityTarget)
                 if exactBoss and checkHumanoid(exactBoss) then
                     return exactBoss
                 end
                 
                 for _, diff in ipairs(difficulties) do
-                    local variantName = bossName .. diff
+                    local variantName = pityTarget .. diff
                     local variantBoss = npcs:FindFirstChild(variantName)
                     if variantBoss and checkHumanoid(variantBoss) then
                         return variantBoss
                     end
                 end
             end
+            return nil
+        else
+            for _, bossName in ipairs(bossList) do
+                if bossName ~= pityTarget and isBossSelected(bossName) then
+                    local exactBoss = npcs:FindFirstChild(bossName)
+                    if exactBoss and checkHumanoid(exactBoss) then
+                        return exactBoss
+                    end
+                    
+                    for _, diff in ipairs(difficulties) do
+                        local variantName = bossName .. diff
+                        local variantBoss = npcs:FindFirstChild(variantName)
+                        if variantBoss and checkHumanoid(variantBoss) then
+                            return variantBoss
+                        end
+                    end
+                end
+            end
+            return nil
         end
-        return nil
     end
     
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
@@ -266,7 +263,7 @@ local function startAutoFarmBoss()
             
             if not safeCFrame then
                 for baseName, _ in pairs(_G.SlowHub.SelectedBosses) do
-                    if string.find(boss.Name, baseName) then
+                    if string.find(boss.Name, baseName) == 1 then
                         safeCFrame = BossSafeZones[baseName]
                         break
                     end
@@ -274,7 +271,7 @@ local function startAutoFarmBoss()
             end
             
             if not safeCFrame and _G.SlowHub.PityTargetBoss ~= "" then
-                if string.find(boss.Name, _G.SlowHub.PityTargetBoss) then
+                if string.find(boss.Name, _G.SlowHub.PityTargetBoss) == 1 then
                     safeCFrame = BossSafeZones[_G.SlowHub.PityTargetBoss]
                 end
             end
@@ -303,7 +300,7 @@ local function startAutoFarmBoss()
     end)
 end
 
-Tab:CreateParagraph({Title = "Select Bosses", Content = "Select which bosses to prioritize over Level Farm."})
+Tab:CreateParagraph({Title = "Select Bosses", Content = "Select which bosses to farm. If Pity System is enabled, these will be used accordingly."})
 
 for _, bossName in ipairs(bossList) do
     Tab:CreateToggle({
@@ -316,10 +313,10 @@ for _, bossName in ipairs(bossList) do
     })
 end
 
-Tab:CreateSection("Pity System")
+Tab:CreateSection("Pity System (Optional)")
 
 Tab:CreateDropdown({
-    Name = "Pity Target Boss",
+    Name = "Pity Target Boss (Optional)",
     Options = bossList,
     CurrentOption = "",
     Flag = "PityTargetBoss",
@@ -333,7 +330,7 @@ Tab:CreateDropdown({
 })
 
 Tab:CreateToggle({
-    Name = "Priority Pity System",
+    Name = "Enable Pity System",
     CurrentValue = false,
     Flag = "PriorityPityEnabled",
     Callback = function(Value)
@@ -343,13 +340,13 @@ Tab:CreateToggle({
 
 Tab:CreateParagraph({
     Title = "Pity System Info", 
-    Content = "IMPORTANT: Select the target boss BOTH in the list above AND in this dropdown! Script updates in real-time when you change selections."
+    Content = "Optional feature. If disabled: farms all selected bosses normally. If enabled: farms selected bosses except target until pity 24, then only targets the pity boss at 24+. Target boss must also be selected above."
 })
 
 Tab:CreateSection("Farm Control")
 
 local FarmToggle = Tab:CreateToggle({
-    Name = "Auto Farm Selected Bosses (Priority)",
+    Name = "Auto Farm Selected Bosses",
     CurrentValue = false,
     Flag = "AutoFarmBoss",
     Callback = function(Value)
