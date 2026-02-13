@@ -3,9 +3,6 @@ local Player = Players.LocalPlayer
 
 local Tab = _G.MainTab
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.AutoEquip = false
-
 -- Get weapons list
 local function GetWeapons()
     local weapons = {}
@@ -46,35 +43,20 @@ local function EquipTool(toolName)
     end)
 end
 
--- Equip all tools
-local function EquipAllTools()
-    pcall(function()
-        local char = Player.Character
-        if not char then return end
-        
-        local backpack = Player:WaitForChild("Backpack")
-        if not backpack then return end
-        
-        -- Equip all from backpack
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                tool.Parent = char
-            end
-        end
-    end)
-end
-
--- Unequip all tools
-local function UnequipAllTools()
+-- Equip 2 tools (first two in backpack)
+local function EquipTwoTools()
     pcall(function()
         local char = Player.Character
         local backpack = Player:WaitForChild("Backpack")
         if not char or not backpack then return end
         
-        for _, tool in ipairs(char:GetChildren()) do
-            if tool:IsA("Tool") then
-                tool.Parent = backpack
+        local count = 0
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and count < 2 then
+                tool.Parent = char
+                count = count + 1
             end
+            if count >= 2 then break end
         end
     end)
 end
@@ -95,68 +77,22 @@ local NormalDropdown = Tab:CreateDropdown({
     end
 })
 
--- MULTI Dropdown - Equips ALL tools (no selection needed)
+-- MULTI Dropdown - Equips 2 tools
 local MultiDropdown = Tab:CreateDropdown({
     Name = "Multi",
-    Options = {"Equip All Tools"},
+    Options = {"Equip 2 Tools"},
     CurrentOption = {""},
     MultipleOptions = false,
     Flag = "MultiWeapon",
     Callback = function(Value)
-        EquipAllTools()
+        EquipTwoTools()
     end
 })
 
 -- Refresh Button
 local RefreshButton = Tab:CreateButton({
-    Name = "Refresh Weapons",
+    Name = "Refresh",
     Callback = function()
-        local newWeapons = GetWeapons()
-        NormalDropdown:Refresh(newWeapons)
+        NormalDropdown:Refresh(GetWeapons())
     end
 })
-
--- Equip All Button
-local EquipAllButton = Tab:CreateButton({
-    Name = "Equip All",
-    Callback = function()
-        EquipAllTools()
-    end
-})
-
--- Unequip All Button
-local UnequipAllButton = Tab:CreateButton({
-    Name = "Unequip All",
-    Callback = function()
-        UnequipAllTools()
-    end
-})
-
--- Auto Equip Toggle
-local AutoEquipToggle = Tab:CreateToggle({
-    Name = "Auto Equip All",
-    CurrentValue = false,
-    Flag = "AutoEquipAll",
-    Callback = function(state)
-        _G.SlowHub.AutoEquip = state
-        
-        if state then
-            task.spawn(function()
-                while _G.SlowHub.AutoEquip do
-                    EquipAllTools()
-                    task.wait(0.001)
-                end
-            end)
-        end
-    end
-})
-
--- Respawn connection
-Player.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid")
-    task.wait(0.5)
-    
-    if _G.SlowHub.AutoEquip then
-        EquipAllTools()
-    end
-end)
