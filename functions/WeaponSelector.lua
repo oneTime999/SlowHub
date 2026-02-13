@@ -32,14 +32,31 @@ local function GetWeapons()
     return #weapons > 0 and weapons or {"No weapons found"}
 end
 
--- Equip all tools from backpack
-local function EquipAllTools()
+-- Equip single tool
+local function EquipTool(toolName)
     pcall(function()
         local char = Player.Character
         local backpack = Player:WaitForChild("Backpack")
         if not char or not backpack then return end
         
-        for _, tool in pairs(backpack:GetChildren()) do
+        local tool = backpack:FindFirstChild(toolName)
+        if tool and tool:IsA("Tool") then
+            tool.Parent = char
+        end
+    end)
+end
+
+-- Equip all tools
+local function EquipAllTools()
+    pcall(function()
+        local char = Player.Character
+        if not char then return end
+        
+        local backpack = Player:WaitForChild("Backpack")
+        if not backpack then return end
+        
+        -- Equip all from backpack
+        for _, tool in ipairs(backpack:GetChildren()) do
             if tool:IsA("Tool") then
                 tool.Parent = char
             end
@@ -47,14 +64,14 @@ local function EquipAllTools()
     end)
 end
 
--- Unequip all tools to backpack
+-- Unequip all tools
 local function UnequipAllTools()
     pcall(function()
         local char = Player.Character
         local backpack = Player:WaitForChild("Backpack")
         if not char or not backpack then return end
         
-        for _, tool in pairs(char:GetChildren()) do
+        for _, tool in ipairs(char:GetChildren()) do
             if tool:IsA("Tool") then
                 tool.Parent = backpack
             end
@@ -62,7 +79,7 @@ local function UnequipAllTools()
     end)
 end
 
--- Normal Dropdown (Single selection)
+-- NORMAL Dropdown - Select single weapon
 local NormalDropdown = Tab:CreateDropdown({
     Name = "Normal",
     Options = GetWeapons(),
@@ -73,29 +90,19 @@ local NormalDropdown = Tab:CreateDropdown({
         local weapon = (type(Value) == "table" and Value[1]) or Value
         
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
-            pcall(function()
-                local char = Player.Character
-                local backpack = Player:WaitForChild("Backpack")
-                if not char or not backpack then return end
-                
-                local tool = backpack:FindFirstChild(weapon)
-                if tool and tool:IsA("Tool") then
-                    tool.Parent = char
-                end
-            end)
+            EquipTool(weapon)
         end
     end
 })
 
--- Multi Dropdown (Equip All - same as equip all button)
+-- MULTI Dropdown - Equips ALL tools (no selection needed)
 local MultiDropdown = Tab:CreateDropdown({
     Name = "Multi",
-    Options = GetWeapons(),
-    CurrentOption = {},
-    MultipleOptions = true,
+    Options = {"Equip All Tools"},
+    CurrentOption = {""},
+    MultipleOptions = false,
     Flag = "MultiWeapon",
     Callback = function(Value)
-        -- Just equip all regardless of selection
         EquipAllTools()
     end
 })
@@ -106,7 +113,6 @@ local RefreshButton = Tab:CreateButton({
     Callback = function()
         local newWeapons = GetWeapons()
         NormalDropdown:Refresh(newWeapons)
-        MultiDropdown:Refresh(newWeapons)
     end
 })
 
@@ -126,7 +132,7 @@ local UnequipAllButton = Tab:CreateButton({
     end
 })
 
--- Auto Equip Toggle (Fast loop)
+-- Auto Equip Toggle
 local AutoEquipToggle = Tab:CreateToggle({
     Name = "Auto Equip All",
     CurrentValue = false,
@@ -145,7 +151,7 @@ local AutoEquipToggle = Tab:CreateToggle({
     end
 })
 
--- Character respawn connection
+-- Respawn connection
 Player.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid")
     task.wait(0.5)
