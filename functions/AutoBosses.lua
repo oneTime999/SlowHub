@@ -43,6 +43,7 @@ local autoFarmBossConnection = nil
 local isRunning = false
 local lastTargetBoss = nil
 local hasVisitedSafeZone = false
+local currentFarmingBoss = nil
 
 local function getPityCount()
     local success, pityText = pcall(function()
@@ -91,39 +92,69 @@ local function isBossSelected(bossName)
     return false
 end
 
-local function getAliveBoss()
+local function shouldStopFarmingCurrentBoss(boss)
+    if not boss or not boss.Parent then return true end
+    if not checkHumanoid(boss) then return true end
+    
+    local bossBaseName = getBossBaseName(boss.Name)
+    local currentPity = getPityCount()
+    local isPityTargetTime = (currentPity >= 24)
+    local pityTarget = _G.SlowHub.PityTargetBoss
+    
+    if _G.SlowHub.PriorityPityEnabled then
+        if isPityTargetTime then
+            if bossBaseName ~= pityTarget then
+                return true
+            end
+            if not isBossSelected(bossBaseName) then
+                return true
+            end
+        else
+            if bossBaseName == pityTarget then
+                return true
+            end
+            if not isBossSelected(bossBaseName) then
+                return true
+            end
+        end
+    else
+        if not isBossSelected(bossBaseName) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+local function findValidBoss()
     local npcs = workspace:FindFirstChild("NPCs")
     if not npcs then return nil end
     
     local currentPity = getPityCount()
     local isPityTargetTime = (currentPity >= 24)
+    local pityTarget = _G.SlowHub.PityTargetBoss
     
-    if _G.SlowHub.PriorityPityEnabled and isPityTargetTime and _G.SlowHub.PityTargetBoss ~= "" then
-        local targetBossName = _G.SlowHub.PityTargetBoss
-        
-        if not isBossSelected(targetBossName) then
-            return nil
-        end
-        
-        local exactBoss = npcs:FindFirstChild(targetBossName)
-        if exactBoss and checkHumanoid(exactBoss) then
-            return exactBoss
-        end
-        
-        for _, diff in ipairs(difficulties) do
-            local variantName = targetBossName .. diff
-            local variantBoss = npcs:FindFirstChild(variantName)
-            if variantBoss and checkHumanoid(variantBoss) then
-                return variantBoss
+    if _G.SlowHub.PriorityPityEnabled and isPityTargetTime and pityTarget ~= "" then
+        if isBossSelected(pityTarget) then
+            local exactBoss = npcs:FindFirstChild(pityTarget)
+            if exactBoss and checkHumanoid(exactBoss) then
+                return exactBoss
+            end
+            
+            for _, diff in ipairs(difficulties) do
+                local variantName = pityTarget .. diff
+                local variantBoss = npcs:FindFirstChild(variantName)
+                if variantBoss and checkHumanoid(variantBoss) then
+                    return variantBoss
+                end
             end
         end
-        
         return nil
     end
     
     if _G.SlowHub.PriorityPityEnabled and not isPityTargetTime then
         for _, bossName in ipairs(bossList) do
-            if bossName ~= _G.SlowHub.PityTargetBoss and isBossSelected(bossName) then
+            if bossName ~= pityTarget and isBossSelected(bossName) then
                 local exactBoss = npcs:FindFirstChild(bossName)
                 if exactBoss and checkHumanoid(exactBoss) then
                     return exactBoss
@@ -178,6 +209,7 @@ local function stopAutoFarmBoss()
     isRunning = false
     lastTargetBoss = nil
     hasVisitedSafeZone = false
+    currentFarmingBoss = nil
     _G.SlowHub.IsAttackingBoss = false
     
     if autoFarmBossConnection then
@@ -191,6 +223,7 @@ local function startAutoFarmBoss()
     if isRunning then stopAutoFarmBoss() task.wait(0.2) end
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
+    currentFarmingBoss = nil
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
@@ -198,17 +231,28 @@ local function startAutoFarmBoss()
             return
         end
         
-        local boss = getAliveBoss()
-        
-        if boss then
-            _G.SlowHub.IsAttackingBoss = true
-        else
-            _G.SlowHub.IsAttackingBoss = false
-            lastTargetBoss = nil
+        if currentFarmingBoss and shouldStopFarmingCurrentBoss(currentFarmingBoss) then
+            currentFarmingBoss = nil
             hasVisitedSafeZone = false
-            return 
+            lastTargetBoss = nil
+            _G.SlowHub.IsAttackingBoss = false
+            task.wait(0.1)
+            return
         end
-
+        
+        if not currentFarmingBoss then
+            currentFarmingBoss = findValidBoss()
+            if not currentFarmingBoss then
+                _G.SlowHub.IsAttackingBoss = false
+                return
+            end
+            hasVisitedSafeZone = false
+            lastTargetBoss = currentFarmingBoss
+        end
+        
+        local boss = currentFarmingBoss
+        _G.SlowHub.IsAttackingBoss = true
+        
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
             hasVisitedSafeZone = false
@@ -299,7 +343,7 @@ Tab:CreateToggle({
 
 Tab:CreateParagraph({
     Title = "Pity System Info", 
-    Content = "IMPORTANT: Select the target boss BOTH in the list above AND in this dropdown! When pity < 24, it farms selected bosses (excluding target). At pity 24+, it ONLY targets the selected pity boss."
+    Content = "IMPORTANT: Select the target boss BOTH in the list above AND in this dropdown! Script updates in real-time when you change selections."
 })
 
 Tab:CreateSection("Farm Control")
