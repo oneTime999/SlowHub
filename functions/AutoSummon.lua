@@ -4,8 +4,8 @@ local RunService = game:GetService("RunService")
 
 local BossConfigs = {
     ["RimuruBoss"] = {
-        Method = "New",
-        InternalName = "Rimuru" -- O Remote usa isso, mas o modelo pode ser RimuruBoss_Normal
+        Method = "RimuruSpecific", -- Método único para o Rimuru
+        InternalName = "Rimuru"
     },
     ["StrongestofTodayBoss"] = {
         Method = "New",
@@ -46,7 +46,7 @@ local isSummoningBoss = false
 local selectedBoss = nil
 local selectedDifficulty = "Normal"
 
--- Função de verificação melhorada
+-- Função de verificação de vida (Mantida a correção anterior)
 local function isBossAlive(bossName)
     local found = false
     pcall(function()
@@ -85,14 +85,11 @@ local function startAutoSummonBoss()
         local config = BossConfigs[selectedBoss]
         if not config then return end
 
-        -- LÓGICA CORRIGIDA AQUI
-        -- Verifica múltiplas possibilidades de nome para garantir que encontre o Boss
+        -- Verificação de nome (Procura por Rimuru_Normal OU RimuruBoss_Normal)
         local namesToCheck = {}
         
-        if config.Method == "New" then
-            -- Possibilidade 1: Baseado no InternalName (Ex: Rimuru_Normal)
+        if config.Method == "New" or config.Method == "RimuruSpecific" then
             table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
-            -- Possibilidade 2: Baseado na Chave/Seleção (Ex: RimuruBoss_Normal) - Correção solicitada
             table.insert(namesToCheck, selectedBoss .. "_" .. selectedDifficulty)
         else
             table.insert(namesToCheck, selectedBoss)
@@ -112,7 +109,20 @@ local function startAutoSummonBoss()
         end
         
         pcall(function()
-            if config.Method == "New" then
+            -- LÓGICA ATUALIZADA AQUI
+            if config.Method == "RimuruSpecific" then
+                -- O código exato que você forneceu para o Rimuru
+                local args = {
+                    [1] = selectedDifficulty
+                }
+                -- Tenta localizar a pasta correta (alguns jogos usam RemoteEvents, outros Remotes)
+                if ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("RequestSpawnRimuru") then
+                    ReplicatedStorage.RemoteEvents.RequestSpawnRimuru:FireServer(unpack(args))
+                elseif ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("RequestSpawnRimuru") then
+                    ReplicatedStorage.Remotes.RequestSpawnRimuru:FireServer(unpack(args))
+                end
+                
+            elseif config.Method == "New" then
                 local args = {
                     [1] = config.InternalName,
                     [2] = selectedDifficulty
@@ -141,7 +151,7 @@ Tab:CreateDropdown({
 })
 
 Tab:CreateDropdown({
-    Name = "Select Difficulty (New Bosses Only)",
+    Name = "Select Difficulty (New/Rimuru Only)",
     Options = DifficultyList,
     CurrentOption = {"Normal"},
     MultipleOptions = false,
