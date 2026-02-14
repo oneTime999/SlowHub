@@ -142,7 +142,7 @@ Tab:CreateDropdown({
     Name = "Select Boss to Summon",
     Options = BossList,
     CurrentOption = {""},
-    MultipleOptions = false,
+    MultipleOptions = true,
     Flag = "SelectBossSummon",
     Callback = function(Value)
         local val = (type(Value) == "table" and Value[1]) or Value
