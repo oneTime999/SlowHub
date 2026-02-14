@@ -14,7 +14,8 @@ local LevelConfig = {
     {minLevel = 5500, maxLevel = 5999, quest = "QuestNPC11", npc = "Hollow", count = 5},
     -- Novas Quests Adicionadas:
     {minLevel = 6000, maxLevel = 6999, quest = "QuestNPC12", npc = "StrongSorcerer", count = 5},
-    {minLevel = 7000, maxLevel = 99999, quest = "QuestNPC13", npc = "Curse", count = 5}
+    {minLevel = 7000, maxLevel = 7999, quest = "QuestNPC13", npc = "Curse", count = 5},
+    {minLevel = 8000, maxLevel = 99999, quest = "QuestNPC14", npc = "Slime", count = 5}
 }
 
 local NPCSafeZones = {
@@ -26,7 +27,8 @@ local NPCSafeZones = {
     ["Hollow"]          = CFrame.new(-365.12628173828125, -0.44140613079071045, 1097.683349609375),
     -- Novas Coordenadas Adicionadas:
     ["StrongSorcerer"] = CFrame.new(637.979126, 2.375789, -1669.440186),
-    ["Curse"]          = CFrame.new(-69.846375, 1.907236, -1857.250244)
+    ["Curse"]          = CFrame.new(-69.846375, 1.907236, -1857.250244),
+    ["Slime"]          = CFrame.new(-1124.753173828125, 19.703411102294922, 371.2305908203125)
 }
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
