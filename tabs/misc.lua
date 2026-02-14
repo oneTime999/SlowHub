@@ -10,9 +10,10 @@ loadstring(game:HttpGet(githubBase .. "AutoConq.lua"))()
 loadstring(game:HttpGet(githubBase .. "AutoAscend.lua"))()
 
 -- Auto Skill Section
-Tab:CreateLabel("Auto Skill")
+Tab:CreateLabel("Auto Skill and Key Craft")
 
 loadstring(game:HttpGet(githubBase .. "AutoSkill.lua"))()
+loadstring(game:HttpGet(githubBase .. "SlimeKey.lua"))()
 
 -- Codes Section
 Tab:CreateLabel("Codes")
