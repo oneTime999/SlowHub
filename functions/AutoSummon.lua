@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 local BossConfigs = {
     ["RimuruBoss"] = {
         Method = "New",
-        InternalName = "RimuruBoss"
+        InternalName = "Rimuru"
     },
     ["StrongestofTodayBoss"] = {
         Method = "New",
