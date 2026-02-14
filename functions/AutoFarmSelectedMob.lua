@@ -32,6 +32,7 @@ local QuestConfig = {
     ["StrongSorcerer"]  = "QuestNPC12",
     ["Curse"]           = "QuestNPC13",
     ["Slime"]           = "QuestNPC14"
+    -- Valentine não tem quest (evento)
 }
 
 local MobSafeZones = {
@@ -56,7 +57,7 @@ local killCount = 0
 local lastTargetName = nil
 local hasVisitedSafeZone = false
 local wasAttackingBoss = false
-local currentQuestName = nil
+local lastValidQuest = nil
 
 local function getNPC(npcName, index)
     if workspace:FindFirstChild("NPCs") then
@@ -85,7 +86,12 @@ local function getNextMobIndex()
 end
 
 local function getQuestForMob(mobName)
-    return QuestConfig[mobName] or "QuestNPC1"
+    local quest = QuestConfig[mobName]
+    if quest then
+        lastValidQuest = quest
+        return quest
+    end
+    return nil
 end
 
 local function getMobConfig(mobName)
@@ -125,7 +131,7 @@ local function stopAutoFarm()
     killCount = 0
     lastTargetName = nil
     hasVisitedSafeZone = false
-    currentQuestName = nil
+    lastValidQuest = nil
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -140,8 +146,12 @@ local function startQuestLoop()
         while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
             if _G.SlowHub.AutoQuestSelectedMob and not _G.SlowHub.IsAttackingBoss then
                 pcall(function()
-                    if currentQuestName then
-                        ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(currentQuestName)
+                    local currentMob = selectedMobs[currentMobIndex]
+                    if currentMob then
+                        local questToAccept = getQuestForMob(currentMob)
+                        if questToAccept then
+                            ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questToAccept)
+                        end
                     end
                 end)
             end
@@ -155,10 +165,6 @@ local function switchToNextMob()
     currentNPCIndex = 1
     killCount = 0
     hasVisitedSafeZone = false
-    local currentMob = selectedMobs[currentMobIndex]
-    if currentMob then
-        currentQuestName = getQuestForMob(currentMob)
-    end
 end
 
 local function startAutoFarm()
@@ -169,11 +175,6 @@ local function startAutoFarm()
     currentMobIndex = 1
     currentNPCIndex = 1
     killCount = 0
-    
-    local firstMob = selectedMobs[1]
-    if firstMob then
-        currentQuestName = getQuestForMob(firstMob)
-    end
     
     startQuestLoop()
     local lastAttack = 0
@@ -251,7 +252,7 @@ local function startAutoFarm()
 end
 
 Tab:CreateDropdown({
-    Name = "Select Mobs",
+    Name = "Select Mobs (Multi Select)",
     Options = MobList,
     CurrentOption = {},
     MultipleOptions = true,
@@ -268,10 +269,7 @@ Tab:CreateDropdown({
         currentNPCIndex = 1
         killCount = 0
         hasVisitedSafeZone = false
-        
-        if #selectedMobs > 0 then
-            currentQuestName = getQuestForMob(selectedMobs[1])
-        end
+        lastValidQuest = nil
         
         if _G.SlowHub.AutoFarmSelectedMob and #selectedMobs > 0 then
             stopAutoFarm()
