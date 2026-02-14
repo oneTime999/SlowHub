@@ -251,7 +251,7 @@ local function startAutoFarm()
 end
 
 Tab:CreateDropdown({
-    Name = "Select Mobs (Multi Select)",
+    Name = "Select Mobs",
     Options = MobList,
     CurrentOption = {},
     MultipleOptions = true,
