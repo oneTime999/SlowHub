@@ -3,6 +3,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local BossConfigs = {
+    ["RimuruBoss"] = {
+        Method = "New",
+        InternalName = "RimuruBoss"
+    },
     ["StrongestofTodayBoss"] = {
         Method = "New",
         InternalName = "StrongestToday"
