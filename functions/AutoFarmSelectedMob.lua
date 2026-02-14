@@ -47,14 +47,16 @@ local MobSafeZones = {
     ["Valentine"]       = CFrame.new(-1159.370, 4.414, -1245.361)
 }
 
-local autoFarmSelectedConnection = nil
+local autoFarmConnection = nil
+local questLoopActive = false
 local selectedMobs = {}
-local currentMobListIndex = 1
-local currentSpawnIndex = 1
-local lastTargetMob = nil
+local currentMobIndex = 1
+local currentNPCIndex = 1
+local killCount = 0
+local lastTargetName = nil
 local hasVisitedSafeZone = false
 local wasAttackingBoss = false
-local lastQuestCheck = 0
+local currentQuestName = nil
 
 local function getNPC(npcName, index)
     if workspace:FindFirstChild("NPCs") then
@@ -68,6 +70,30 @@ local function getNPCRootPart(npc)
         return npc.HumanoidRootPart
     end
     return nil
+end
+
+local function getNextNPC(current, maxCount)
+    local next = current + 1
+    if next > maxCount then return 1 end
+    return next
+end
+
+local function getNextMobIndex()
+    local next = currentMobIndex + 1
+    if next > #selectedMobs then return 1 end
+    return next
+end
+
+local function getQuestForMob(mobName)
+    return QuestConfig[mobName] or "QuestNPC1"
+end
+
+local function getMobConfig(mobName)
+    return {
+        npc = mobName,
+        quest = getQuestForMob(mobName),
+        count = 5 
+    }
 end
 
 local function EquipWeapon()
@@ -87,16 +113,19 @@ local function EquipWeapon()
     return success
 end
 
-local function stopAutoFarmSelectedMob()
-    if autoFarmSelectedConnection then
-        autoFarmSelectedConnection:Disconnect()
-        autoFarmSelectedConnection = nil
+local function stopAutoFarm()
+    if autoFarmConnection then
+        autoFarmConnection:Disconnect()
+        autoFarmConnection = nil
     end
+    questLoopActive = false
     _G.SlowHub.AutoFarmSelectedMob = false
-    currentSpawnIndex = 1
-    currentMobListIndex = 1
-    lastTargetMob = nil
+    currentMobIndex = 1
+    currentNPCIndex = 1
+    killCount = 0
+    lastTargetName = nil
     hasVisitedSafeZone = false
+    currentQuestName = nil
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -104,16 +133,53 @@ local function stopAutoFarmSelectedMob()
     end)
 end
 
-local function startAutoFarmSelectedMob()
-    if autoFarmSelectedConnection then stopAutoFarmSelectedMob() end
-    _G.SlowHub.AutoFarmSelectedMob = true
+local function startQuestLoop()
+    if questLoopActive then return end
+    questLoopActive = true
+    task.spawn(function()
+        while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
+            if _G.SlowHub.AutoQuestSelectedMob and not _G.SlowHub.IsAttackingBoss then
+                pcall(function()
+                    if currentQuestName then
+                        ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(currentQuestName)
+                    end
+                end)
+            end
+            task.wait(2)
+        end
+    end)
+end
+
+local function switchToNextMob()
+    currentMobIndex = getNextMobIndex()
+    currentNPCIndex = 1
+    killCount = 0
+    hasVisitedSafeZone = false
+    local currentMob = selectedMobs[currentMobIndex]
+    if currentMob then
+        currentQuestName = getQuestForMob(currentMob)
+    end
+end
+
+local function startAutoFarm()
+    if autoFarmConnection then stopAutoFarm() end
+    if #selectedMobs == 0 then return end
     
+    _G.SlowHub.AutoFarmSelectedMob = true
+    currentMobIndex = 1
+    currentNPCIndex = 1
+    killCount = 0
+    
+    local firstMob = selectedMobs[1]
+    if firstMob then
+        currentQuestName = getQuestForMob(firstMob)
+    end
+    
+    startQuestLoop()
     local lastAttack = 0
     
-    autoFarmSelectedConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarmSelectedMob() return end
-        if #selectedMobs == 0 then return end
-
+    autoFarmConnection = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarm() return end
         if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true return end
         
         if wasAttackingBoss then
@@ -127,21 +193,20 @@ local function startAutoFarmSelectedMob()
         
         local now = tick()
         
-        local currentMobName = selectedMobs[currentMobListIndex]
+        if #selectedMobs == 0 then stopAutoFarm() return end
         
-        if currentMobName ~= lastTargetMob then
-            lastTargetMob = currentMobName
-            hasVisitedSafeZone = false
+        local currentMobName = selectedMobs[currentMobIndex]
+        if not currentMobName then 
+            currentMobIndex = 1
+            currentMobName = selectedMobs[1]
+            if not currentMobName then stopAutoFarm() return end
         end
+        
+        local config = getMobConfig(currentMobName)
 
-        if _G.SlowHub.AutoQuestSelectedMob and (now - lastQuestCheck > 3) then
-            local questName = QuestConfig[currentMobName]
-            if questName then
-                pcall(function()
-                    ReplicatedStorage.RemoteEvents.QuestAccept:FireServer(questName)
-                end)
-            end
-            lastQuestCheck = now
+        if currentMobName ~= lastTargetName then
+            lastTargetName = currentMobName
+            hasVisitedSafeZone = false
         end
 
         if not hasVisitedSafeZone then
@@ -154,18 +219,16 @@ local function startAutoFarmSelectedMob()
             hasVisitedSafeZone = true
         end
 
-        local npc = getNPC(currentMobName, currentSpawnIndex)
+        local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
 
         if not npcAlive then
-            currentSpawnIndex = currentSpawnIndex + 1
-            if currentSpawnIndex > 5 then
-                currentSpawnIndex = 1
-                currentMobListIndex = currentMobListIndex + 1
-                if currentMobListIndex > #selectedMobs then
-                    currentMobListIndex = 1
-                end
-                hasVisitedSafeZone = false
+            killCount = killCount + 1
+            if killCount >= 5 then
+                switchToNextMob()
+                return
+            else
+                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
             end
         else
             local npcRoot = getNPCRootPart(npc)
@@ -181,45 +244,47 @@ local function startAutoFarmSelectedMob()
                     lastAttack = now
                 end
             else
-                currentSpawnIndex = currentSpawnIndex + 1
-                if currentSpawnIndex > 5 then
-                    currentSpawnIndex = 1
-                    currentMobListIndex = currentMobListIndex + 1
-                    if currentMobListIndex > #selectedMobs then
-                        currentMobListIndex = 1
-                    end
-                    hasVisitedSafeZone = false 
-                end
+                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
             end
         end
     end)
 end
 
 Tab:CreateDropdown({
-    Name = "Select Mobs (Multi)",
+    Name = "Select Mobs (Multi Select)",
     Options = MobList,
     CurrentOption = {},
-    MultiSelection = true, 
-    Flag = "SelectMob",
+    MultipleOptions = true,
+    Flag = "SelectMobs",
     Callback = function(Option)
+        selectedMobs = {}
         if type(Option) == "table" then
-            selectedMobs = Option
-        else
-            selectedMobs = {Option}
+            for _, value in ipairs(Option) do
+                table.insert(selectedMobs, tostring(value))
+            end
         end
         
-        currentSpawnIndex = 1
-        currentMobListIndex = 1
+        currentMobIndex = 1
+        currentNPCIndex = 1
+        killCount = 0
         hasVisitedSafeZone = false
         
-        if _G.SlowHub.AutoFarmSelectedMob then
-            startAutoFarmSelectedMob()
+        if #selectedMobs > 0 then
+            currentQuestName = getQuestForMob(selectedMobs[1])
+        end
+        
+        if _G.SlowHub.AutoFarmSelectedMob and #selectedMobs > 0 then
+            stopAutoFarm()
+            task.wait(0.1)
+            startAutoFarm()
+        elseif #selectedMobs == 0 then
+            stopAutoFarm()
         end
     end
 })
 
 Tab:CreateToggle({
-    Name = "Auto Farm Selected Mob",
+    Name = "Auto Farm Selected Mobs",
     CurrentValue = false,
     Flag = "AutoFarmSelectedMob",
     Callback = function(Value)
@@ -231,9 +296,9 @@ Tab:CreateToggle({
             if #selectedMobs == 0 then
                 return
             end
-            startAutoFarmSelectedMob()
+            startAutoFarm()
         else
-            stopAutoFarmSelectedMob()
+            stopAutoFarm()
         end
     end
 })
