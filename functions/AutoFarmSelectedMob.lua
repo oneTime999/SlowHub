@@ -17,7 +17,9 @@ local MobList = {
     "Sorcerer", 
     "Hollow", 
     "StrongSorcerer", 
-    "Curse"
+    "Curse",
+    "Slime",      -- Adicionado
+    "Valentine"   -- Adicionado
 }
 
 local QuestConfig = {
@@ -27,8 +29,10 @@ local QuestConfig = {
     ["FrostRogue"]      = "QuestNPC7",
     ["Sorcerer"]        = "QuestNPC9",
     ["Hollow"]          = "QuestNPC11",
-    ["StrongSorcerer"] = "QuestNPC12",
-    ["Curse"]          = "QuestNPC13"
+    ["StrongSorcerer"]  = "QuestNPC12",
+    ["Curse"]           = "QuestNPC13",
+    ["Slime"]           = "QuestNPC14" -- Adicionado
+    -- Valentine não foi adicionado aqui pois não possui quest
 }
 
 local MobSafeZones = {
@@ -38,8 +42,10 @@ local MobSafeZones = {
     ["FrostRogue"]      = CFrame.new(-398.725, -1.138, -1071.568),
     ["Sorcerer"]        = CFrame.new(1398.259, 8.486, 488.058),
     ["Hollow"]          = CFrame.new(-482.868, -2.058, 936.237),
-    ["StrongSorcerer"] = CFrame.new(637.979, 2.376, -1669.440),
-    ["Curse"]          = CFrame.new(-69.846, 1.907, -1857.250)
+    ["StrongSorcerer"]  = CFrame.new(637.979, 2.376, -1669.440),
+    ["Curse"]           = CFrame.new(-69.846, 1.907, -1857.250),
+    ["Slime"]           = CFrame.new(-1124.753, 19.703, 371.231),      -- Adicionado
+    ["Valentine"]       = CFrame.new(-1159.370, 4.414, -1245.361)      -- Adicionado
 }
 
 local autoFarmSelectedConnection = nil
