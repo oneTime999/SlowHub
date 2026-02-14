@@ -1,3 +1,4 @@
+local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -85,11 +86,6 @@ local function isBossSelected(bossName)
     if _G.SlowHub.SelectedBosses[baseName] then
         return true
     end
-    for _, diff in ipairs(difficulties) do
-        if _G.SlowHub.SelectedBosses[baseName .. diff] then
-            return true
-        end
-    end
     return false
 end
 
@@ -136,16 +132,12 @@ local function findValidBoss()
         if isPityTargetTime then
             if isBossSelected(pityTarget) then
                 local exactBoss = npcs:FindFirstChild(pityTarget)
-                if exactBoss and checkHumanoid(exactBoss) then
-                    return exactBoss
-                end
+                if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
                 
                 for _, diff in ipairs(difficulties) do
                     local variantName = pityTarget .. diff
                     local variantBoss = npcs:FindFirstChild(variantName)
-                    if variantBoss and checkHumanoid(variantBoss) then
-                        return variantBoss
-                    end
+                    if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
                 end
             end
             return nil
@@ -153,16 +145,12 @@ local function findValidBoss()
             for _, bossName in ipairs(bossList) do
                 if bossName ~= pityTarget and isBossSelected(bossName) then
                     local exactBoss = npcs:FindFirstChild(bossName)
-                    if exactBoss and checkHumanoid(exactBoss) then
-                        return exactBoss
-                    end
+                    if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
                     
                     for _, diff in ipairs(difficulties) do
                         local variantName = bossName .. diff
                         local variantBoss = npcs:FindFirstChild(variantName)
-                        if variantBoss and checkHumanoid(variantBoss) then
-                            return variantBoss
-                        end
+                        if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
                     end
                 end
             end
@@ -173,16 +161,12 @@ local function findValidBoss()
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
             local exactBoss = npcs:FindFirstChild(bossName)
-            if exactBoss and checkHumanoid(exactBoss) then
-                return exactBoss
-            end
+            if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
 
             for _, diff in ipairs(difficulties) do
                 local variantName = bossName .. diff
                 local variantBoss = npcs:FindFirstChild(variantName)
-                if variantBoss and checkHumanoid(variantBoss) then
-                    return variantBoss
-                end
+                if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
             end
         end
     end
@@ -221,7 +205,6 @@ local function startAutoFarmBoss()
     if isRunning then stopAutoFarmBoss() task.wait(0.2) end
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
-    currentFarmingBoss = nil
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
@@ -261,7 +244,6 @@ local function startAutoFarmBoss()
 
         if not hasVisitedSafeZone then
             local safeCFrame = BossSafeZones[boss.Name]
-            
             if not safeCFrame then
                 for baseName, _ in pairs(_G.SlowHub.SelectedBosses) do
                     if string.find(boss.Name, baseName) == 1 then
@@ -271,16 +253,11 @@ local function startAutoFarmBoss()
                 end
             end
             
-            if not safeCFrame and _G.SlowHub.PityTargetBoss ~= "" then
-                if string.find(boss.Name, _G.SlowHub.PityTargetBoss) == 1 then
-                    safeCFrame = BossSafeZones[_G.SlowHub.PityTargetBoss]
-                end
-            end
-
             if safeCFrame then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 playerRoot.CFrame = safeCFrame
                 hasVisitedSafeZone = true 
+                task.wait(0.1)
                 return
             else
                 hasVisitedSafeZone = true
@@ -293,7 +270,6 @@ local function startAutoFarmBoss()
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                 playerRoot.CFrame = targetCFrame
-                
                 EquipWeapon()
                 ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
             end)
@@ -301,14 +277,14 @@ local function startAutoFarmBoss()
     end)
 end
 
-Tab:CreateParagraph({Title = "Select Bosses", Content = "Select which bosses to farm."})
+Tab:CreateSection("Boss Selection")
 
 Tab:CreateDropdown({
-    Name = "Bosses List",
+    Name = "Select Bosses to Farm",
     Options = bossList,
     CurrentOption = {},
     MultipleOptions = true,
-    Flag = "SelectedBossesDropdown",
+    Flag = "MultiBossSelector",
     Callback = function(Options)
         _G.SlowHub.SelectedBosses = {}
         for _, bossName in ipairs(Options) do
@@ -320,7 +296,7 @@ Tab:CreateDropdown({
 Tab:CreateSection("Pity System (Optional)")
 
 Tab:CreateDropdown({
-    Name = "Pity Target Boss (Optional)",
+    Name = "Pity Target Boss",
     Options = bossList,
     CurrentOption = "",
     Flag = "PityTargetBoss",
@@ -342,14 +318,9 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateParagraph({
-    Title = "Pity System Info", 
-    Content = "Optional feature. If disabled: farms all selected bosses normally. If enabled: farms selected bosses except target until pity 24, then only targets the pity boss at 24+. Target boss must also be selected above."
-})
-
 Tab:CreateSection("Farm Control")
 
-local FarmToggle = Tab:CreateToggle({
+Tab:CreateToggle({
     Name = "Auto Farm Selected Bosses",
     CurrentValue = false,
     Flag = "AutoFarmBoss",
@@ -357,14 +328,8 @@ local FarmToggle = Tab:CreateToggle({
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 if Rayfield then
-                    Rayfield:Notify({
-                        Title = "Error",
-                        Content = "Please select a weapon first!",
-                        Duration = 3,
-                        Image = 4483362458,
-                    })
+                    Rayfield:Notify({Title = "Error", Content = "Please select a weapon first!", Duration = 3})
                 end
-                _G.SlowHub.AutoFarmBosses = false
                 return
             end
             startAutoFarmBoss()
