@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 local BossConfigs = {
     ["RimuruBoss"] = {
         Method = "New",
-        InternalName = "Rimuru"
+        InternalName = "Rimuru" -- O Remote usa isso, mas o modelo pode ser RimuruBoss_Normal
     },
     ["StrongestofTodayBoss"] = {
         Method = "New",
@@ -46,6 +46,7 @@ local isSummoningBoss = false
 local selectedBoss = nil
 local selectedDifficulty = "Normal"
 
+-- Função de verificação melhorada
 local function isBossAlive(bossName)
     local found = false
     pcall(function()
@@ -66,17 +67,17 @@ local function stopAutoSummonBoss()
         autoSummonBossConnection:Disconnect()
         autoSummonBossConnection = nil
     end
-    _G.SlowHub.AutoSummonBoss = false
+    if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
 end
 
 local function startAutoSummonBoss()
     if autoSummonBossConnection then stopAutoSummonBoss() end
     
     isSummoningBoss = true
-    _G.SlowHub.AutoSummonBoss = true
+    if _G.SlowHub then _G.SlowHub.AutoSummonBoss = true end
     
     autoSummonBossConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoSummonBoss or not isSummoningBoss then
+        if (_G.SlowHub and not _G.SlowHub.AutoSummonBoss) or not isSummoningBoss then
             stopAutoSummonBoss()
             return
         end
@@ -84,12 +85,29 @@ local function startAutoSummonBoss()
         local config = BossConfigs[selectedBoss]
         if not config then return end
 
-        local workspaceCheckName = selectedBoss
+        -- LÓGICA CORRIGIDA AQUI
+        -- Verifica múltiplas possibilidades de nome para garantir que encontre o Boss
+        local namesToCheck = {}
+        
         if config.Method == "New" then
-            workspaceCheckName = selectedBoss .. "_" .. selectedDifficulty
+            -- Possibilidade 1: Baseado no InternalName (Ex: Rimuru_Normal)
+            table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
+            -- Possibilidade 2: Baseado na Chave/Seleção (Ex: RimuruBoss_Normal) - Correção solicitada
+            table.insert(namesToCheck, selectedBoss .. "_" .. selectedDifficulty)
+        else
+            table.insert(namesToCheck, selectedBoss)
+            table.insert(namesToCheck, config.InternalName)
         end
         
-        if isBossAlive(workspaceCheckName) then
+        local bossAlreadyAlive = false
+        for _, name in ipairs(namesToCheck) do
+            if isBossAlive(name) then
+                bossAlreadyAlive = true
+                break
+            end
+        end
+        
+        if bossAlreadyAlive then
             return 
         end
         
@@ -107,6 +125,7 @@ local function startAutoSummonBoss()
     end)
 end
 
+-- UI
 Tab:CreateSection("Summon Settings")
 
 Tab:CreateDropdown({
@@ -146,13 +165,13 @@ Tab:CreateToggle({
                     Duration = 3,
                     Image = 4483362458,
                 })
-                _G.SlowHub.AutoSummonBoss = false
+                if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
                 return
             end
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
         end
-        _G.SlowHub.AutoSummonBoss = Value
+        if _G.SlowHub then _G.SlowHub.AutoSummonBoss = Value end
     end
 })
