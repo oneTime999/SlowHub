@@ -151,7 +151,7 @@ Tab:CreateDropdown({
 })
 
 Tab:CreateDropdown({
-    Name = "Select Difficulty (New/Rimuru Only)",
+    Name = "Select Difficulty",
     Options = DifficultyList,
     CurrentOption = {"Normal"},
     MultipleOptions = false,
