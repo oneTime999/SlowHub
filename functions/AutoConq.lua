@@ -21,7 +21,7 @@ end
 local function startAutoHaki()
     if hakiConnection then stopAutoHaki() end
 
-    _G.SlowHub.AutoHaki = true
+    _G.SlowHub.AutoHaki = false
     
     hakiConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoHaki then
