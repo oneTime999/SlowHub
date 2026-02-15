@@ -290,6 +290,9 @@ Tab:CreateDropdown({
         for _, bossName in ipairs(Options) do
             _G.SlowHub.SelectedBosses[bossName] = true
         end
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -306,6 +309,9 @@ Tab:CreateDropdown({
         else
             _G.SlowHub.PityTargetBoss = Option
         end
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -315,6 +321,9 @@ Tab:CreateToggle({
     Flag = "PriorityPityEnabled",
     Callback = function(Value)
         _G.SlowHub.PriorityPityEnabled = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -337,6 +346,9 @@ Tab:CreateToggle({
             stopAutoFarmBoss()
         end
         _G.SlowHub.AutoFarmBosses = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -349,6 +361,9 @@ Tab:CreateSlider({
     Flag = "BossFarmDistance",
     Callback = function(Value)
         _G.SlowHub.BossFarmDistance = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -361,5 +376,8 @@ Tab:CreateSlider({
     Flag = "BossFarmHeight",
     Callback = function(Value)
         _G.SlowHub.BossFarmHeight = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
