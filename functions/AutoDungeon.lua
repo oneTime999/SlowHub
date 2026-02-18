@@ -190,7 +190,8 @@ MainTab:CreateSlider({
 MainTab:CreateDropdown({
     Name = "Select Difficulty",
     Options = {"Easy", "Medium", "Hard", "Extreme"},
-    CurrentOption = _G.SlowHub.DungeonVoteDifficulty or "",
+    CurrentOption = _G.SlowHub.DungeonVoteDifficulty and {_G.SlowHub.DungeonVoteDifficulty} or {""},
+    MultipleOptions = false,
     Flag = "DungeonVoteDifficulty",
     Callback = function(Option)
         local val = (type(Option) == "table" and Option[1]) or Option
