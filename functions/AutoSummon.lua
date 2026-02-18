@@ -7,7 +7,7 @@ local BossConfigs = {
         Method = "RimuruSpecific",
         InternalName = "Rimuru"
     },
-    ["GilgameshBoss"] = { -- ADICIONADO AQUI
+    ["GilgameshBoss"] = {
         Method = "Gilgamesh",
         InternalName = "GilgameshBoss"
     },
@@ -50,7 +50,7 @@ local isSummoningBoss = false
 local selectedBosses = {} 
 local selectedDifficulty = "Normal"
 
--- Função de verificação de vida
+-- Health check function
 local function isBossAlive(bossName)
     local found = false
     pcall(function()
@@ -63,6 +63,35 @@ local function isBossAlive(bossName)
         end
     end)
     return found
+end
+
+-- Check if pity system is active and pity target time
+local function isPityTargetTime()
+    if _G.SlowHub and _G.SlowHub.IsPityTargetTime then
+        return _G.SlowHub.IsPityTargetTime()
+    end
+    return false
+end
+
+-- Get pity target boss
+local function getPityTargetBoss()
+    if _G.SlowHub and _G.SlowHub.PityTargetBoss then
+        return _G.SlowHub.PityTargetBoss
+    end
+    return ""
+end
+
+-- Check if pity system is enabled
+local function isPitySystemEnabled()
+    if _G.SlowHub and _G.SlowHub.PriorityPityEnabled then
+        return _G.SlowHub.PriorityPityEnabled
+    end
+    return false
+end
+
+-- Check if boss is summonable (exists in BossConfigs)
+local function isBossSummonable(bossName)
+    return BossConfigs[bossName] ~= nil
 end
 
 local function stopAutoSummonBoss()
@@ -86,14 +115,84 @@ local function startAutoSummonBoss()
             return
         end
         
+        -- Check pity system status
+        local pityEnabled = isPitySystemEnabled()
+        local pityTargetTime = isPityTargetTime()
+        local pityTargetBoss = getPityTargetBoss()
+        
+        -- If pity target time, only summon the pity target boss
+        if pityEnabled and pityTargetTime and pityTargetBoss ~= "" then
+            -- Check if pity target is in selected bosses and is summonable
+            local pityTargetSelected = false
+            for _, selectedBoss in pairs(selectedBosses) do
+                if selectedBoss == pityTargetBoss then
+                    pityTargetSelected = true
+                    break
+                end
+            end
+            
+            -- Only proceed if pity target is selected and summonable
+            if pityTargetSelected and isBossSummonable(pityTargetBoss) then
+                local config = BossConfigs[pityTargetBoss]
+                
+                -- Build names to check
+                local namesToCheck = {}
+                if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" then
+                    table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
+                    table.insert(namesToCheck, pityTargetBoss .. "_" .. selectedDifficulty)
+                else
+                    table.insert(namesToCheck, pityTargetBoss)
+                    table.insert(namesToCheck, config.InternalName)
+                end
+                
+                -- Check if already alive
+                local bossAlreadyAlive = false
+                for _, name in ipairs(namesToCheck) do
+                    if isBossAlive(name) then
+                        bossAlreadyAlive = true
+                        break
+                    end
+                end
+                
+                -- Summon only pity target
+                if not bossAlreadyAlive then
+                    pcall(function()
+                        if config.Method == "RimuruSpecific" then
+                            local args = { [1] = selectedDifficulty }
+                            if ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("RequestSpawnRimuru") then
+                                ReplicatedStorage.RemoteEvents.RequestSpawnRimuru:FireServer(unpack(args))
+                            elseif ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("RequestSpawnRimuru") then
+                                ReplicatedStorage.Remotes.RequestSpawnRimuru:FireServer(unpack(args))
+                            end
+                        elseif config.Method == "Gilgamesh" then
+                            local args = {
+                                [1] = config.InternalName,
+                                [2] = selectedDifficulty
+                            }
+                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(unpack(args))
+                        elseif config.Method == "New" then
+                            local args = {
+                                [1] = config.InternalName,
+                                [2] = selectedDifficulty
+                            }
+                            ReplicatedStorage.Remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
+                        else
+                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(pityTargetBoss)
+                        end
+                    end)
+                end
+            end
+            -- If pity target is not selected or not summonable, do nothing (wait)
+            return
+        end
+        
+        -- Normal mode: summon all selected bosses
         for _, currentBossName in pairs(selectedBosses) do
             local config = BossConfigs[currentBossName]
             
             if config then
-                -- Verificação de nome
+                -- Build names to check
                 local namesToCheck = {}
-                
-                -- Adicionei "Gilgamesh" aqui para ele procurar por GilgameshBoss_Normal, etc.
                 if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" then
                     table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
                     table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
@@ -110,7 +209,7 @@ local function startAutoSummonBoss()
                     end
                 end
                 
-                -- Se não estiver vivo, tenta spawnar
+                -- Summon if not alive
                 if not bossAlreadyAlive then
                     pcall(function()
                         if config.Method == "RimuruSpecific" then
@@ -120,15 +219,12 @@ local function startAutoSummonBoss()
                             elseif ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("RequestSpawnRimuru") then
                                 ReplicatedStorage.Remotes.RequestSpawnRimuru:FireServer(unpack(args))
                             end
-                            
                         elseif config.Method == "Gilgamesh" then
-                            -- LÓGICA DO GILGAMESH (RequestSummonBoss com 2 argumentos)
                             local args = {
-                                [1] = config.InternalName, -- "GilgameshBoss"
-                                [2] = selectedDifficulty   -- Ex: "Normal"
+                                [1] = config.InternalName,
+                                [2] = selectedDifficulty
                             }
                             ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(unpack(args))
-                            
                         elseif config.Method == "New" then
                             local args = {
                                 [1] = config.InternalName,
@@ -136,7 +232,6 @@ local function startAutoSummonBoss()
                             }
                             ReplicatedStorage.Remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
                         else
-                            -- Método antigo (apenas nome)
                             ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(currentBossName)
                         end
                     end)
