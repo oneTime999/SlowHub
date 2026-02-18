@@ -42,7 +42,6 @@ _G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
 if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
--- Global pity functions for access from other scripts
 _G.SlowHub.GetPityCount = function()
     local success, pityText = pcall(function()
         local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
@@ -326,7 +325,7 @@ Tab:CreateDropdown({
 
 Tab:CreateToggle({
     Name = "Enable Pity System",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.PriorityPityEnabled or false,
     Flag = "PriorityPityEnabled",
     Callback = function(Value)
         _G.SlowHub.PriorityPityEnabled = Value
@@ -340,7 +339,7 @@ Tab:CreateSection("Farm Control")
 
 Tab:CreateToggle({
     Name = "Auto Farm Selected Bosses",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoFarmBosses or false,
     Flag = "AutoFarmBoss",
     Callback = function(Value)
         if Value then
