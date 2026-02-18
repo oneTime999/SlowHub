@@ -60,51 +60,66 @@ end
 
 local ToggleZ = Tab:CreateToggle({
     Name = "Auto Skill Z",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoSkillZ or false,
     Flag = "AutoSkillZ",
     Callback = function(value)
         _G.SlowHub.AutoSkillZ = value
         updateAutoSkill()
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 local ToggleX = Tab:CreateToggle({
     Name = "Auto Skill X",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoSkillX or false,
     Flag = "AutoSkillX",
     Callback = function(value)
         _G.SlowHub.AutoSkillX = value
         updateAutoSkill()
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 local ToggleC = Tab:CreateToggle({
     Name = "Auto Skill C",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoSkillC or false,
     Flag = "AutoSkillC",
     Callback = function(value)
         _G.SlowHub.AutoSkillC = value
         updateAutoSkill()
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 local ToggleV = Tab:CreateToggle({
     Name = "Auto Skill V",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoSkillV or false,
     Flag = "AutoSkillV",
     Callback = function(value)
         _G.SlowHub.AutoSkillV = value
         updateAutoSkill()
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 local ToggleF = Tab:CreateToggle({
     Name = "Auto Skill F",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoSkillF or false,
     Flag = "AutoSkillF",
     Callback = function(value)
         _G.SlowHub.AutoSkillF = value
         updateAutoSkill()
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
