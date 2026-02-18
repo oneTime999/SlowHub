@@ -66,16 +66,29 @@ local function EquipSelectedTool()
     end)
 end
 
-local currentOption = {}
+local weapons = GetWeapons()
+local currentOption = {""}
+
 if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
-    currentOption = {_G.SlowHub.SelectedWeapon}
-else
-    currentOption = {""}
+    local found = false
+    for _, weapon in ipairs(weapons) do
+        if weapon == _G.SlowHub.SelectedWeapon then
+            found = true
+            break
+        end
+    end
+    
+    if found then
+        currentOption = {_G.SlowHub.SelectedWeapon}
+    else
+        _G.SlowHub.SelectedWeapon = nil
+        currentOption = {""}
+    end
 end
 
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
-    Options = GetWeapons(),
+    Options = weapons,
     CurrentOption = currentOption,
     MultipleOptions = false,
     Flag = "SelectWeapon",
@@ -96,6 +109,15 @@ local WeaponDropdown = Tab:CreateDropdown({
         end
     end
 })
+
+if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
+    task.spawn(function()
+        task.wait(0.5)
+        pcall(function()
+            WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
+        end)
+    end)
+end
 
 local RefreshButton = Tab:CreateButton({
     Name = "Refresh Weapons",
