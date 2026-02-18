@@ -9,7 +9,7 @@ local function stopAutoCraft()
         autoCraftConnection:Disconnect()
         autoCraftConnection = nil
     end
-    _G.SlowHub.AutoCraftSlime = false
+    _G.SlowHub.AutoCraftDivineGrail = false
 end
 
 local function startAutoCraft()
@@ -17,10 +17,10 @@ local function startAutoCraft()
         stopAutoCraft()
     end
 
-    _G.SlowHub.AutoCraftSlime = true
+    _G.SlowHub.AutoCraftDivineGrail = true
 
     autoCraftConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoCraftSlime then
+        if not _G.SlowHub.AutoCraftDivineGrail then
             stopAutoCraft()
             return
         end
@@ -29,18 +29,19 @@ local function startAutoCraft()
             lastCraftTime = tick()
             pcall(function()
                 local args = {
-                    [1] = "SlimeKey",
+                    [1] = "DivineGrail",
+                    [2] = 1,
                 }
-                ReplicatedStorage.Remotes.RequestSlimeCraft:InvokeServer(unpack(args))
+                ReplicatedStorage.Remotes.RequestGrailCraft:InvokeServer(unpack(args))
             end)
         end
     end)
 end
 
 local Toggle = _G.MiscTab:CreateToggle({
-    Name = "Auto Craft Slime Key",
-    CurrentValue = _G.SlowHub.AutoCraftSlime or false,
-    Flag = "AutoCraftSlimeKey",
+    Name = "Auto Craft Divine Grail",
+    CurrentValue = _G.SlowHub.AutoCraftDivineGrail or false,
+    Flag = "AutoCraftDivineGrail",
     Callback = function(Value)
         if Value then
             startAutoCraft()
@@ -48,14 +49,14 @@ local Toggle = _G.MiscTab:CreateToggle({
             stopAutoCraft()
         end
         
-        _G.SlowHub.AutoCraftSlime = Value
+        _G.SlowHub.AutoCraftDivineGrail = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
 })
 
-if _G.SlowHub.AutoCraftSlime then
+if _G.SlowHub.AutoCraftDivineGrail then
     task.wait(2)
     startAutoCraft()
 end
