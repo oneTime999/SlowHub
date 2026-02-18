@@ -110,14 +110,22 @@ local WeaponDropdown = Tab:CreateDropdown({
     end
 })
 
-if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
-    task.spawn(function()
-        task.wait(0.5)
-        pcall(function()
-            WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
+task.spawn(function()
+    task.wait(1)
+    
+    if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
+        local success, err = pcall(function()
+            if WeaponDropdown and typeof(WeaponDropdown) == "table" and WeaponDropdown.Set then
+                WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
+                print("WeaponDropdown:Set() applied successfully")
+            end
         end)
-    end)
-end
+        
+        if not success then
+            warn("Failed to set WeaponDropdown value: " .. tostring(err))
+        end
+    end
+end)
 
 local RefreshButton = Tab:CreateButton({
     Name = "Refresh Weapons",
