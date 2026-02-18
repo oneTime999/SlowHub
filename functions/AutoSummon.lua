@@ -65,7 +65,7 @@ local function isBossAlive(bossName)
     return found
 end
 
--- Check if pity system is active and pity target time
+-- Check if pity system is active and pity target time (pity >= 24)
 local function isPityTargetTime()
     if _G.SlowHub and _G.SlowHub.IsPityTargetTime then
         return _G.SlowHub.IsPityTargetTime()
@@ -89,9 +89,11 @@ local function isPitySystemEnabled()
     return false
 end
 
--- Check if boss is summonable (exists in BossConfigs)
-local function isBossSummonable(bossName)
-    return BossConfigs[bossName] ~= nil
+-- Check if boss is the pity target
+local function isPityTargetBoss(bossName)
+    local pityTarget = getPityTargetBoss()
+    if pityTarget == "" then return false end
+    return bossName == pityTarget
 end
 
 local function stopAutoSummonBoss()
@@ -120,74 +122,36 @@ local function startAutoSummonBoss()
         local pityTargetTime = isPityTargetTime()
         local pityTargetBoss = getPityTargetBoss()
         
-        -- If pity target time, only summon the pity target boss
-        if pityEnabled and pityTargetTime and pityTargetBoss ~= "" then
-            -- Check if pity target is in selected bosses and is summonable
-            local pityTargetSelected = false
-            for _, selectedBoss in pairs(selectedBosses) do
-                if selectedBoss == pityTargetBoss then
-                    pityTargetSelected = true
-                    break
-                end
-            end
+        -- Filter bosses to summon based on pity system
+        local bossesToSummon = {}
+        
+        for _, selectedBoss in pairs(selectedBosses) do
+            local config = BossConfigs[selectedBoss]
+            if not config then continue end
             
-            -- Only proceed if pity target is selected and summonable
-            if pityTargetSelected and isBossSummonable(pityTargetBoss) then
-                local config = BossConfigs[pityTargetBoss]
-                
-                -- Build names to check
-                local namesToCheck = {}
-                if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" then
-                    table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
-                    table.insert(namesToCheck, pityTargetBoss .. "_" .. selectedDifficulty)
-                else
-                    table.insert(namesToCheck, pityTargetBoss)
-                    table.insert(namesToCheck, config.InternalName)
-                end
-                
-                -- Check if already alive
-                local bossAlreadyAlive = false
-                for _, name in ipairs(namesToCheck) do
-                    if isBossAlive(name) then
-                        bossAlreadyAlive = true
-                        break
+            -- If pity system is enabled
+            if pityEnabled and pityTargetBoss ~= "" then
+                if isPityTargetBoss(selectedBoss) then
+                    -- This is the pity target boss, only summon when pity >= 24
+                    if pityTargetTime then
+                        table.insert(bossesToSummon, selectedBoss)
                     end
+                    -- If pity < 24, skip this boss (don't summon)
+                else
+                    -- This is NOT the pity target boss, only summon when pity < 24
+                    if not pityTargetTime then
+                        table.insert(bossesToSummon, selectedBoss)
+                    end
+                    -- If pity >= 24, skip this boss (don't summon)
                 end
-                
-                -- Summon only pity target
-                if not bossAlreadyAlive then
-                    pcall(function()
-                        if config.Method == "RimuruSpecific" then
-                            local args = { [1] = selectedDifficulty }
-                            if ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("RequestSpawnRimuru") then
-                                ReplicatedStorage.RemoteEvents.RequestSpawnRimuru:FireServer(unpack(args))
-                            elseif ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("RequestSpawnRimuru") then
-                                ReplicatedStorage.Remotes.RequestSpawnRimuru:FireServer(unpack(args))
-                            end
-                        elseif config.Method == "Gilgamesh" then
-                            local args = {
-                                [1] = config.InternalName,
-                                [2] = selectedDifficulty
-                            }
-                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(unpack(args))
-                        elseif config.Method == "New" then
-                            local args = {
-                                [1] = config.InternalName,
-                                [2] = selectedDifficulty
-                            }
-                            ReplicatedStorage.Remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
-                        else
-                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(pityTargetBoss)
-                        end
-                    end)
-                end
+            else
+                -- Pity system disabled, summon all selected bosses
+                table.insert(bossesToSummon, selectedBoss)
             end
-            -- If pity target is not selected or not summonable, do nothing (wait)
-            return
         end
         
-        -- Normal mode: summon all selected bosses
-        for _, currentBossName in pairs(selectedBosses) do
+        -- Summon filtered bosses
+        for _, currentBossName in pairs(bossesToSummon) do
             local config = BossConfigs[currentBossName]
             
             if config then
