@@ -146,10 +146,15 @@ end
 
 Tab:CreateSection("Mini Bosses")
 
+local miniBossOption = ""
+if _G.SlowHub.SelectedMiniBoss and _G.SlowHub.SelectedMiniBoss ~= "" then
+    miniBossOption = _G.SlowHub.SelectedMiniBoss
+end
+
 Tab:CreateDropdown({
     Name = "Select Mini Boss",
     Options = miniBossList,
-    CurrentOption = _G.SlowHub.SelectedMiniBoss or "",
+    CurrentOption = miniBossOption ~= "" and {miniBossOption} or {""},
     MultipleOptions = false,
     Flag = "SelectMiniBoss",
     Callback = function(Value)
