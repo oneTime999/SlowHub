@@ -66,10 +66,17 @@ local function EquipSelectedTool()
     end)
 end
 
+local currentOption = {}
+if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
+    currentOption = {_G.SlowHub.SelectedWeapon}
+else
+    currentOption = {""}
+end
+
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
-    CurrentOption = _G.SlowHub.SelectedWeapon and {_G.SlowHub.SelectedWeapon} or {""},
+    CurrentOption = currentOption,
     MultipleOptions = false,
     Flag = "SelectWeapon",
     Callback = function(Value)
@@ -128,3 +135,8 @@ Player.CharacterAdded:Connect(function(char)
         EquipSelectedTool()
     end
 end)
+
+if _G.SlowHub.SelectedWeapon then
+    task.wait(0.5)
+    EquipSelectedTool()
+end
