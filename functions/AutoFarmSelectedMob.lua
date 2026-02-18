@@ -32,7 +32,6 @@ local QuestConfig = {
     ["StrongSorcerer"]  = "QuestNPC12",
     ["Curse"]           = "QuestNPC13",
     ["Slime"]           = "QuestNPC14"
-    -- Valentine não tem quest (evento)
 }
 
 local MobSafeZones = {
@@ -50,7 +49,7 @@ local MobSafeZones = {
 
 local autoFarmConnection = nil
 local questLoopActive = false
-local selectedMobs = {}
+local selectedMobs = _G.SlowHub.SelectedMobs or {}
 local currentMobIndex = 1
 local currentNPCIndex = 1
 local killCount = 0
@@ -254,14 +253,16 @@ end
 Tab:CreateDropdown({
     Name = "Select Mobs (Multi Select)",
     Options = MobList,
-    CurrentOption = {},
+    CurrentOption = _G.SlowHub.SelectedMobs or {},
     MultipleOptions = true,
     Flag = "SelectMobs",
     Callback = function(Option)
         selectedMobs = {}
+        _G.SlowHub.SelectedMobs = {}
         if type(Option) == "table" then
             for _, value in ipairs(Option) do
                 table.insert(selectedMobs, tostring(value))
+                table.insert(_G.SlowHub.SelectedMobs, tostring(value))
             end
         end
         
@@ -278,12 +279,16 @@ Tab:CreateDropdown({
         elseif #selectedMobs == 0 then
             stopAutoFarm()
         end
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 Tab:CreateToggle({
     Name = "Auto Farm Selected Mobs",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoFarmSelectedMob or false,
     Flag = "AutoFarmSelectedMob",
     Callback = function(Value)
         _G.SlowHub.AutoFarmSelectedMob = Value
@@ -298,15 +303,21 @@ Tab:CreateToggle({
         else
             stopAutoFarm()
         end
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 Tab:CreateToggle({
     Name = "Auto Quest",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoQuestSelectedMob or false,
     Flag = "AutoQuestSelectedMob",
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -318,6 +329,9 @@ Tab:CreateSlider({
     Flag = "FarmDistance",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -329,5 +343,8 @@ Tab:CreateSlider({
     Flag = "FarmHeight",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
