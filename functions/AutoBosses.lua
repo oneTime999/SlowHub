@@ -287,10 +287,17 @@ end
 
 Tab:CreateSection("Boss Selection")
 
+local selectedBossesOptions = {}
+for boss, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+    if isSelected then
+        table.insert(selectedBossesOptions, boss)
+    end
+end
+
 Tab:CreateDropdown({
     Name = "Select Bosses to Farm",
     Options = bossList,
-    CurrentOption = {},
+    CurrentOption = selectedBossesOptions,
     MultipleOptions = true,
     Flag = "MultiBossSelector",
     Callback = function(Options)
@@ -306,10 +313,16 @@ Tab:CreateDropdown({
 
 Tab:CreateSection("Pity System (Optional)")
 
+local pityTargetOption = ""
+if _G.SlowHub.PityTargetBoss and _G.SlowHub.PityTargetBoss ~= "" then
+    pityTargetOption = _G.SlowHub.PityTargetBoss
+end
+
 Tab:CreateDropdown({
     Name = "Pity Target Boss",
     Options = bossList,
-    CurrentOption = "",
+    CurrentOption = pityTargetOption ~= "" and {pityTargetOption} or {""},
+    MultipleOptions = false,
     Flag = "PityTargetBoss",
     Callback = function(Option)
         if type(Option) == "table" then
