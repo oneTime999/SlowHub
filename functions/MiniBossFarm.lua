@@ -28,7 +28,7 @@ if not _G.SlowHub.MiniBossFarmHeight then _G.SlowHub.MiniBossFarmHeight = 4 end
 
 local autoFarmMiniBossConnection = nil
 local questConnection = nil
-local selectedMiniBoss = nil
+local selectedMiniBoss = _G.SlowHub.SelectedMiniBoss or nil
 local isRunning = false
 local lastTargetName = nil
 local hasVisitedSafeZone = false
@@ -144,32 +144,35 @@ local function startAutoFarmMiniBoss()
     end)
 end
 
--- RAYFIELD UI
 Tab:CreateSection("Mini Bosses")
 
 Tab:CreateDropdown({
     Name = "Select Mini Boss",
     Options = miniBossList,
-    CurrentOption = {""},
+    CurrentOption = _G.SlowHub.SelectedMiniBoss or "",
     MultipleOptions = false,
     Flag = "SelectMiniBoss",
     Callback = function(Value)
         local wasRunning = isRunning
         if wasRunning then stopAutoFarmMiniBoss() end
         
-        -- Fix Table vs String
         selectedMiniBoss = (type(Value) == "table" and Value[1]) or Value
+        _G.SlowHub.SelectedMiniBoss = selectedMiniBoss
         
         if wasRunning then 
             task.wait(0.3)
             startAutoFarmMiniBoss() 
+        end
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
         end
     end
 })
 
 Tab:CreateToggle({
     Name = "Auto Farm Mini Boss",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoFarmMiniBosses or false,
     Flag = "AutoFarmMiniBoss",
     Callback = function(Value)
         if Value then
@@ -186,6 +189,9 @@ Tab:CreateToggle({
             stopAutoFarmMiniBoss()
         end
         _G.SlowHub.AutoFarmMiniBosses = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -198,6 +204,9 @@ Tab:CreateSlider({
     Flag = "MiniBossDistance",
     Callback = function(Value)
         _G.SlowHub.MiniBossFarmDistance = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -210,5 +219,8 @@ Tab:CreateSlider({
     Flag = "MiniBossHeight",
     Callback = function(Value)
         _G.SlowHub.MiniBossFarmHeight = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
