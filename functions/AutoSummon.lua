@@ -7,6 +7,10 @@ local BossConfigs = {
         Method = "RimuruSpecific",
         InternalName = "Rimuru"
     },
+    ["GilgameshBoss"] = { -- ADICIONADO AQUI
+        Method = "Gilgamesh",
+        InternalName = "GilgameshBoss"
+    },
     ["StrongestofTodayBoss"] = {
         Method = "New",
         InternalName = "StrongestToday"
@@ -43,7 +47,7 @@ local DifficultyList = {
 
 local autoSummonBossConnection = nil
 local isSummoningBoss = false
-local selectedBosses = {} -- Alterado para tabela para suportar múltiplos
+local selectedBosses = {} 
 local selectedDifficulty = "Normal"
 
 -- Função de verificação de vida
@@ -82,15 +86,15 @@ local function startAutoSummonBoss()
             return
         end
         
-        -- AQUI É A MUDANÇA PRINCIPAL: Loop através de todos os bosses selecionados
         for _, currentBossName in pairs(selectedBosses) do
             local config = BossConfigs[currentBossName]
             
             if config then
-                -- Verificação de nome para o boss atual do loop
+                -- Verificação de nome
                 local namesToCheck = {}
                 
-                if config.Method == "New" or config.Method == "RimuruSpecific" then
+                -- Adicionei "Gilgamesh" aqui para ele procurar por GilgameshBoss_Normal, etc.
+                if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" then
                     table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
                     table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
                 else
@@ -106,7 +110,7 @@ local function startAutoSummonBoss()
                     end
                 end
                 
-                -- Se este boss específico não estiver vivo, tenta spawnar
+                -- Se não estiver vivo, tenta spawnar
                 if not bossAlreadyAlive then
                     pcall(function()
                         if config.Method == "RimuruSpecific" then
@@ -117,6 +121,14 @@ local function startAutoSummonBoss()
                                 ReplicatedStorage.Remotes.RequestSpawnRimuru:FireServer(unpack(args))
                             end
                             
+                        elseif config.Method == "Gilgamesh" then
+                            -- LÓGICA DO GILGAMESH (RequestSummonBoss com 2 argumentos)
+                            local args = {
+                                [1] = config.InternalName, -- "GilgameshBoss"
+                                [2] = selectedDifficulty   -- Ex: "Normal"
+                            }
+                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(unpack(args))
+                            
                         elseif config.Method == "New" then
                             local args = {
                                 [1] = config.InternalName,
@@ -124,6 +136,7 @@ local function startAutoSummonBoss()
                             }
                             ReplicatedStorage.Remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
                         else
+                            -- Método antigo (apenas nome)
                             ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(currentBossName)
                         end
                     end)
@@ -137,13 +150,12 @@ end
 Tab:CreateSection("Summon Settings")
 
 Tab:CreateDropdown({
-    Name = "Select Bosses to Summon", -- Atualizado nome para plural
+    Name = "Select Bosses to Summon",
     Options = BossList,
     CurrentOption = {""},
-    MultipleOptions = true, -- Isso permite selecionar vários
+    MultipleOptions = true,
     Flag = "SelectBossSummon",
     Callback = function(Value)
-        -- Agora aceitamos a tabela inteira, não apenas o [1]
         selectedBosses = Value
     end
 })
@@ -166,7 +178,6 @@ Tab:CreateToggle({
     Flag = "AutoSummonBoss",
     Callback = function(Value)
         if Value then
-            -- Verifica se a tabela está vazia
             if not selectedBosses or #selectedBosses == 0 then
                 Rayfield:Notify({
                     Title = "Error",
@@ -175,7 +186,6 @@ Tab:CreateToggle({
                     Image = 4483362458,
                 })
                 if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
-                -- Resetar toggle visualmente pode necessitar de código extra dependendo da Lib, mas o return previne o loop
                 return
             end
             startAutoSummonBoss()
