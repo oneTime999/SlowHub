@@ -47,10 +47,9 @@ local DifficultyList = {
 
 local autoSummonBossConnection = nil
 local isSummoningBoss = false
-local selectedBosses = {} 
-local selectedDifficulty = "Normal"
+local selectedBosses = _G.SlowHub.SelectedSummonBosses or {} 
+local selectedDifficulty = _G.SlowHub.SelectedSummonDifficulty or "Normal"
 
--- Health check function
 local function isBossAlive(bossName)
     local found = false
     pcall(function()
@@ -65,7 +64,6 @@ local function isBossAlive(bossName)
     return found
 end
 
--- Check if pity system is active and pity target time (pity >= 24)
 local function isPityTargetTime()
     if _G.SlowHub and _G.SlowHub.IsPityTargetTime then
         return _G.SlowHub.IsPityTargetTime()
@@ -73,7 +71,6 @@ local function isPityTargetTime()
     return false
 end
 
--- Get pity target boss
 local function getPityTargetBoss()
     if _G.SlowHub and _G.SlowHub.PityTargetBoss then
         return _G.SlowHub.PityTargetBoss
@@ -81,7 +78,6 @@ local function getPityTargetBoss()
     return ""
 end
 
--- Check if pity system is enabled
 local function isPitySystemEnabled()
     if _G.SlowHub and _G.SlowHub.PriorityPityEnabled then
         return _G.SlowHub.PriorityPityEnabled
@@ -89,7 +85,6 @@ local function isPitySystemEnabled()
     return false
 end
 
--- Check if boss is the pity target
 local function isPityTargetBoss(bossName)
     local pityTarget = getPityTargetBoss()
     if pityTarget == "" then return false end
@@ -102,60 +97,50 @@ local function stopAutoSummonBoss()
         autoSummonBossConnection:Disconnect()
         autoSummonBossConnection = nil
     end
-    if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
+    if _G.SlowHub then _G.SlowHub.AutoSummon = false end
 end
 
 local function startAutoSummonBoss()
     if autoSummonBossConnection then stopAutoSummonBoss() end
     
     isSummoningBoss = true
-    if _G.SlowHub then _G.SlowHub.AutoSummonBoss = true end
+    if _G.SlowHub then _G.SlowHub.AutoSummon = true end
     
     autoSummonBossConnection = RunService.Heartbeat:Connect(function()
-        if (_G.SlowHub and not _G.SlowHub.AutoSummonBoss) or not isSummoningBoss then
+        if (_G.SlowHub and not _G.SlowHub.AutoSummon) or not isSummoningBoss then
             stopAutoSummonBoss()
             return
         end
         
-        -- Check pity system status
         local pityEnabled = isPitySystemEnabled()
         local pityTargetTime = isPityTargetTime()
         local pityTargetBoss = getPityTargetBoss()
         
-        -- Filter bosses to summon based on pity system
         local bossesToSummon = {}
         
         for _, selectedBoss in pairs(selectedBosses) do
             local config = BossConfigs[selectedBoss]
             if not config then continue end
             
-            -- If pity system is enabled
             if pityEnabled and pityTargetBoss ~= "" then
                 if isPityTargetBoss(selectedBoss) then
-                    -- This is the pity target boss, only summon when pity >= 24
                     if pityTargetTime then
                         table.insert(bossesToSummon, selectedBoss)
                     end
-                    -- If pity < 24, skip this boss (don't summon)
                 else
-                    -- This is NOT the pity target boss, only summon when pity < 24
                     if not pityTargetTime then
                         table.insert(bossesToSummon, selectedBoss)
                     end
-                    -- If pity >= 24, skip this boss (don't summon)
                 end
             else
-                -- Pity system disabled, summon all selected bosses
                 table.insert(bossesToSummon, selectedBoss)
             end
         end
         
-        -- Summon filtered bosses
         for _, currentBossName in pairs(bossesToSummon) do
             local config = BossConfigs[currentBossName]
             
             if config then
-                -- Build names to check
                 local namesToCheck = {}
                 if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" then
                     table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
@@ -173,7 +158,6 @@ local function startAutoSummonBoss()
                     end
                 end
                 
-                -- Summon if not alive
                 if not bossAlreadyAlive then
                     pcall(function()
                         if config.Method == "RimuruSpecific" then
@@ -205,35 +189,42 @@ local function startAutoSummonBoss()
     end)
 end
 
--- UI
 Tab:CreateSection("Summon Settings")
 
 Tab:CreateDropdown({
     Name = "Select Bosses to Summon",
     Options = BossList,
-    CurrentOption = {""},
+    CurrentOption = _G.SlowHub.SelectedSummonBosses or {},
     MultipleOptions = true,
     Flag = "SelectBossSummon",
     Callback = function(Value)
         selectedBosses = Value
+        _G.SlowHub.SelectedSummonBosses = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 Tab:CreateDropdown({
     Name = "Select Difficulty",
     Options = DifficultyList,
-    CurrentOption = {"Normal"},
+    CurrentOption = _G.SlowHub.SelectedSummonDifficulty or "Normal",
     MultipleOptions = false,
     Flag = "SelectBossDifficulty",
     Callback = function(Value)
         local val = (type(Value) == "table" and Value[1]) or Value
         selectedDifficulty = val
+        _G.SlowHub.SelectedSummonDifficulty = val
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
 Tab:CreateToggle({
     Name = "Auto Summon Boss",
-    CurrentValue = false,
+    CurrentValue = _G.SlowHub.AutoSummon or false,
     Flag = "AutoSummonBoss",
     Callback = function(Value)
         if Value then
@@ -244,13 +235,16 @@ Tab:CreateToggle({
                     Duration = 3,
                     Image = 4483362458,
                 })
-                if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
+                if _G.SlowHub then _G.SlowHub.AutoSummon = false end
                 return
             end
             startAutoSummonBoss()
         else
             stopAutoSummonBoss()
         end
-        if _G.SlowHub then _G.SlowHub.AutoSummonBoss = Value end
+        if _G.SlowHub then _G.SlowHub.AutoSummon = Value end
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
