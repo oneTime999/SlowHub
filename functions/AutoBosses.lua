@@ -42,13 +42,8 @@ _G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
 if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
-local autoFarmBossConnection = nil
-local isRunning = false
-local lastTargetBoss = nil
-local hasVisitedSafeZone = false
-local currentFarmingBoss = nil
-
-local function getPityCount()
+-- Global pity functions for access from other scripts
+_G.SlowHub.GetPityCount = function()
     local success, pityText = pcall(function()
         local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
         return pityLabel.Text
@@ -62,6 +57,19 @@ local function getPityCount()
     end
     return 0
 end
+
+_G.SlowHub.IsPityTargetTime = function()
+    if not _G.SlowHub.PriorityPityEnabled or _G.SlowHub.PityTargetBoss == "" then
+        return false
+    end
+    return _G.SlowHub.GetPityCount() >= 24
+end
+
+local autoFarmBossConnection = nil
+local isRunning = false
+local lastTargetBoss = nil
+local hasVisitedSafeZone = false
+local currentFarmingBoss = nil
 
 local function checkHumanoid(model)
     if model and model.Parent then
@@ -101,7 +109,7 @@ local function shouldStopFarmingCurrentBoss(boss)
     end
     
     if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
-        local currentPity = getPityCount()
+        local currentPity = _G.SlowHub.GetPityCount()
         local isPityTargetTime = (currentPity >= 24)
         local pityTarget = _G.SlowHub.PityTargetBoss
         
@@ -127,7 +135,7 @@ local function findValidBoss()
     local pityTarget = _G.SlowHub.PityTargetBoss
     
     if pityEnabled and pityTarget ~= "" then
-        local currentPity = getPityCount()
+        local currentPity = _G.SlowHub.GetPityCount()
         local isPityTargetTime = (currentPity >= 24)
         
         if isPityTargetTime then
