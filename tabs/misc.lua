@@ -14,6 +14,7 @@ Tab:CreateLabel("Auto Skill and Key Craft")
 
 loadstring(game:HttpGet(githubBase .. "AutoSkill.lua"))()
 loadstring(game:HttpGet(githubBase .. "SlimeKey.lua"))()
+loadstring(game:HttpGet(githubBase .. "DivineGrail.lua"))()
 
 -- Codes Section
 Tab:CreateLabel("Codes")
