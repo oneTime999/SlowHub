@@ -209,7 +209,7 @@ Tab:CreateDropdown({
 Tab:CreateDropdown({
     Name = "Select Difficulty",
     Options = DifficultyList,
-    CurrentOption = _G.SlowHub.SelectedSummonDifficulty or "Normal",
+    CurrentOption = {_G.SlowHub.SelectedSummonDifficulty or "Normal"},
     MultipleOptions = false,
     Flag = "SelectBossDifficulty",
     Callback = function(Value)
