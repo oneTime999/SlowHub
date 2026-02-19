@@ -12,6 +12,7 @@ local LevelConfig = {
     {minLevel = 1500, maxLevel = 2999, quest = "QuestNPC7", npc = "FrostRogue", count = 5},
     {minLevel = 3000, maxLevel = 5499, quest = "QuestNPC9", npc = "Sorcerer", count = 5},
     {minLevel = 5500, maxLevel = 5999, quest = "QuestNPC11", npc = "Hollow", count = 5},
+    -- Novas Quests Adicionadas:
     {minLevel = 6000, maxLevel = 6999, quest = "QuestNPC12", npc = "StrongSorcerer", count = 5},
     {minLevel = 7000, maxLevel = 7999, quest = "QuestNPC13", npc = "Curse", count = 5},
     {minLevel = 8000, maxLevel = 99999, quest = "QuestNPC14", npc = "Slime", count = 5}
@@ -24,6 +25,7 @@ local NPCSafeZones = {
     ["FrostRogue"]      = CFrame.new(-398.725769, -1.13884699, -1071.56885),
     ["Sorcerer"]        = CFrame.new(1398.2594, 8.48633194, 488.058838),
     ["Hollow"]          = CFrame.new(-365.12628173828125, -0.44140613079071045, 1097.683349609375),
+    -- Novas Coordenadas Adicionadas:
     ["StrongSorcerer"] = CFrame.new(637.979126, 2.375789, -1669.440186),
     ["Curse"]          = CFrame.new(-69.846375, 1.907236, -1857.250244),
     ["Slime"]          = CFrame.new(-1124.753173828125, 19.703411102294922, 371.2305908203125)
@@ -189,7 +191,7 @@ end
 
 MainTab:CreateToggle({
     Name = "Auto Farm Level",
-    CurrentValue = _G.SlowHub.AutoFarmLevel or false,
+    CurrentValue = _G.SlowHub.AutoFarmLevel,
     Flag = "AutoFarmLevel",
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
@@ -207,9 +209,6 @@ MainTab:CreateToggle({
         else
             stopAutoLevel()
         end
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
@@ -221,9 +220,6 @@ MainTab:CreateSlider({
     Flag = "FarmDistance",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
@@ -235,9 +231,6 @@ MainTab:CreateSlider({
     Flag = "FarmHeight",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
