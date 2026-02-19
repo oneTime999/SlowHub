@@ -16,12 +16,8 @@ local MerchantItemsList = {
     "Secret Chest"
 }
 
-if _G.SlowHub.AutoBuyMerchant == nil then
-    _G.SlowHub.AutoBuyMerchant = false
-end
-if _G.SlowHub.SelectedMerchantItems == nil then
-    _G.SlowHub.SelectedMerchantItems = {}
-end
+_G.SlowHub.AutoBuyMerchant = false
+_G.SlowHub.SelectedMerchantItems = {}
 
 task.spawn(function()
     while true do
@@ -45,20 +41,17 @@ end)
 local Dropdown = Tab:CreateDropdown({
     Name = "Select Merchant Items to Buy",
     Options = MerchantItemsList,
-    CurrentOption = _G.SlowHub.SelectedMerchantItems or {},
+    CurrentOption = {"Select Items"},
     MultipleOptions = true,
     Flag = "SelectMerchantItems",
     Callback = function(Value)
         _G.SlowHub.SelectedMerchantItems = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 local Toggle = Tab:CreateToggle({
     Name = "Auto Buy Selected Items",
-    CurrentValue = _G.SlowHub.AutoBuyMerchant or false,
+    CurrentValue = false,
     Flag = "AutoBuyMerchant",
     Callback = function(Value)
         _G.SlowHub.AutoBuyMerchant = Value
@@ -70,10 +63,6 @@ local Toggle = Tab:CreateToggle({
                 Duration = 3,
                 Image = 4483362458
             })
-        end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
