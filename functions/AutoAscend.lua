@@ -5,11 +5,9 @@ getgenv().AutoAscend = false
 
 Tab:CreateToggle({
     Name = "Auto Ascend",
-    CurrentValue = _G.SlowHub.AutoAscend or false,
-    Flag = "AutoAscend",
+    CurrentValue = false,
     Callback = function(Value)
         getgenv().AutoAscend = Value
-        _G.SlowHub.AutoAscend = Value
         
         if Value then
             task.spawn(function()
@@ -20,10 +18,6 @@ Tab:CreateToggle({
                     task.wait(10)
                 end
             end)
-        end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
