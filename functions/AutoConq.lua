@@ -3,31 +3,33 @@ local RunService = game:GetService("RunService")
 
 local hakiConnection = nil
 local lastExecution = 0
-local WAIT_TIME = 3
+local WAIT_TIME = 3 -- Tempo em segundos
 
-if _G.SlowHub.AutoConq == nil then
-    _G.SlowHub.AutoConq = false
+-- Inicializa a variável no SlowHub caso não exista
+if _G.SlowHub.AutoHaki == nil then
+    _G.SlowHub.AutoHaki = false
 end
 
-local function stopAutoConq()
+local function stopAutoHaki()
     if hakiConnection then
         hakiConnection:Disconnect()
         hakiConnection = nil
     end
-    _G.SlowHub.AutoConq = false
+    _G.SlowHub.AutoHaki = false
 end
 
-local function startAutoConq()
-    if hakiConnection then stopAutoConq() end
+local function startAutoHaki()
+    if hakiConnection then stopAutoHaki() end
 
-    _G.SlowHub.AutoConq = true
+    _G.SlowHub.AutoHaki = true
     
     hakiConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoConq then
-            stopAutoConq()
+        if not _G.SlowHub.AutoHaki then
+            stopAutoHaki()
             return
         end
 
+        -- Verifica se já se passaram 3 segundos desde a última execução
         if tick() - lastExecution >= WAIT_TIME then
             lastExecution = tick()
             
@@ -39,25 +41,27 @@ local function startAutoConq()
     end)
 end
 
+-- Criação do Toggle na aba Misc
 local HakiToggle = _G.MiscTab:CreateToggle({
     Name = "Auto Conqueror Haki",
-    CurrentValue = _G.SlowHub.AutoConq,
-    Flag = "AutoConq",
+    CurrentValue = _G.SlowHub.AutoHaki,
+    Flag = "AutoHaki",
     Callback = function(Value)
         if Value then
-            startAutoConq()
+            startAutoHaki()
         else
-            stopAutoConq()
+            stopAutoHaki()
         end
         
-        _G.SlowHub.AutoConq = Value
+        _G.SlowHub.AutoHaki = Value
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
 })
 
-if _G.SlowHub.AutoConq then
+-- Auto-execução caso a config esteja salva como ligada
+if _G.SlowHub.AutoHaki then
     task.wait(2)
-    startAutoConq()
+    startAutoHaki()
 end
