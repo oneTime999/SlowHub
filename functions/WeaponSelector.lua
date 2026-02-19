@@ -1,16 +1,13 @@
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local Tab = _G.MainTab
+local Tab = _G.MainTab -- Certifique-se que a Tab está definida
 
 _G.SlowHub = _G.SlowHub or {}
-if _G.SlowHub.SelectedWeapon == nil then
-    _G.SlowHub.SelectedWeapon = nil
-end
-if _G.SlowHub.EquipLoop == nil then
-    _G.SlowHub.EquipLoop = false
-end
+_G.SlowHub.SelectedWeapon = nil
+_G.SlowHub.EquipLoop = false
 
+-- 1. Função de pegar armas (Mantida idêntica à lógica original)
 local function GetWeapons()
     local weapons = {}
     local added = {}
@@ -38,6 +35,7 @@ local function GetWeapons()
     return #weapons > 0 and weapons or {"No weapons found"}
 end
 
+-- 2. Função de encontrar e equipar (Otimizada para funcionar no Rayfield)
 local function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
     
@@ -52,10 +50,12 @@ local function EquipSelectedTool()
         local humanoid = char:FindFirstChild("Humanoid")
         if not humanoid or humanoid.Health <= 0 then return end
 
+        -- Se a arma JÁ estiver na mão, não fazemos nada (evita bugs)
         if char:FindFirstChild(weaponName) then
             return
         end
 
+        -- Procura na Backpack para equipar
         local backpack = Player:FindFirstChild("Backpack")
         if backpack then
             local tool = backpack:FindFirstChild(weaponName)
@@ -66,36 +66,19 @@ local function EquipSelectedTool()
     end)
 end
 
-local weapons = GetWeapons()
-local currentOption = {""}
-
-if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
-    local found = false
-    for _, weapon in ipairs(weapons) do
-        if weapon == _G.SlowHub.SelectedWeapon then
-            found = true
-            break
-        end
-    end
-    
-    if found then
-        currentOption = {_G.SlowHub.SelectedWeapon}
-    else
-        _G.SlowHub.SelectedWeapon = nil
-        currentOption = {""}
-    end
-end
-
+-- 3. Criação do Dropdown (AQUI ESTAVA O ERRO)
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
-    Options = weapons,
-    CurrentOption = currentOption,
+    Options = GetWeapons(),
+    CurrentOption = {""}, -- Rayfield pede uma tabela aqui
     MultipleOptions = false,
     Flag = "SelectWeapon",
     Callback = function(Value)
+        -- CORREÇÃO: Rayfield retorna uma tabela { "Nome" }. Precisamos pegar o primeiro item.
         local weapon = (type(Value) == "table" and Value[1]) or Value
         
-        print("Selected Weapon:", weapon) 
+        -- Debug para garantir que está pegando o nome (pressione F9 para ver)
+        print("Arma Selecionada:", weapon) 
 
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
@@ -103,41 +86,23 @@ local WeaponDropdown = Tab:CreateDropdown({
         else
             _G.SlowHub.SelectedWeapon = nil
         end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
-task.spawn(function()
-    task.wait(1)
-    
-    if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
-        local success, err = pcall(function()
-            if WeaponDropdown and typeof(WeaponDropdown) == "table" and WeaponDropdown.Set then
-                WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
-                print("WeaponDropdown:Set() applied successfully")
-            end
-        end)
-        
-        if not success then
-            warn("Failed to set WeaponDropdown value: " .. tostring(err))
-        end
-    end
-end)
-
+-- 4. Botão de Refresh
 local RefreshButton = Tab:CreateButton({
     Name = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
+        -- Atualiza a lista do dropdown no Rayfield
         WeaponDropdown:Refresh(newWeapons)
     end
 })
 
+-- 5. Toggle de Loop
 local EquipLoopToggle = Tab:CreateToggle({
     Name = "Loop Equip Tool",
-    CurrentValue = _G.SlowHub.EquipLoop or false,
+    CurrentValue = false,
     Flag = "LoopEquipTool",
     Callback = function(state)
         _G.SlowHub.EquipLoop = state
@@ -150,13 +115,10 @@ local EquipLoopToggle = Tab:CreateToggle({
                 end
             end)
         end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
+-- 6. Conexão ao renascer
 Player.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid")
     char:WaitForChild("Backpack")
@@ -165,8 +127,3 @@ Player.CharacterAdded:Connect(function(char)
         EquipSelectedTool()
     end
 end)
-
-if _G.SlowHub.SelectedWeapon then
-    task.wait(0.5)
-    EquipSelectedTool()
-end
