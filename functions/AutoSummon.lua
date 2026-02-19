@@ -2,6 +2,10 @@ local Tab = _G.BossesTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+if not _G.SlowHub then
+    _G.SlowHub = {}
+end
+
 local BossConfigs = {
     ["RimuruBoss"] = {
         Method = "RimuruSpecific",
