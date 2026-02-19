@@ -42,6 +42,7 @@ _G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
 if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
+-- Global pity functions for access from other scripts
 _G.SlowHub.GetPityCount = function()
     local success, pityText = pcall(function()
         local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
@@ -287,17 +288,10 @@ end
 
 Tab:CreateSection("Boss Selection")
 
-local selectedBossesOptions = {}
-for boss, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-    if isSelected then
-        table.insert(selectedBossesOptions, boss)
-    end
-end
-
 Tab:CreateDropdown({
     Name = "Select Bosses to Farm",
     Options = bossList,
-    CurrentOption = selectedBossesOptions,
+    CurrentOption = {},
     MultipleOptions = true,
     Flag = "MultiBossSelector",
     Callback = function(Options)
@@ -313,16 +307,10 @@ Tab:CreateDropdown({
 
 Tab:CreateSection("Pity System (Optional)")
 
-local pityTargetOption = ""
-if _G.SlowHub.PityTargetBoss and _G.SlowHub.PityTargetBoss ~= "" then
-    pityTargetOption = _G.SlowHub.PityTargetBoss
-end
-
 Tab:CreateDropdown({
     Name = "Pity Target Boss",
     Options = bossList,
-    CurrentOption = pityTargetOption ~= "" and {pityTargetOption} or {""},
-    MultipleOptions = false,
+    CurrentOption = "",
     Flag = "PityTargetBoss",
     Callback = function(Option)
         if type(Option) == "table" then
@@ -338,7 +326,7 @@ Tab:CreateDropdown({
 
 Tab:CreateToggle({
     Name = "Enable Pity System",
-    CurrentValue = _G.SlowHub.PriorityPityEnabled or false,
+    CurrentValue = false,
     Flag = "PriorityPityEnabled",
     Callback = function(Value)
         _G.SlowHub.PriorityPityEnabled = Value
@@ -352,7 +340,7 @@ Tab:CreateSection("Farm Control")
 
 Tab:CreateToggle({
     Name = "Auto Farm Selected Bosses",
-    CurrentValue = _G.SlowHub.AutoFarmBosses or false,
+    CurrentValue = false,
     Flag = "AutoFarmBoss",
     Callback = function(Value)
         if Value then
