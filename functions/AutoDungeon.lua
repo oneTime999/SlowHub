@@ -141,7 +141,7 @@ end
 
 MainTab:CreateToggle({
     Name = "Auto Farm Dungeon",
-    CurrentValue = _G.SlowHub.AutoFarmDungeon or false,
+    CurrentValue = false,
     Flag = "AutoFarmDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
@@ -152,9 +152,6 @@ MainTab:CreateToggle({
             startDungeonFarm()
         else
             stopDungeonFarm()
-        end
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
@@ -167,9 +164,6 @@ MainTab:CreateSlider({
     Flag = "DungeonFarmDistance",
     Callback = function(Value)
         _G.SlowHub.DungeonFarmDistance = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
@@ -181,30 +175,22 @@ MainTab:CreateSlider({
     Flag = "DungeonFarmHeight",
     Callback = function(Value)
         _G.SlowHub.DungeonFarmHeight = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 MainTab:CreateDropdown({
     Name = "Select Difficulty",
     Options = {"Easy", "Medium", "Hard", "Extreme"},
-    CurrentOption = _G.SlowHub.DungeonVoteDifficulty and {_G.SlowHub.DungeonVoteDifficulty} or {""},
-    MultipleOptions = false,
+    CurrentOption = "",
     Flag = "DungeonVoteDifficulty",
     Callback = function(Option)
-        local val = (type(Option) == "table" and Option[1]) or Option
-        _G.SlowHub.DungeonVoteDifficulty = val
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        _G.SlowHub.DungeonVoteDifficulty = Option[1] or Option
     end
 })
 
 MainTab:CreateToggle({
     Name = "Auto Vote Difficulty",
-    CurrentValue = _G.SlowHub.AutoVoteDungeon or false,
+    CurrentValue = false,
     Flag = "AutoVoteDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoVoteDungeon = Value
@@ -213,15 +199,12 @@ MainTab:CreateToggle({
         else
             stopVoteLoop()
         end
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 MainTab:CreateToggle({
     Name = "Auto Replay Dungeon",
-    CurrentValue = _G.SlowHub.AutoReplayDungeon or false,
+    CurrentValue = false,
     Flag = "AutoReplayDungeon",
     Callback = function(Value)
         _G.SlowHub.AutoReplayDungeon = Value
@@ -229,9 +212,6 @@ MainTab:CreateToggle({
             startReplayLoop()
         else
             stopReplayLoop()
-        end
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
