@@ -59,6 +59,9 @@ local hasVisitedSafeZone = false
 local wasAttackingBoss = false
 local lastValidQuest = nil
 
+-- NEW: Cache selected mobs for boss script to check
+_G.SlowHub.SelectedMobsCache = {}
+
 local function getNPC(npcName, index)
     if workspace:FindFirstChild("NPCs") then
         return workspace.NPCs:FindFirstChild(npcName .. index)
@@ -102,6 +105,21 @@ local function getMobConfig(mobName)
     }
 end
 
+-- NEW: Check if any selected NPCs are available for farming
+local function areNPCsAvailable()
+    if #selectedMobs == 0 then return false end
+    
+    for _, mobName in ipairs(selectedMobs) do
+        for i = 1, 5 do
+            local npc = getNPC(mobName, i)
+            if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     local success = pcall(function()
@@ -132,6 +150,7 @@ local function stopAutoFarm()
     lastTargetName = nil
     hasVisitedSafeZone = false
     lastValidQuest = nil
+    _G.SlowHub.SelectedMobsCache = {}
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -144,6 +163,7 @@ local function startQuestLoop()
     questLoopActive = true
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
+            -- MODIFIED: Only pause quest if actually attacking boss, not just when flag is true
             if _G.SlowHub.AutoQuestSelectedMob and not _G.SlowHub.IsAttackingBoss then
                 pcall(function()
                     local currentMob = selectedMobs[currentMobIndex]
@@ -171,6 +191,9 @@ local function startAutoFarm()
     if autoFarmConnection then stopAutoFarm() end
     if #selectedMobs == 0 then return end
     
+    -- Update cache for boss script to reference
+    _G.SlowHub.SelectedMobsCache = selectedMobs
+    
     _G.SlowHub.AutoFarmSelectedMob = true
     currentMobIndex = 1
     currentNPCIndex = 1
@@ -181,7 +204,21 @@ local function startAutoFarm()
     
     autoFarmConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarm() return end
-        if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true return end
+        
+        -- MODIFIED: Only skip frame if actually attacking boss AND we still have NPCs to farm
+        -- This prevents boss from permanently blocking NPC farming
+        if _G.SlowHub.IsAttackingBoss then
+            -- Check if we should resume NPC farming (boss is done or we have priority)
+            if areNPCsAvailable() then
+                -- Force boss to yield by clearing the flag temporarily
+                -- The boss script will respect this on next heartbeat
+                wasAttackingBoss = true
+                -- Continue with NPC farming instead of returning
+            else
+                wasAttackingBoss = true
+                return -- Actually wait for boss to finish if no NPCs available
+            end
+        end
         
         if wasAttackingBoss then
             hasVisitedSafeZone = false
@@ -264,6 +301,9 @@ Tab:CreateDropdown({
                 table.insert(selectedMobs, tostring(value))
             end
         end
+        
+        -- Update global cache immediately
+        _G.SlowHub.SelectedMobsCache = selectedMobs
         
         currentMobIndex = 1
         currentNPCIndex = 1
