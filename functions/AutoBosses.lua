@@ -65,6 +65,60 @@ _G.SlowHub.IsPityTargetTime = function()
     return _G.SlowHub.GetPityCount() >= 24
 end
 
+-- NEW: Check if NPCs are available for farming (prevents boss from blocking NPCs)
+_G.SlowHub.AreNPCsAvailable = function()
+    -- Check Auto Farm Level
+    if _G.SlowHub.AutoFarmLevel then
+        local config = nil
+        local level = 1
+        pcall(function()
+            level = Player.Data.Level.Value
+        end)
+        
+        local LevelConfig = {
+            {minLevel = 1, maxLevel = 249, npc = "Thief", count = 5},
+            {minLevel = 250, maxLevel = 749, npc = "Monkey", count = 5},
+            {minLevel = 750, maxLevel = 1499, npc = "DesertBandit", count = 5},
+            {minLevel = 1500, maxLevel = 2999, npc = "FrostRogue", count = 5},
+            {minLevel = 3000, maxLevel = 5499, npc = "Sorcerer", count = 5},
+            {minLevel = 5500, maxLevel = 5999, npc = "Hollow", count = 5},
+            {minLevel = 6000, maxLevel = 6999, npc = "StrongSorcerer", count = 5},
+            {minLevel = 7000, maxLevel = 7999, npc = "Curse", count = 5},
+            {minLevel = 8000, maxLevel = 99999, npc = "Slime", count = 5}
+        }
+        
+        for _, cfg in pairs(LevelConfig) do
+            if level >= cfg.minLevel and level <= cfg.maxLevel then
+                config = cfg
+                break
+            end
+        end
+        
+        if config then
+            for i = 1, config.count do
+                local npc = workspace.NPCs:FindFirstChild(config.npc .. i)
+                if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+                    return true
+                end
+            end
+        end
+    end
+    
+    -- Check Auto Farm Selected Mobs
+    if _G.SlowHub.AutoFarmSelectedMob and _G.SlowHub.SelectedMobsCache and #_G.SlowHub.SelectedMobsCache > 0 then
+        for _, mobName in ipairs(_G.SlowHub.SelectedMobsCache) do
+            for i = 1, 5 do
+                local npc = workspace.NPCs:FindFirstChild(mobName .. i)
+                if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
 local autoFarmBossConnection = nil
 local isRunning = false
 local lastTargetBoss = nil
@@ -108,6 +162,11 @@ local function shouldStopFarmingCurrentBoss(boss)
         return true
     end
     
+    -- NEW: If NPCs are available, stop farming boss (NPCs have priority)
+    if _G.SlowHub.AreNPCsAvailable() then
+        return true
+    end
+    
     if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
         local currentPity = _G.SlowHub.GetPityCount()
         local isPityTargetTime = (currentPity >= 24)
@@ -128,6 +187,11 @@ local function shouldStopFarmingCurrentBoss(boss)
 end
 
 local function findValidBoss()
+    -- PRIORITY CHECK: If NPCs are available, return nil (let NPCs farm)
+    if _G.SlowHub.AreNPCsAvailable() then
+        return nil
+    end
+    
     local npcs = workspace:FindFirstChild("NPCs")
     if not npcs then return nil end
     
@@ -219,6 +283,17 @@ local function startAutoFarmBoss()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
             stopAutoFarmBoss()
             return
+        end
+        
+        -- CRITICAL FIX: Check if NPCs are available - if yes, pause boss farming
+        if _G.SlowHub.AreNPCsAvailable() then
+            if currentFarmingBoss then
+                currentFarmingBoss = nil
+                hasVisitedSafeZone = false
+                lastTargetBoss = nil
+                _G.SlowHub.IsAttackingBoss = false
+            end
+            return -- Exit early, let NPCs farm
         end
         
         if currentFarmingBoss and shouldStopFarmingCurrentBoss(currentFarmingBoss) then
