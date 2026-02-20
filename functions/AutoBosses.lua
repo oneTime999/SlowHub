@@ -18,14 +18,14 @@ local BossSafeZones = {
     ["StrongestofTodayBoss"] = CFrame.new(181.69, 5.24, -2446.61),
     ["StrongestinHistoryBoss"] = CFrame.new(639.29, 3.67, -2273.30),
     ["IchigoBoss"] = CFrame.new(828.11, -0.39, -1130.76),
-    ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
+    ["AizenBoss"] = CFrame.new(-567.22, 2.57, 1228.49),
     ["AlucardBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["QinShiBoss"] = CFrame.new(828.11, -0.39, -1130.76),
-    ["SaberBoss"]  = CFrame.new(828.11, -0.39, -1130.76),
+    ["SaberBoss"] = CFrame.new(828.11, -0.39, -1130.76),
     ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["SukunaBoss"] = CFrame.new(1571.26, 77.22, -34.11),
-    ["GojoBoss"]   = CFrame.new(1858.32, 12.98, 338.14),
-    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10)
+    ["GojoBoss"] = CFrame.new(1858.32, 12.98, 338.14),
+    ["YujiBoss"] = CFrame.new(1537.92, 12.98, 226.10)
 }
 
 for _, bossBaseName in ipairs({"StrongestofTodayBoss", "StrongestinHistoryBoss"}) do
@@ -42,7 +42,6 @@ _G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
 if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
--- Global pity functions for access from other scripts
 _G.SlowHub.GetPityCount = function()
     local success, pityText = pcall(function()
         local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
@@ -70,6 +69,8 @@ local isRunning = false
 local lastTargetBoss = nil
 local hasVisitedSafeZone = false
 local currentFarmingBoss = nil
+local lastBossFoundTime = 0
+local BOSS_TIMEOUT = 5
 
 local function checkHumanoid(model)
     if model and model.Parent then
@@ -212,13 +213,22 @@ end
 
 local function startAutoFarmBoss()
     if isRunning then stopAutoFarmBoss() task.wait(0.2) end
+    
+    _G.SlowHub.IsAttackingBoss = false
+    _G.SlowHub.AutoFarmLevel = false
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
+    lastBossFoundTime = tick()
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
             stopAutoFarmBoss()
             return
+        end
+        
+        if tick() - lastBossFoundTime > BOSS_TIMEOUT then
+            _G.SlowHub.IsAttackingBoss = false
+            lastBossFoundTime = tick()
         end
         
         if currentFarmingBoss and shouldStopFarmingCurrentBoss(currentFarmingBoss) then
@@ -236,6 +246,7 @@ local function startAutoFarmBoss()
                 _G.SlowHub.IsAttackingBoss = false
                 return
             end
+            lastBossFoundTime = tick()
             hasVisitedSafeZone = false
             lastTargetBoss = currentFarmingBoss
         end
