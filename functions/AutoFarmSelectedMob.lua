@@ -23,29 +23,28 @@ local MobList = {
 }
 
 local QuestConfig = {
-    ["Thief"]           = "QuestNPC1",
-    ["Monkey"]          = "QuestNPC3", 
-    ["DesertBandit"]    = "QuestNPC5",
-    ["FrostRogue"]      = "QuestNPC7",
-    ["Sorcerer"]        = "QuestNPC9",
-    ["Hollow"]          = "QuestNPC11",
-    ["StrongSorcerer"]  = "QuestNPC12",
-    ["Curse"]           = "QuestNPC13",
-    ["Slime"]           = "QuestNPC14"
-    -- Valentine não tem quest (evento)
+    ["Thief"] = "QuestNPC1",
+    ["Monkey"] = "QuestNPC3", 
+    ["DesertBandit"] = "QuestNPC5",
+    ["FrostRogue"] = "QuestNPC7",
+    ["Sorcerer"] = "QuestNPC9",
+    ["Hollow"] = "QuestNPC11",
+    ["StrongSorcerer"] = "QuestNPC12",
+    ["Curse"] = "QuestNPC13",
+    ["Slime"] = "QuestNPC14"
 }
 
 local MobSafeZones = {
-    ["Thief"]           = CFrame.new(177.723, 11.206, -157.246),
-    ["Monkey"]          = CFrame.new(-567.758, -0.874, 399.302),
-    ["DesertBandit"]    = CFrame.new(-867.638, -4.222, -446.678),
-    ["FrostRogue"]      = CFrame.new(-398.725, -1.138, -1071.568),
-    ["Sorcerer"]        = CFrame.new(1398.259, 8.486, 488.058),
-    ["Hollow"]          = CFrame.new(-482.868, -2.058, 936.237),
-    ["StrongSorcerer"]  = CFrame.new(637.979, 2.376, -1669.440),
-    ["Curse"]           = CFrame.new(-69.846, 1.907, -1857.250),
-    ["Slime"]           = CFrame.new(-1124.753, 19.703, 371.231),
-    ["Valentine"]       = CFrame.new(-1159.370, 4.414, -1245.361)
+    ["Thief"] = CFrame.new(177.723, 11.206, -157.246),
+    ["Monkey"] = CFrame.new(-567.758, -0.874, 399.302),
+    ["DesertBandit"] = CFrame.new(-867.638, -4.222, -446.678),
+    ["FrostRogue"] = CFrame.new(-398.725, -1.138, -1071.568),
+    ["Sorcerer"] = CFrame.new(1398.259, 8.486, 488.058),
+    ["Hollow"] = CFrame.new(-482.868, -2.058, 936.237),
+    ["StrongSorcerer"] = CFrame.new(637.979, 2.376, -1669.440),
+    ["Curse"] = CFrame.new(-69.846, 1.907, -1857.250),
+    ["Slime"] = CFrame.new(-1124.753, 19.703, 371.231),
+    ["Valentine"] = CFrame.new(-1159.370, 4.414, -1245.361)
 }
 
 local autoFarmConnection = nil
@@ -58,6 +57,10 @@ local lastTargetName = nil
 local hasVisitedSafeZone = false
 local wasAttackingBoss = false
 local lastValidQuest = nil
+local lastStateCheck = 0
+local lastNPCSwitch = 0
+local stuckCheckTime = 0
+local lastPosition = nil
 
 local function getNPC(npcName, index)
     if workspace:FindFirstChild("NPCs") then
@@ -132,6 +135,9 @@ local function stopAutoFarm()
     lastTargetName = nil
     hasVisitedSafeZone = false
     lastValidQuest = nil
+    lastNPCSwitch = 0
+    stuckCheckTime = 0
+    lastPosition = nil
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -165,34 +171,53 @@ local function switchToNextMob()
     currentNPCIndex = 1
     killCount = 0
     hasVisitedSafeZone = false
+    stuckCheckTime = 0
+    lastPosition = nil
 end
 
 local function startAutoFarm()
     if autoFarmConnection then stopAutoFarm() end
     if #selectedMobs == 0 then return end
     
+    _G.SlowHub.IsAttackingBoss = false
     _G.SlowHub.AutoFarmSelectedMob = true
     currentMobIndex = 1
     currentNPCIndex = 1
     killCount = 0
+    lastNPCSwitch = 0
+    stuckCheckTime = tick()
+    lastPosition = nil
     
     startQuestLoop()
     local lastAttack = 0
     
     autoFarmConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarm() return end
-        if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true return end
+        
+        local now = tick()
+        
+        if now - lastStateCheck >= 1 then
+            lastStateCheck = now
+            if not _G.SlowHub.AutoFarmBosses then
+                _G.SlowHub.IsAttackingBoss = false
+            end
+        end
+        
+        if _G.SlowHub.IsAttackingBoss then 
+            wasAttackingBoss = true 
+            return 
+        end
         
         if wasAttackingBoss then
             hasVisitedSafeZone = false
             wasAttackingBoss = false
+            stuckCheckTime = now
+            lastPosition = nil
         end
 
         local character = Player.Character
         local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
         if not playerRoot or not character:FindFirstChild("Humanoid") or character.Humanoid.Health <= 0 then return end
-        
-        local now = tick()
         
         if #selectedMobs == 0 then stopAutoFarm() return end
         
@@ -208,6 +233,8 @@ local function startAutoFarm()
         if currentMobName ~= lastTargetName then
             lastTargetName = currentMobName
             hasVisitedSafeZone = false
+            stuckCheckTime = now
+            lastPosition = nil
         end
 
         if not hasVisitedSafeZone then
@@ -218,20 +245,38 @@ local function startAutoFarm()
                 task.wait(0.5)
             end
             hasVisitedSafeZone = true
+            stuckCheckTime = now
+            lastPosition = playerRoot.Position
+        end
+
+        if now - stuckCheckTime > 10 then
+            if lastPosition and (playerRoot.Position - lastPosition).Magnitude < 5 then
+                currentNPCIndex = getNextNPC(currentNPCIndex, 10)
+                stuckCheckTime = now
+                lastPosition = playerRoot.Position
+            else
+                stuckCheckTime = now
+                lastPosition = playerRoot.Position
+            end
         end
 
         local npc = getNPC(config.npc, currentNPCIndex)
         local npcAlive = npc and npc.Parent and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0
 
         if not npcAlive then
-            killCount = killCount + 1
-            if killCount >= 5 then
-                switchToNextMob()
-                return
-            else
-                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
+            if now - lastNPCSwitch > 0.5 then
+                killCount = killCount + 1
+                if killCount >= 25 then
+                    switchToNextMob()
+                    return
+                else
+                    currentNPCIndex = getNextNPC(currentNPCIndex, 10)
+                    lastNPCSwitch = now
+                end
             end
         else
+            lastNPCSwitch = now
+            killCount = 0
             local npcRoot = getNPCRootPart(npc)
             if npcRoot then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -245,7 +290,10 @@ local function startAutoFarm()
                     lastAttack = now
                 end
             else
-                currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
+                if now - lastNPCSwitch > 0.5 then
+                    currentNPCIndex = getNextNPC(currentNPCIndex, 10)
+                    lastNPCSwitch = now
+                end
             end
         end
     end)
@@ -270,6 +318,9 @@ Tab:CreateDropdown({
         killCount = 0
         hasVisitedSafeZone = false
         lastValidQuest = nil
+        lastNPCSwitch = 0
+        stuckCheckTime = 0
+        lastPosition = nil
         
         if _G.SlowHub.AutoFarmSelectedMob and #selectedMobs > 0 then
             stopAutoFarm()
