@@ -71,12 +71,6 @@ local lastTargetBoss = nil
 local hasVisitedSafeZone = false
 local currentFarmingBoss = nil
 
--- NOVO: Variáveis para monitoramento contínuo
-local lastAttackTime = 0
-local attackInterval = 0.05 -- 50ms entre ataques
-local bossSearchTimer = 0
-local bossSearchInterval = 0.3 -- Procura boss a cada 0.3s se não estiver farmando
-
 local function checkHumanoid(model)
     if model and model.Parent then
         local humanoid = model:FindFirstChild("Humanoid")
@@ -114,21 +108,12 @@ local function shouldStopFarmingCurrentBoss(boss)
         return true
     end
     
-    -- Se for Pity Time, só para se não for o boss de pity
-    if _G.SlowHub.IsPityTargetTime() then
-        local pityTarget = _G.SlowHub.PityTargetBoss
-        if bossBaseName ~= pityTarget then
-            return true
-        end
-        return false
-    end
-    
-    -- Se não for pity time, verifica se ainda deve farmar este boss
     if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
         local currentPity = _G.SlowHub.GetPityCount()
+        local isPityTargetTime = (currentPity >= 24)
         local pityTarget = _G.SlowHub.PityTargetBoss
         
-        if currentPity >= 24 then
+        if isPityTargetTime then
             if bossBaseName ~= pityTarget then
                 return true
             end
@@ -149,31 +134,41 @@ local function findValidBoss()
     local pityEnabled = _G.SlowHub.PriorityPityEnabled
     local pityTarget = _G.SlowHub.PityTargetBoss
     
-    -- Se Pity Time, só procura o boss de pity
-    if pityEnabled and pityTarget ~= "" and _G.SlowHub.IsPityTargetTime() then
-        if isBossSelected(pityTarget) then
-            local exactBoss = npcs:FindFirstChild(pityTarget)
-            if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
-            
-            for _, diff in ipairs(difficulties) do
-                local variantName = pityTarget .. diff
-                local variantBoss = npcs:FindFirstChild(variantName)
-                if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
-            end
-        end
-        return nil
-    end
-    
-    -- Procura qualquer boss selecionado
-    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-        if isSelected then
-            -- Se pity está ativo mas não é pity time, pula o boss de pity
-            if pityEnabled and pityTarget ~= "" and bossName == pityTarget then
-                if _G.SlowHub.GetPityCount() < 24 then
-                    continue
+    if pityEnabled and pityTarget ~= "" then
+        local currentPity = _G.SlowHub.GetPityCount()
+        local isPityTargetTime = (currentPity >= 24)
+        
+        if isPityTargetTime then
+            if isBossSelected(pityTarget) then
+                local exactBoss = npcs:FindFirstChild(pityTarget)
+                if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
+                
+                for _, diff in ipairs(difficulties) do
+                    local variantName = pityTarget .. diff
+                    local variantBoss = npcs:FindFirstChild(variantName)
+                    if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
                 end
             end
-            
+            return nil
+        else
+            for _, bossName in ipairs(bossList) do
+                if bossName ~= pityTarget and isBossSelected(bossName) then
+                    local exactBoss = npcs:FindFirstChild(bossName)
+                    if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
+                    
+                    for _, diff in ipairs(difficulties) do
+                        local variantName = bossName .. diff
+                        local variantBoss = npcs:FindFirstChild(variantName)
+                        if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
+                    end
+                end
+            end
+            return nil
+        end
+    end
+    
+    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+        if isSelected then
             local exactBoss = npcs:FindFirstChild(bossName)
             if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
 
@@ -207,7 +202,6 @@ local function stopAutoFarmBoss()
     hasVisitedSafeZone = false
     currentFarmingBoss = nil
     _G.SlowHub.IsAttackingBoss = false
-    bossSearchTimer = 0
     
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
@@ -220,98 +214,74 @@ local function startAutoFarmBoss()
     if isRunning then stopAutoFarmBoss() task.wait(0.2) end
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
-    lastAttackTime = 0
-    bossSearchTimer = 0
     
-    autoFarmBossConnection = RunService.Heartbeat:Connect(function(dt)
+    autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
             stopAutoFarmBoss()
             return
         end
         
-        -- Se está farmando um boss, verifica se ele ainda é válido
-        if currentFarmingBoss then
-            if shouldStopFarmingCurrentBoss(currentFarmingBoss) then
-                -- Boss morreu ou não deve mais ser farmado
-                currentFarmingBoss = nil
-                hasVisitedSafeZone = false
-                lastTargetBoss = nil
+        if currentFarmingBoss and shouldStopFarmingCurrentBoss(currentFarmingBoss) then
+            currentFarmingBoss = nil
+            hasVisitedSafeZone = false
+            lastTargetBoss = nil
+            _G.SlowHub.IsAttackingBoss = false
+            task.wait(0.1)
+            return
+        end
+        
+        if not currentFarmingBoss then
+            currentFarmingBoss = findValidBoss()
+            if not currentFarmingBoss then
                 _G.SlowHub.IsAttackingBoss = false
-                bossSearchTimer = bossSearchInterval -- Força procura imediata de novo boss
                 return
             end
-            
-            -- Continua atacando o boss atual
-            local boss = currentFarmingBoss
-            _G.SlowHub.IsAttackingBoss = true
-            
-            if boss ~= lastTargetBoss then
-                lastTargetBoss = boss
-                hasVisitedSafeZone = false
-            end
+            hasVisitedSafeZone = false
+            lastTargetBoss = currentFarmingBoss
+        end
+        
+        local boss = currentFarmingBoss
+        _G.SlowHub.IsAttackingBoss = true
+        
+        if boss ~= lastTargetBoss then
+            lastTargetBoss = boss
+            hasVisitedSafeZone = false
+        end
 
-            local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-            if not playerRoot then return end
+        local playerRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
 
-            if not hasVisitedSafeZone then
-                local safeCFrame = BossSafeZones[boss.Name]
-                if not safeCFrame then
-                    for baseName, _ in pairs(_G.SlowHub.SelectedBosses) do
-                        if string.find(boss.Name, baseName) == 1 then
-                            safeCFrame = BossSafeZones[baseName]
-                            break
-                        end
+        if not hasVisitedSafeZone then
+            local safeCFrame = BossSafeZones[boss.Name]
+            if not safeCFrame then
+                for baseName, _ in pairs(_G.SlowHub.SelectedBosses) do
+                    if string.find(boss.Name, baseName) == 1 then
+                        safeCFrame = BossSafeZones[baseName]
+                        break
                     end
                 end
-                
-                if safeCFrame then
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    playerRoot.CFrame = safeCFrame
-                    hasVisitedSafeZone = true 
-                    task.wait(0.1)
-                    return
-                else
-                    hasVisitedSafeZone = true
-                end
             end
+            
+            if safeCFrame then
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                playerRoot.CFrame = safeCFrame
+                hasVisitedSafeZone = true 
+                task.wait(0.1)
+                return
+            else
+                hasVisitedSafeZone = true
+            end
+        end
 
-            local bossRoot = boss:FindFirstChild("HumanoidRootPart")
-            if bossRoot then
-                pcall(function()
-                    playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
-                    playerRoot.CFrame = targetCFrame
-                    EquipWeapon()
-                    
-                    -- Ataque rápido baseado em tempo
-                    local now = tick()
-                    if (now - lastAttackTime) >= attackInterval then
-                        ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                        lastAttackTime = now
-                    end
-                end)
-            end
-            
-        else
-            -- Não está farmando nenhum boss, procura um novo
-            bossSearchTimer = bossSearchTimer + dt
-            
-            if bossSearchTimer >= bossSearchInterval then
-                bossSearchTimer = 0
-                
-                local foundBoss = findValidBoss()
-                if foundBoss then
-                    -- Encontrou um boss, começa a farmar!
-                    currentFarmingBoss = foundBoss
-                    hasVisitedSafeZone = false
-                    lastTargetBoss = foundBoss
-                    _G.SlowHub.IsAttackingBoss = true
-                    print("SlowHub: Boss found - " .. foundBoss.Name)
-                else
-                    -- Nenhum boss encontrado, mantém flag falsa
-                    _G.SlowHub.IsAttackingBoss = false
-                end
-            end
+        local bossRoot = boss:FindFirstChild("HumanoidRootPart")
+        if bossRoot then
+            pcall(function()
+                playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
+                playerRoot.CFrame = targetCFrame
+                EquipWeapon()
+                ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+            end)
         end
     end)
 end
