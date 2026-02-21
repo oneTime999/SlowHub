@@ -7,7 +7,7 @@ end
 
 Tab:CreateLabel("Teleports")
 
-local teleportScript = game:HttpGet(githubBase .. "Teleports.lua")
+local teleportScript = game:HttpGet(githubBase .. "IslandsTeleport.lua")
 if teleportScript and teleportScript ~= "" then
     local func = loadstring(teleportScript)
     if func then pcall(func) end
