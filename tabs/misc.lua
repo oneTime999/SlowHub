@@ -62,7 +62,20 @@ end
 task.wait(0.1)
 
 -- Auto Skill Section
-Tab:CreateLabel("Key Craft")
+Tab:CreateLabel("Auto Skill and Key Craft")
+
+local skillScript = game:HttpGet(githubBase .. "AutoSkill.lua")
+if skillScript and skillScript ~= "" then
+    local func = loadstring(skillScript)
+    if func then
+        task.spawn(function()
+            local success, err = pcall(func)
+            if not success then warn("SlowHub AutoSkill Error: " .. tostring(err)) end
+        end)
+    end
+end
+
+task.wait(0.05)
 
 local slimeScript = game:HttpGet(githubBase .. "SlimeKey.lua")
 if slimeScript and slimeScript ~= "" then
@@ -145,5 +158,3 @@ if hopScript and hopScript ~= "" then
         end)
     end
 end
-
-print("SlowHub: Misc tab fully loaded")
