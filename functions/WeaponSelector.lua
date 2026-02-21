@@ -1,13 +1,13 @@
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local Tab = _G.MainTab -- Certifique-se que a Tab está definida
+local Tab = _G.MainTab
 
 _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedWeapon = nil
 _G.SlowHub.EquipLoop = false
 
--- 1. Função de pegar armas (Mantida idêntica à lógica original)
+-- 1. Função de pegar armas
 local function GetWeapons()
     local weapons = {}
     local added = {}
@@ -35,12 +35,12 @@ local function GetWeapons()
     return #weapons > 0 and weapons or {"No weapons found"}
 end
 
--- 2. Função de encontrar e equipar (Otimizada para funcionar no Rayfield)
+-- 2. Função de encontrar e equipar
 local function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
-    
-    if not weaponName or weaponName == "" or weaponName == "No weapons found" then 
-        return 
+
+    if not weaponName or weaponName == "" or weaponName == "No weapons found" then
+        return
     end
 
     pcall(function()
@@ -50,12 +50,8 @@ local function EquipSelectedTool()
         local humanoid = char:FindFirstChild("Humanoid")
         if not humanoid or humanoid.Health <= 0 then return end
 
-        -- Se a arma JÁ estiver na mão, não fazemos nada (evita bugs)
-        if char:FindFirstChild(weaponName) then
-            return
-        end
+        if char:FindFirstChild(weaponName) then return end
 
-        -- Procura na Backpack para equipar
         local backpack = Player:FindFirstChild("Backpack")
         if backpack then
             local tool = backpack:FindFirstChild(weaponName)
@@ -66,19 +62,15 @@ local function EquipSelectedTool()
     end)
 end
 
--- 3. Criação do Dropdown (AQUI ESTAVA O ERRO)
+-- 3. Dropdown de seleção de arma
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
-    CurrentOption = {""}, -- Rayfield pede uma tabela aqui
+    CurrentOption = {""},
     MultipleOptions = false,
     Flag = "SelectWeapon",
     Callback = function(Value)
-        -- CORREÇÃO: Rayfield retorna uma tabela { "Nome" }. Precisamos pegar o primeiro item.
         local weapon = (type(Value) == "table" and Value[1]) or Value
-        
-        -- Debug para garantir que está pegando o nome (pressione F9 para ver)
-        print("Arma Selecionada:", weapon) 
 
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
@@ -90,17 +82,16 @@ local WeaponDropdown = Tab:CreateDropdown({
 })
 
 -- 4. Botão de Refresh
-local RefreshButton = Tab:CreateButton({
+Tab:CreateButton({
     Name = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
-        -- Atualiza a lista do dropdown no Rayfield
         WeaponDropdown:Refresh(newWeapons)
     end
 })
 
 -- 5. Toggle de Loop
-local EquipLoopToggle = Tab:CreateToggle({
+Tab:CreateToggle({
     Name = "Loop Equip Tool",
     CurrentValue = false,
     Flag = "LoopEquipTool",
@@ -118,10 +109,10 @@ local EquipLoopToggle = Tab:CreateToggle({
     end
 })
 
--- 6. Conexão ao renascer
+-- 6. Conexão ao renascer — CORRIGIDO: Backpack é filho do Player, não do Character
 Player.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid")
-    char:WaitForChild("Backpack")
+    Player:WaitForChild("Backpack") -- ✅ corrigido
     task.wait(1)
     if _G.SlowHub.EquipLoop then
         EquipSelectedTool()
