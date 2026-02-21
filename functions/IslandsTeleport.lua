@@ -32,33 +32,33 @@ local LocationList = {
     "Slime Island"
 }
 
-local selectedLocation = nil
+local selectedIsland = nil
 
 Tab:CreateDropdown({
-    Name = "Select Location",
+    Name = "Select Island",
     Options = LocationList,
     CurrentOption = {""},
     MultipleOptions = false,
-    Flag = "SelectTeleportLocation",
+    Flag = "SelectIsland",
     Callback = function(Value)
-        selectedLocation = (type(Value) == "table" and Value[1]) or Value
+        selectedIsland = (type(Value) == "table" and Value[1]) or Value
     end
 })
 
 Tab:CreateButton({
-    Name = "Teleport",
+    Name = "Teleport to Island",
     Callback = function()
-        if not selectedLocation or selectedLocation == "" then
+        if not selectedIsland or selectedIsland == "" then
             _G.Rayfield:Notify({
-                Title = "Teleport",
-                Content = "Select a location first!",
+                Title = "Island Teleport",
+                Content = "Select an island first!",
                 Duration = 3,
                 Image = 4483362458
             })
             return
         end
 
-        local target = Locations[selectedLocation]
+        local target = Locations[selectedIsland]
         if not target then return end
 
         pcall(function()
