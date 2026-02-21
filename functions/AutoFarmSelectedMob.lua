@@ -48,6 +48,15 @@ local MobSafeZones = {
     ["Valentine"]       = CFrame.new(-1159.370, 4.414, -1245.361)
 }
 
+-- NOVO: Lista de bosses para monitoramento
+local BossList = {
+    "GilgameshBoss", "RimuruBoss", "MadokaBoss", "StrongestofTodayBoss", 
+    "StrongestinHistoryBoss", "IchigoBoss", "AizenBoss", "AlucardBoss", 
+    "QinShiBoss", "JinwooBoss", "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
+}
+
+local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
+
 local autoFarmConnection = nil
 local questLoopActive = false
 local selectedMobs = {}
@@ -103,6 +112,88 @@ local function getMobConfig(mobName)
         quest = getQuestForMob(mobName),
         count = 5 
     }
+end
+
+-- NOVO: Função para verificar se há bosses selecionados vivos
+local function isBossAvailable()
+    if not _G.SlowHub.AutoFarmBosses then return false end
+    if not _G.SlowHub.SelectedBosses then return false end
+    
+    local npcs = workspace:FindFirstChild("NPCs")
+    if not npcs then return false end
+    
+    -- Verifica se algum boss selecionado está vivo
+    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+        if isSelected then
+            -- Verifica nome exato
+            local exactBoss = npcs:FindFirstChild(bossName)
+            if exactBoss then
+                local humanoid = exactBoss:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    return true
+                end
+            end
+            
+            -- Verifica variantes de dificuldade
+            for _, diff in ipairs(difficulties) do
+                local variantName = bossName .. diff
+                local variantBoss = npcs:FindFirstChild(variantName)
+                if variantBoss then
+                    local humanoid = variantBoss:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+-- NOVO: Função para verificar se é Pity Time e boss de pity está disponível
+local function isPityBossAvailable()
+    if not _G.SlowHub.PriorityPityEnabled then return false end
+    if _G.SlowHub.PityTargetBoss == "" then return false end
+    
+    local currentPity = 0
+    pcall(function()
+        local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
+        if pityLabel then
+            local pityText = pityLabel.Text
+            local match = pityText:match("Pity: (%d+)/25")
+            if match then
+                currentPity = tonumber(match)
+            end
+        end
+    end)
+    
+    if currentPity >= 24 then
+        local npcs = workspace:FindFirstChild("NPCs")
+        if npcs then
+            local pityTarget = _G.SlowHub.PityTargetBoss
+            local exactBoss = npcs:FindFirstChild(pityTarget)
+            if exactBoss then
+                local humanoid = exactBoss:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    return true
+                end
+            end
+            
+            for _, diff in ipairs(difficulties) do
+                local variantName = pityTarget .. diff
+                local variantBoss = npcs:FindFirstChild(variantName)
+                if variantBoss then
+                    local humanoid = variantBoss:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    
+    return false
 end
 
 local function EquipWeapon()
@@ -176,6 +267,11 @@ end
 local lastAttackTime = 0
 local attackInterval = 0.05 -- 50ms entre ataques
 
+-- NOVO: Variáveis para monitoramento de boss
+local bossCheckTimer = 0
+local bossCheckInterval = 0.5 -- Verifica a cada 0.5 segundos
+local isPausedForBoss = false
+
 local function startAutoFarm()
     if autoFarmConnection then stopAutoFarm() end
     if #selectedMobs == 0 then return end
@@ -188,21 +284,58 @@ local function startAutoFarm()
     currentNPCIndex = 1
     killCount = 0
     lastAttackTime = 0
+    bossCheckTimer = 0
+    isPausedForBoss = false
     
     startQuestLoop()
     
-    autoFarmConnection = RunService.Heartbeat:Connect(function()
+    autoFarmConnection = RunService.Heartbeat:Connect(function(dt)
         if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarm() return end
         
-        -- CORREÇÃO CRÍTICA: Se boss está ativo E atacando, este script PAUSA completamente
-        -- Boss tem prioridade absoluta!
-        if _G.SlowHub.AutoFarmBosses and _G.SlowHub.IsAttackingBoss then
-            -- Boss está farmando, eu paro tudo e espero
-            wasAttackingBoss = true
+        -- NOVO: Monitoramento contínuo de bosses
+        bossCheckTimer = bossCheckTimer + dt
+        if bossCheckTimer >= bossCheckInterval then
+            bossCheckTimer = 0
+            
+            -- Verifica se há boss disponível (prioridade máxima)
+            local bossAvailable = isBossAvailable()
+            local pityBossAvailable = isPityBossAvailable()
+            
+            -- Se é Pity Time, boss tem prioridade absoluta
+            if pityBossAvailable then
+                if not isPausedForBoss then
+                    isPausedForBoss = true
+                    wasAttackingBoss = true
+                    -- Notifica o sistema que boss está ativo
+                    _G.SlowHub.IsAttackingBoss = true
+                end
+                return -- Pausa completamente enquanto boss de pity está vivo
+            end
+            
+            -- Se há boss normal disponível e AutoFarmBosses está ativo
+            if bossAvailable and _G.SlowHub.AutoFarmBosses then
+                if not isPausedForBoss then
+                    isPausedForBoss = true
+                    wasAttackingBoss = true
+                    _G.SlowHub.IsAttackingBoss = true
+                end
+                return -- Pausa enquanto boss está vivo
+            end
+            
+            -- Se não há mais boss, volta a farmar
+            if isPausedForBoss and not bossAvailable and not pityBossAvailable then
+                isPausedForBoss = false
+                wasAttackingBoss = true -- Vai resetar safe zone no próximo ciclo
+                _G.SlowHub.IsAttackingBoss = false
+            end
+        end
+        
+        -- Se está pausado para boss, não faz nada
+        if isPausedForBoss then
             return
         end
         
-        -- Se o boss parou de atacar, eu volto a farmar
+        -- Se o boss parou de atacar, reseta safe zone
         if wasAttackingBoss then
             hasVisitedSafeZone = false
             wasAttackingBoss = false
