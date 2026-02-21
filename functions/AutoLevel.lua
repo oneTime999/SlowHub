@@ -66,18 +66,6 @@ local function getNPC(npcName, index)
     return workspace.NPCs:FindFirstChild(npcName .. index)
 end
 
--- NEW: Check if level-appropriate NPCs are available
-local function areLevelNPCsAvailable()
-    local config = GetCurrentConfig()
-    for i = 1, config.count do
-        local npc = getNPC(config.npc, i)
-        if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
-            return true
-        end
-    end
-    return false
-end
-
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     pcall(function()
@@ -111,7 +99,6 @@ local function startQuestLoop()
     questLoopActive = true
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmLevel do
-            -- MODIFIED: Only pause quest if actually attacking boss
             if not _G.SlowHub.IsAttackingBoss then
                 local config = GetCurrentConfig()
                 pcall(function()
@@ -139,17 +126,9 @@ local function startAutoLevel()
     autoLevelConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmLevel then stopAutoLevel() return end
         
-        -- MODIFIED: Only skip frame if actually attacking boss AND no NPCs available
-        -- This ensures NPCs always take priority when they exist
         if _G.SlowHub.IsAttackingBoss then
-            if areLevelNPCsAvailable() then
-                -- NPCs are available, we should farm them instead of waiting for boss
-                wasAttackingBoss = true
-                -- Continue execution to farm NPCs
-            else
-                wasAttackingBoss = true
-                return -- No NPCs available, let boss farm continue
-            end
+            wasAttackingBoss = true
+            return 
         end
 
         if wasAttackingBoss then
