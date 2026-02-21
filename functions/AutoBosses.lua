@@ -65,60 +65,6 @@ _G.SlowHub.IsPityTargetTime = function()
     return _G.SlowHub.GetPityCount() >= 24
 end
 
--- NEW: Check if NPCs are available for farming (prevents boss from blocking NPCs)
-_G.SlowHub.AreNPCsAvailable = function()
-    -- Check Auto Farm Level
-    if _G.SlowHub.AutoFarmLevel then
-        local config = nil
-        local level = 1
-        pcall(function()
-            level = Player.Data.Level.Value
-        end)
-        
-        local LevelConfig = {
-            {minLevel = 1, maxLevel = 249, npc = "Thief", count = 5},
-            {minLevel = 250, maxLevel = 749, npc = "Monkey", count = 5},
-            {minLevel = 750, maxLevel = 1499, npc = "DesertBandit", count = 5},
-            {minLevel = 1500, maxLevel = 2999, npc = "FrostRogue", count = 5},
-            {minLevel = 3000, maxLevel = 5499, npc = "Sorcerer", count = 5},
-            {minLevel = 5500, maxLevel = 5999, npc = "Hollow", count = 5},
-            {minLevel = 6000, maxLevel = 6999, npc = "StrongSorcerer", count = 5},
-            {minLevel = 7000, maxLevel = 7999, npc = "Curse", count = 5},
-            {minLevel = 8000, maxLevel = 99999, npc = "Slime", count = 5}
-        }
-        
-        for _, cfg in pairs(LevelConfig) do
-            if level >= cfg.minLevel and level <= cfg.maxLevel then
-                config = cfg
-                break
-            end
-        end
-        
-        if config then
-            for i = 1, config.count do
-                local npc = workspace.NPCs:FindFirstChild(config.npc .. i)
-                if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
-                    return true
-                end
-            end
-        end
-    end
-    
-    -- Check Auto Farm Selected Mobs
-    if _G.SlowHub.AutoFarmSelectedMob and _G.SlowHub.SelectedMobsCache and #_G.SlowHub.SelectedMobsCache > 0 then
-        for _, mobName in ipairs(_G.SlowHub.SelectedMobsCache) do
-            for i = 1, 5 do
-                local npc = workspace.NPCs:FindFirstChild(mobName .. i)
-                if npc and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
-                    return true
-                end
-            end
-        end
-    end
-    
-    return false
-end
-
 local autoFarmBossConnection = nil
 local isRunning = false
 local lastTargetBoss = nil
@@ -162,17 +108,21 @@ local function shouldStopFarmingCurrentBoss(boss)
         return true
     end
     
-    -- NEW: If NPCs are available, stop farming boss (NPCs have priority)
-    if _G.SlowHub.AreNPCsAvailable() then
-        return true
+    -- Se for Pity Time, só para se não for o boss de pity
+    if _G.SlowHub.IsPityTargetTime() then
+        local pityTarget = _G.SlowHub.PityTargetBoss
+        if bossBaseName ~= pityTarget then
+            return true
+        end
+        return false
     end
     
+    -- Se não for pity time, verifica se ainda deve farmar este boss
     if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
         local currentPity = _G.SlowHub.GetPityCount()
-        local isPityTargetTime = (currentPity >= 24)
         local pityTarget = _G.SlowHub.PityTargetBoss
         
-        if isPityTargetTime then
+        if currentPity >= 24 then
             if bossBaseName ~= pityTarget then
                 return true
             end
@@ -187,52 +137,37 @@ local function shouldStopFarmingCurrentBoss(boss)
 end
 
 local function findValidBoss()
-    -- PRIORITY CHECK: If NPCs are available, return nil (let NPCs farm)
-    if _G.SlowHub.AreNPCsAvailable() then
-        return nil
-    end
-    
     local npcs = workspace:FindFirstChild("NPCs")
     if not npcs then return nil end
     
     local pityEnabled = _G.SlowHub.PriorityPityEnabled
     local pityTarget = _G.SlowHub.PityTargetBoss
     
-    if pityEnabled and pityTarget ~= "" then
-        local currentPity = _G.SlowHub.GetPityCount()
-        local isPityTargetTime = (currentPity >= 24)
-        
-        if isPityTargetTime then
-            if isBossSelected(pityTarget) then
-                local exactBoss = npcs:FindFirstChild(pityTarget)
-                if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
-                
-                for _, diff in ipairs(difficulties) do
-                    local variantName = pityTarget .. diff
-                    local variantBoss = npcs:FindFirstChild(variantName)
-                    if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
-                end
+    -- Se Pity Time, só procura o boss de pity
+    if pityEnabled and pityTarget ~= "" and _G.SlowHub.IsPityTargetTime() then
+        if isBossSelected(pityTarget) then
+            local exactBoss = npcs:FindFirstChild(pityTarget)
+            if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
+            
+            for _, diff in ipairs(difficulties) do
+                local variantName = pityTarget .. diff
+                local variantBoss = npcs:FindFirstChild(variantName)
+                if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
             end
-            return nil
-        else
-            for _, bossName in ipairs(bossList) do
-                if bossName ~= pityTarget and isBossSelected(bossName) then
-                    local exactBoss = npcs:FindFirstChild(bossName)
-                    if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
-                    
-                    for _, diff in ipairs(difficulties) do
-                        local variantName = bossName .. diff
-                        local variantBoss = npcs:FindFirstChild(variantName)
-                        if variantBoss and checkHumanoid(variantBoss) then return variantBoss end
-                    end
-                end
-            end
-            return nil
         end
+        return nil
     end
     
+    -- Procura qualquer boss selecionado
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
+            -- Se pity está ativo mas não é pity time, pula o boss de pity
+            if pityEnabled and pityTarget ~= "" and bossName == pityTarget then
+                if _G.SlowHub.GetPityCount() < 24 then
+                    continue
+                end
+            end
+            
             local exactBoss = npcs:FindFirstChild(bossName)
             if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
 
@@ -274,10 +209,15 @@ local function stopAutoFarmBoss()
     _G.SlowHub.AutoFarmBosses = false
 end
 
+-- CORREÇÃO: Sistema de ataque rápido
+local lastAttackTime = 0
+local attackInterval = 0.05 -- 50ms entre ataques
+
 local function startAutoFarmBoss()
     if isRunning then stopAutoFarmBoss() task.wait(0.2) end
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
+    lastAttackTime = 0
     
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
@@ -285,17 +225,7 @@ local function startAutoFarmBoss()
             return
         end
         
-        -- CRITICAL FIX: Check if NPCs are available - if yes, pause boss farming
-        if _G.SlowHub.AreNPCsAvailable() then
-            if currentFarmingBoss then
-                currentFarmingBoss = nil
-                hasVisitedSafeZone = false
-                lastTargetBoss = nil
-                _G.SlowHub.IsAttackingBoss = false
-            end
-            return -- Exit early, let NPCs farm
-        end
-        
+        -- CORREÇÃO: Se o boss atual morreu ou não deve mais ser farmado, limpa
         if currentFarmingBoss and shouldStopFarmingCurrentBoss(currentFarmingBoss) then
             currentFarmingBoss = nil
             hasVisitedSafeZone = false
@@ -305,6 +235,7 @@ local function startAutoFarmBoss()
             return
         end
         
+        -- Procura um boss válido
         if not currentFarmingBoss then
             currentFarmingBoss = findValidBoss()
             if not currentFarmingBoss then
@@ -315,6 +246,8 @@ local function startAutoFarmBoss()
             lastTargetBoss = currentFarmingBoss
         end
         
+        -- CORREÇÃO: Sempre marca como atacando boss quando tem um boss válido
+        -- Isso força outros scripts (AutoFarmSelectedMob) a pararem
         local boss = currentFarmingBoss
         _G.SlowHub.IsAttackingBoss = true
         
@@ -355,7 +288,13 @@ local function startAutoFarmBoss()
                 local targetCFrame = bossRoot.CFrame * CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
                 playerRoot.CFrame = targetCFrame
                 EquipWeapon()
-                ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                
+                -- CORREÇÃO: Ataque mais rápido baseado em tempo
+                local now = tick()
+                if (now - lastAttackTime) >= attackInterval then
+                    ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
+                    lastAttackTime = now
+                end
             end)
         end
     end)
