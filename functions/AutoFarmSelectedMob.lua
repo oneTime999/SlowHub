@@ -48,15 +48,6 @@ local MobSafeZones = {
     ["Valentine"]       = CFrame.new(-1159.370, 4.414, -1245.361)
 }
 
--- NOVO: Lista de bosses para monitoramento
-local BossList = {
-    "GilgameshBoss", "RimuruBoss", "MadokaBoss", "StrongestofTodayBoss", 
-    "StrongestinHistoryBoss", "IchigoBoss", "AizenBoss", "AlucardBoss", 
-    "QinShiBoss", "JinwooBoss", "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
-}
-
-local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
-
 local autoFarmConnection = nil
 local questLoopActive = false
 local selectedMobs = {}
@@ -67,9 +58,6 @@ local lastTargetName = nil
 local hasVisitedSafeZone = false
 local wasAttackingBoss = false
 local lastValidQuest = nil
-
--- Cache selected mobs for boss script to check
-_G.SlowHub.SelectedMobsCache = {}
 
 local function getNPC(npcName, index)
     if workspace:FindFirstChild("NPCs") then
@@ -114,88 +102,6 @@ local function getMobConfig(mobName)
     }
 end
 
--- NOVO: Função para verificar se há bosses selecionados vivos
-local function isBossAvailable()
-    if not _G.SlowHub.AutoFarmBosses then return false end
-    if not _G.SlowHub.SelectedBosses then return false end
-    
-    local npcs = workspace:FindFirstChild("NPCs")
-    if not npcs then return false end
-    
-    -- Verifica se algum boss selecionado está vivo
-    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-        if isSelected then
-            -- Verifica nome exato
-            local exactBoss = npcs:FindFirstChild(bossName)
-            if exactBoss then
-                local humanoid = exactBoss:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    return true
-                end
-            end
-            
-            -- Verifica variantes de dificuldade
-            for _, diff in ipairs(difficulties) do
-                local variantName = bossName .. diff
-                local variantBoss = npcs:FindFirstChild(variantName)
-                if variantBoss then
-                    local humanoid = variantBoss:FindFirstChild("Humanoid")
-                    if humanoid and humanoid.Health > 0 then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    
-    return false
-end
-
--- NOVO: Função para verificar se é Pity Time e boss de pity está disponível
-local function isPityBossAvailable()
-    if not _G.SlowHub.PriorityPityEnabled then return false end
-    if _G.SlowHub.PityTargetBoss == "" then return false end
-    
-    local currentPity = 0
-    pcall(function()
-        local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
-        if pityLabel then
-            local pityText = pityLabel.Text
-            local match = pityText:match("Pity: (%d+)/25")
-            if match then
-                currentPity = tonumber(match)
-            end
-        end
-    end)
-    
-    if currentPity >= 24 then
-        local npcs = workspace:FindFirstChild("NPCs")
-        if npcs then
-            local pityTarget = _G.SlowHub.PityTargetBoss
-            local exactBoss = npcs:FindFirstChild(pityTarget)
-            if exactBoss then
-                local humanoid = exactBoss:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    return true
-                end
-            end
-            
-            for _, diff in ipairs(difficulties) do
-                local variantName = pityTarget .. diff
-                local variantBoss = npcs:FindFirstChild(variantName)
-                if variantBoss then
-                    local humanoid = variantBoss:FindFirstChild("Humanoid")
-                    if humanoid and humanoid.Health > 0 then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    
-    return false
-end
-
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     local success = pcall(function()
@@ -226,7 +132,6 @@ local function stopAutoFarm()
     lastTargetName = nil
     hasVisitedSafeZone = false
     lastValidQuest = nil
-    _G.SlowHub.SelectedMobsCache = {}
     pcall(function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -239,7 +144,6 @@ local function startQuestLoop()
     questLoopActive = true
     task.spawn(function()
         while questLoopActive and _G.SlowHub.AutoFarmSelectedMob do
-            -- CORREÇÃO: Só pausa quest se realmente estiver atacando boss
             if _G.SlowHub.AutoQuestSelectedMob and not _G.SlowHub.IsAttackingBoss then
                 pcall(function()
                     local currentMob = selectedMobs[currentMobIndex]
@@ -263,79 +167,22 @@ local function switchToNextMob()
     hasVisitedSafeZone = false
 end
 
--- CORREÇÃO: Sistema de ataque rápido
-local lastAttackTime = 0
-local attackInterval = 0.05 -- 50ms entre ataques
-
--- NOVO: Variáveis para monitoramento de boss
-local bossCheckTimer = 0
-local bossCheckInterval = 0.5 -- Verifica a cada 0.5 segundos
-local isPausedForBoss = false
-
 local function startAutoFarm()
     if autoFarmConnection then stopAutoFarm() end
     if #selectedMobs == 0 then return end
-    
-    -- Update cache for boss script to reference
-    _G.SlowHub.SelectedMobsCache = selectedMobs
     
     _G.SlowHub.AutoFarmSelectedMob = true
     currentMobIndex = 1
     currentNPCIndex = 1
     killCount = 0
-    lastAttackTime = 0
-    bossCheckTimer = 0
-    isPausedForBoss = false
     
     startQuestLoop()
+    local lastAttack = 0
     
-    autoFarmConnection = RunService.Heartbeat:Connect(function(dt)
+    autoFarmConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarm() return end
+        if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true return end
         
-        -- NOVO: Monitoramento contínuo de bosses
-        bossCheckTimer = bossCheckTimer + dt
-        if bossCheckTimer >= bossCheckInterval then
-            bossCheckTimer = 0
-            
-            -- Verifica se há boss disponível (prioridade máxima)
-            local bossAvailable = isBossAvailable()
-            local pityBossAvailable = isPityBossAvailable()
-            
-            -- Se é Pity Time, boss tem prioridade absoluta
-            if pityBossAvailable then
-                if not isPausedForBoss then
-                    isPausedForBoss = true
-                    wasAttackingBoss = true
-                    -- Notifica o sistema que boss está ativo
-                    _G.SlowHub.IsAttackingBoss = true
-                end
-                return -- Pausa completamente enquanto boss de pity está vivo
-            end
-            
-            -- Se há boss normal disponível e AutoFarmBosses está ativo
-            if bossAvailable and _G.SlowHub.AutoFarmBosses then
-                if not isPausedForBoss then
-                    isPausedForBoss = true
-                    wasAttackingBoss = true
-                    _G.SlowHub.IsAttackingBoss = true
-                end
-                return -- Pausa enquanto boss está vivo
-            end
-            
-            -- Se não há mais boss, volta a farmar
-            if isPausedForBoss and not bossAvailable and not pityBossAvailable then
-                isPausedForBoss = false
-                wasAttackingBoss = true -- Vai resetar safe zone no próximo ciclo
-                _G.SlowHub.IsAttackingBoss = false
-            end
-        end
-        
-        -- Se está pausado para boss, não faz nada
-        if isPausedForBoss then
-            return
-        end
-        
-        -- Se o boss parou de atacar, reseta safe zone
         if wasAttackingBoss then
             hasVisitedSafeZone = false
             wasAttackingBoss = false
@@ -393,10 +240,9 @@ local function startAutoFarm()
                 
                 EquipWeapon()
                 
-                -- CORREÇÃO: Ataque mais rápido baseado em tempo
-                if (now - lastAttackTime) >= attackInterval then
+                if (now - lastAttack) > 0.15 then
                     ReplicatedStorage.CombatSystem.Remotes.RequestHit:FireServer()
-                    lastAttackTime = now
+                    lastAttack = now
                 end
             else
                 currentNPCIndex = getNextNPC(currentNPCIndex, config.count)
@@ -418,9 +264,6 @@ Tab:CreateDropdown({
                 table.insert(selectedMobs, tostring(value))
             end
         end
-        
-        -- Update global cache immediately
-        _G.SlowHub.SelectedMobsCache = selectedMobs
         
         currentMobIndex = 1
         currentNPCIndex = 1
