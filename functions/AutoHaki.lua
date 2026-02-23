@@ -14,6 +14,13 @@ local armParts = {
     "Right Arm"
 }
 
+local function isAlive()
+    local character = Player.Character
+    if not character then return false end
+    local humanoid = character:FindFirstChild("Humanoid")
+    return humanoid and humanoid.Health > 0
+end
+
 local function hasHakiEffect()
     local character = Player.Character
     if not character then return false end
@@ -60,6 +67,8 @@ local function startAutoHaki()
             return
         end
 
+        if not isAlive() then return end
+
         local now = tick()
 
         if now - lastToggleTime >= COOLDOWN_TIME then
@@ -81,7 +90,7 @@ local Toggle = Tab:CreateToggle({
         else
             stopAutoHaki()
         end
-        
+
         _G.SlowHub.AutoHaki = Value
         if _G.SaveConfig then
             _G.SaveConfig()
