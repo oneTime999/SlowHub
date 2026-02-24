@@ -5,27 +5,28 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local bossList = {
-    "GilgameshBoss", "RimuruBoss", "MadokaBoss", "StrongestofTodayBoss", "StrongestinHistoryBoss", "IchigoBoss", "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss", 
+    "AnosBoss", "GilgameshBoss", "RimuruBoss", "MadokaBoss", "StrongestofTodayBoss", "StrongestinHistoryBoss", "IchigoBoss", "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss",
     "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
 }
 
 local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
 
 local BossSafeZones = {
+    ["AnosBoss"] = CFrame.new(950.0978393554688, -0.23529791831970215, 1378.4510498046875),
     ["GilgameshBoss"] = CFrame.new(828.11, -0.39, -1130.76),
     ["RimuruBoss"] = CFrame.new(-1363.4713134765625, 30.04159164428711, 221.3505859375),
     ["MadokaBoss"] = CFrame.new(-1264.6318359375, -0.17221689224243164, -1116.2039794921875),
     ["StrongestofTodayBoss"] = CFrame.new(181.69, 5.24, -2446.61),
     ["StrongestinHistoryBoss"] = CFrame.new(639.29, 3.67, -2273.30),
     ["IchigoBoss"] = CFrame.new(828.11, -0.39, -1130.76),
-    ["AizenBoss"]  = CFrame.new(-567.22, 2.57, 1228.49),
+    ["AizenBoss"] = CFrame.new(-567.22, 2.57, 1228.49),
     ["AlucardBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["QinShiBoss"] = CFrame.new(828.11, -0.39, -1130.76),
-    ["SaberBoss"]  = CFrame.new(828.11, -0.39, -1130.76),
+    ["SaberBoss"] = CFrame.new(828.11, -0.39, -1130.76),
     ["JinwooBoss"] = CFrame.new(248.74, 12.09, 927.54),
     ["SukunaBoss"] = CFrame.new(1571.26, 77.22, -34.11),
-    ["GojoBoss"]   = CFrame.new(1858.32, 12.98, 338.14),
-    ["YujiBoss"]   = CFrame.new(1537.92, 12.98, 226.10)
+    ["GojoBoss"] = CFrame.new(1858.32, 12.98, 338.14),
+    ["YujiBoss"] = CFrame.new(1537.92, 12.98, 226.10)
 }
 
 for _, bossBaseName in ipairs({"StrongestofTodayBoss", "StrongestinHistoryBoss"}) do
@@ -42,13 +43,11 @@ _G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
 if not _G.SlowHub.BossFarmDistance then _G.SlowHub.BossFarmDistance = 8 end
 if not _G.SlowHub.BossFarmHeight then _G.SlowHub.BossFarmHeight = 5 end
 
--- Global pity functions for access from other scripts
 _G.SlowHub.GetPityCount = function()
     local success, pityText = pcall(function()
         local pityLabel = Player:WaitForChild("PlayerGui", 5):WaitForChild("BossUI", 5):WaitForChild("MainFrame", 5):WaitForChild("BossHPBar", 5):WaitForChild("Pity", 5)
         return pityLabel.Text
     end)
-    
     if success and pityText then
         local currentPity = pityText:match("Pity: (%d+)/25")
         if currentPity then
@@ -101,18 +100,18 @@ end
 local function shouldStopFarmingCurrentBoss(boss)
     if not boss or not boss.Parent then return true end
     if not checkHumanoid(boss) then return true end
-    
+
     local bossBaseName = getBossBaseName(boss.Name)
-    
+
     if not isBossSelected(bossBaseName) then
         return true
     end
-    
+
     if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
         local currentPity = _G.SlowHub.GetPityCount()
         local isPityTargetTime = (currentPity >= 24)
         local pityTarget = _G.SlowHub.PityTargetBoss
-        
+
         if isPityTargetTime then
             if bossBaseName ~= pityTarget then
                 return true
@@ -123,26 +122,26 @@ local function shouldStopFarmingCurrentBoss(boss)
             end
         end
     end
-    
+
     return false
 end
 
 local function findValidBoss()
     local npcs = workspace:FindFirstChild("NPCs")
     if not npcs then return nil end
-    
+
     local pityEnabled = _G.SlowHub.PriorityPityEnabled
     local pityTarget = _G.SlowHub.PityTargetBoss
-    
+
     if pityEnabled and pityTarget ~= "" then
         local currentPity = _G.SlowHub.GetPityCount()
         local isPityTargetTime = (currentPity >= 24)
-        
+
         if isPityTargetTime then
             if isBossSelected(pityTarget) then
                 local exactBoss = npcs:FindFirstChild(pityTarget)
                 if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
-                
+
                 for _, diff in ipairs(difficulties) do
                     local variantName = pityTarget .. diff
                     local variantBoss = npcs:FindFirstChild(variantName)
@@ -155,7 +154,7 @@ local function findValidBoss()
                 if bossName ~= pityTarget and isBossSelected(bossName) then
                     local exactBoss = npcs:FindFirstChild(bossName)
                     if exactBoss and checkHumanoid(exactBoss) then return exactBoss end
-                    
+
                     for _, diff in ipairs(difficulties) do
                         local variantName = bossName .. diff
                         local variantBoss = npcs:FindFirstChild(variantName)
@@ -166,7 +165,7 @@ local function findValidBoss()
             return nil
         end
     end
-    
+
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
             local exactBoss = npcs:FindFirstChild(bossName)
@@ -202,7 +201,7 @@ local function stopAutoFarmBoss()
     hasVisitedSafeZone = false
     currentFarmingBoss = nil
     _G.SlowHub.IsAttackingBoss = false
-    
+
     if autoFarmBossConnection then
         autoFarmBossConnection:Disconnect()
         autoFarmBossConnection = nil
@@ -214,13 +213,13 @@ local function startAutoFarmBoss()
     if isRunning then stopAutoFarmBoss() task.wait(0.2) end
     isRunning = true
     _G.SlowHub.AutoFarmBosses = true
-    
+
     autoFarmBossConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoFarmBosses or not isRunning then
             stopAutoFarmBoss()
             return
         end
-        
+
         if currentFarmingBoss and shouldStopFarmingCurrentBoss(currentFarmingBoss) then
             currentFarmingBoss = nil
             hasVisitedSafeZone = false
@@ -229,7 +228,7 @@ local function startAutoFarmBoss()
             task.wait(0.1)
             return
         end
-        
+
         if not currentFarmingBoss then
             currentFarmingBoss = findValidBoss()
             if not currentFarmingBoss then
@@ -239,10 +238,10 @@ local function startAutoFarmBoss()
             hasVisitedSafeZone = false
             lastTargetBoss = currentFarmingBoss
         end
-        
+
         local boss = currentFarmingBoss
         _G.SlowHub.IsAttackingBoss = true
-        
+
         if boss ~= lastTargetBoss then
             lastTargetBoss = boss
             hasVisitedSafeZone = false
@@ -261,11 +260,11 @@ local function startAutoFarmBoss()
                     end
                 end
             end
-            
+
             if safeCFrame then
                 playerRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 playerRoot.CFrame = safeCFrame
-                hasVisitedSafeZone = true 
+                hasVisitedSafeZone = true
                 task.wait(0.1)
                 return
             else
