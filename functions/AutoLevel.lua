@@ -15,7 +15,9 @@ local LevelConfig = {
     -- Novas Quests Adicionadas:
     {minLevel = 6000, maxLevel = 6999, quest = "QuestNPC12", npc = "StrongSorcerer", count = 5},
     {minLevel = 7000, maxLevel = 7999, quest = "QuestNPC13", npc = "Curse", count = 5},
-    {minLevel = 8000, maxLevel = 99999, quest = "QuestNPC14", npc = "Slime", count = 5}
+    {minLevel = 8000, maxLevel = 8999, quest = "QuestNPC14", npc = "Slime", count = 5},
+    -- AcademyTeacher Quest:
+    {minLevel = 9000, maxLevel = 99999, quest = "QuestNPC15", npc = "AcademyTeacher", count = 5}
 }
 
 local NPCSafeZones = {
@@ -28,7 +30,9 @@ local NPCSafeZones = {
     -- Novas Coordenadas Adicionadas:
     ["StrongSorcerer"] = CFrame.new(637.979126, 2.375789, -1669.440186),
     ["Curse"]          = CFrame.new(-69.846375, 1.907236, -1857.250244),
-    ["Slime"]          = CFrame.new(-1124.753173828125, 19.703411102294922, 371.2305908203125)
+    ["Slime"]          = CFrame.new(-1124.753173828125, 19.703411102294922, 371.2305908203125),
+    -- AcademyTeacher Position:
+    ["AcademyTeacher"] = CFrame.new(1072.5455322265625, 1.7783551216125488, 1275.641845703125)
 }
 
 if not _G.SlowHub.FarmDistance then _G.SlowHub.FarmDistance = 8 end
