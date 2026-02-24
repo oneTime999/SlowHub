@@ -14,7 +14,8 @@ local Locations = {
     ["Dungeon Island"]   = Vector3.new(1298, 4, -841),
     ["Shinjuku Island"]  = Vector3.new(365.327392578125, -0.6694481372833252, -1633.190673828125),
     ["Valentine Island"] = Vector3.new(-1024.6634521484375, -1.5604705810546875, -1030.836181640625),
-    ["Slime Island"]     = Vector3.new(-985.4874877929688, -2.1221892833709717, 254.98291015625)
+    ["Slime Island"]     = Vector3.new(-985.4874877929688, -2.1221892833709717, 254.98291015625),
+    ["Academy Island"] = Vector3.new(1040.2939453125, -2.0211944580078125, 1088.76904296875)
 }
 
 local LocationList = {
@@ -29,7 +30,8 @@ local LocationList = {
     "Dungeon Island",
     "Shinjuku Island",
     "Valentine Island",
-    "Slime Island"
+    "Slime Island",
+    "Academy Island"
 }
 
 local selectedIsland = nil
