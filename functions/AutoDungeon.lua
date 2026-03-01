@@ -140,7 +140,7 @@ local function startDungeonFarm()
 end
 
 MainTab:CreateToggle({
-    Name = "Auto Farm Dungeon",
+    Name = "Auto Farm Dungeon or Boss Rush",
     CurrentValue = false,
     Flag = "AutoFarmDungeon",
     Callback = function(Value)
