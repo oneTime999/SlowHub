@@ -2,6 +2,7 @@ local Tab = _G.ShopTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local MerchantItemsList = {
+    "Rush Key",
     "Clan Reroll",
     "Race Reroll",
     "Trait Reroll",
