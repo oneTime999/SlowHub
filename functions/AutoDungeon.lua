@@ -203,7 +203,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-    Name = "Auto Replay Dungeon",
+    Name = "Auto Replay Dungeon or Boss Rush",
     CurrentValue = false,
     Flag = "AutoReplayDungeon",
     Callback = function(Value)
