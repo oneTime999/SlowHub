@@ -19,7 +19,6 @@ local MobList = {
     "StrongSorcerer", 
     "Curse",
     "Slime",
-    "Valentine",
     "AcademyTeacher"
 }
 
@@ -46,7 +45,6 @@ local MobSafeZones = {
     ["StrongSorcerer"]  = CFrame.new(637.979, 2.376, -1669.440),
     ["Curse"]           = CFrame.new(-69.846, 1.907, -1857.250),
     ["Slime"]           = CFrame.new(-1124.753, 19.703, 371.231),
-    ["Valentine"]       = CFrame.new(-1159.370, 4.414, -1245.361),
     ["AcademyTeacher"]       = CFrame.new(1072.5455322265625, 1.7783551216125488, 1275.641845703125)
 }
 
