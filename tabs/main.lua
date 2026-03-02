@@ -35,7 +35,7 @@ end
 
 task.wait(0.2)
 
-Tab:CreateLabel("Auto Dungeon")
+Tab:CreateLabel("Auto Dungeon or Boss Rush")
 
 local dungeonScript = game:HttpGet(githubBase .. "AutoDungeon.lua")
 if dungeonScript and dungeonScript ~= "" then
