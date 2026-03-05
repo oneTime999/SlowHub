@@ -270,7 +270,7 @@ Tab:CreateSlider({
 })
 
 Tab:CreateToggle({
-    Name = "Auto Roll Fixing",
+    Name = "Auto Roll",
     CurrentValue = _G.SlowHub.AutoRoll,
     Flag = "AutoRoll",
     Callback = OnToggleChange
