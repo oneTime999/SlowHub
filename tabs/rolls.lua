@@ -1,4 +1,4 @@
-local Tab = _G.RollTab
+local Tab = _G.RollsTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 if not _G.SlowHub then
