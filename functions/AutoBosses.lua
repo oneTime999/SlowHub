@@ -36,13 +36,6 @@ for _, bossBaseName in ipairs(bossList) do
     end
 end
 
-_G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
-_G.SlowHub.PityTargetBoss = _G.SlowHub.PityTargetBoss or ""
-_G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
-_G.SlowHub.BossFarmDistance = _G.SlowHub.BossFarmDistance or 8
-_G.SlowHub.BossFarmHeight = _G.SlowHub.BossFarmHeight or 5
-_G.SlowHub.BossFarmCooldown = _G.SlowHub.BossFarmCooldown or 0.15
-
 local State = {
     Connection = nil,
     IsRunning = false,
@@ -112,12 +105,10 @@ local function GetSafeZone(bossName)
     if directSafeZone then
         return directSafeZone
     end
-    
     local baseName = GetBossBaseName(bossName)
     if baseName then
         return BossSafeZones[baseName]
     end
-    
     return nil
 end
 
@@ -125,29 +116,22 @@ local function GetPityCount()
     local success, result = pcall(function()
         local playerGui = Player:FindFirstChild("PlayerGui")
         if not playerGui then return nil end
-        
         local bossUI = playerGui:FindFirstChild("BossUI")
         if not bossUI then return nil end
-        
         local mainFrame = bossUI:FindFirstChild("MainFrame")
         if not mainFrame then return nil end
-        
         local bossHPBar = mainFrame:FindFirstChild("BossHPBar")
         if not bossHPBar then return nil end
-        
         local pityLabel = bossHPBar:FindFirstChild("Pity")
         if not pityLabel then return nil end
-        
         return pityLabel.Text
     end)
-    
     if success and result then
         local currentPity = string.match(result, "Pity: (%d+)/25")
         if currentPity then
             return tonumber(currentPity)
         end
     end
-    
     return 0
 end
 
@@ -160,33 +144,27 @@ end
 local function ShouldSwitchBoss(currentBoss)
     if not currentBoss or not currentBoss.Parent then return true end
     if not IsAlive(currentBoss) then return true end
-    
     local bossBaseName = GetBossBaseName(currentBoss.Name)
     if not bossBaseName then return true end
     if not IsBossSelected(bossBaseName) then return true end
-    
     if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
         local isPityTime = IsPityTargetTime()
         local pityTarget = _G.SlowHub.PityTargetBoss
-        
         if isPityTime then
             if bossBaseName ~= pityTarget then return true end
         else
             if bossBaseName == pityTarget then return true end
         end
     end
-    
     return false
 end
 
 local function FindBossByName(bossName)
     if not State.NPCsFolder then return nil end
-    
     local exactMatch = State.NPCsFolder:FindFirstChild(bossName)
     if exactMatch and IsAlive(exactMatch) then
         return exactMatch
     end
-    
     for _, diff in ipairs(difficulties) do
         local variantName = bossName .. diff
         local variant = State.NPCsFolder:FindFirstChild(variantName)
@@ -194,16 +172,13 @@ local function FindBossByName(bossName)
             return variant
         end
     end
-    
     return nil
 end
 
 local function FindValidBoss()
     if not State.NPCsFolder then return nil end
-    
     local pityEnabled = _G.SlowHub.PriorityPityEnabled
     local pityTarget = _G.SlowHub.PityTargetBoss
-    
     if pityEnabled and pityTarget ~= "" then
         if IsPityTargetTime() then
             if IsBossSelected(pityTarget) then
@@ -220,86 +195,66 @@ local function FindValidBoss()
             return nil
         end
     end
-    
     for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
         if isSelected then
             local found = FindBossByName(bossName)
             if found then return found end
         end
     end
-    
     return nil
 end
 
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return end
-    
     local success = pcall(function()
         if not State.Character then return end
-        
         local humanoid = State.Character:FindFirstChildOfClass("Humanoid")
         if not humanoid then return end
-        
         local hasEquipped = State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon)
         if hasEquipped then return end
-        
         local backpack = Player:FindFirstChild("Backpack")
         if not backpack then return end
-        
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
         if weapon then
             humanoid:EquipTool(weapon)
         end
     end)
-    
     return success
 end
 
 local function TeleportToSafeZone(boss)
     if not State.HumanoidRootPart then return false end
-    
     local safeCFrame = GetSafeZone(boss.Name)
     if not safeCFrame then
         return true
     end
-    
     State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
     State.HumanoidRootPart.CFrame = safeCFrame
-    
     return true
 end
 
 local function TeleportToBoss(boss)
     if not State.HumanoidRootPart then return false end
-    
     local bossRoot = boss:FindFirstChild("HumanoidRootPart")
     if not bossRoot then return false end
-    
     State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    
     local offset = CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
     State.HumanoidRootPart.CFrame = bossRoot.CFrame * offset
-    
     return true
 end
 
 local function PerformAttack()
     local currentTime = tick()
     local cooldown = _G.SlowHub.BossFarmCooldown
-    
     if currentTime - State.LastHitTime < cooldown then
         return
     end
-    
     State.LastHitTime = currentTime
-    
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
-        
         local remotes = combatSystem:FindFirstChild("Remotes")
         if not remotes then return end
-        
         local requestHit = remotes:FindFirstChild("RequestHit")
         if requestHit then
             requestHit:FireServer()
@@ -314,18 +269,14 @@ local function ResetState()
     _G.SlowHub.IsAttackingBoss = false
 end
 
-local function StopAutoFarm()
+function StopAutoFarm()
     if not State.IsRunning then return end
-    
     State.IsRunning = false
-    
     if State.Connection then
         State.Connection:Disconnect()
         State.Connection = nil
     end
-    
     ResetState()
-    _G.SlowHub.AutoFarmBosses = false
 end
 
 local function FarmLoop()
@@ -333,24 +284,20 @@ local function FarmLoop()
         StopAutoFarm()
         return
     end
-    
     if not State.Character or not State.Character.Parent then
         return
     end
-    
     if not State.HumanoidRootPart then
         State.HumanoidRootPart = State.Character:FindFirstChild("HumanoidRootPart")
         if not State.HumanoidRootPart then
             return
         end
     end
-    
     if State.CurrentBoss and ShouldSwitchBoss(State.CurrentBoss) then
         ResetState()
         task.wait(0.1)
         return
     end
-    
     if not State.CurrentBoss then
         State.CurrentBoss = FindValidBoss()
         if not State.CurrentBoss then
@@ -360,15 +307,12 @@ local function FarmLoop()
         State.HasVisitedSafeZone = false
         State.LastTarget = State.CurrentBoss
     end
-    
     local boss = State.CurrentBoss
     _G.SlowHub.IsAttackingBoss = true
-    
     if boss ~= State.LastTarget then
         State.LastTarget = boss
         State.HasVisitedSafeZone = false
     end
-    
     if not State.HasVisitedSafeZone then
         local success = TeleportToSafeZone(boss)
         if success then
@@ -377,7 +321,6 @@ local function FarmLoop()
         task.wait(0.1)
         return
     end
-    
     local success = TeleportToBoss(boss)
     if success then
         EquipWeapon()
@@ -385,30 +328,23 @@ local function FarmLoop()
     end
 end
 
-local function StartAutoFarm()
+function StartAutoFarm()
     if State.IsRunning then
         StopAutoFarm()
         task.wait(0.2)
     end
-    
     InitializeState()
-    
     if not State.NPCsFolder then
         return false
     end
-    
     State.IsRunning = true
-    _G.SlowHub.AutoFarmBosses = true
-    
     State.Connection = RunService.Heartbeat:Connect(FarmLoop)
-    
     return true
 end
 
 local function Notify(title, content, duration)
     duration = duration or 3
-    
-    local success = pcall(function()
+    pcall(function()
         if _G.WindUI and _G.WindUI.Notify then
             _G.WindUI:Notify({
                 Title = title,
@@ -418,25 +354,17 @@ local function Notify(title, content, duration)
             })
         end
     end)
-    
-    return success
 end
 
 Tab:Section({Title = "Boss Selection"})
 
 Tab:Dropdown({
     Title = "Select Bosses to Farm",
+    Flag = "SelectedBosses",
     Values = bossList,
     Multi = true,
     Default = {},
     Callback = function(Options)
-        _G.SlowHub.SelectedBosses = {}
-        for _, bossName in ipairs(Options) do
-            _G.SlowHub.SelectedBosses[bossName] = true
-        end
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
@@ -444,27 +372,20 @@ Tab:Section({Title = "Pity System (Optional)"})
 
 Tab:Dropdown({
     Title = "Pity Target Boss",
+    Flag = "PityTargetBoss",
     Values = bossList,
     Default = "",
     Callback = function(Option)
-        local selected = type(Option) == "table" and Option[1] or Option
-        _G.SlowHub.PityTargetBoss = selected or ""
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Toggle({
     Title = "Enable Pity System",
+    Flag = "PriorityPityEnabled",
     Default = false,
     Callback = function(Value)
-        _G.SlowHub.PriorityPityEnabled = Value
         if _G.SlowHub.AutoFarmBosses and State.IsRunning then
             ResetState()
-        end
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
@@ -473,6 +394,7 @@ Tab:Section({Title = "Farm Control"})
 
 Tab:Toggle({
     Title = "Auto Farm Selected Bosses",
+    Flag = "AutoFarmBosses",
     Default = false,
     Callback = function(Value)
         if Value then
@@ -484,57 +406,51 @@ Tab:Toggle({
         else
             StopAutoFarm()
         end
-        _G.SlowHub.AutoFarmBosses = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Boss Farm Distance",
+    Flag = "BossFarmDistance",
     Step = 1,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.BossFarmDistance,
+        Default = 8,
     },
     Callback = function(Value)
-        _G.SlowHub.BossFarmDistance = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Boss Farm Height",
+    Flag = "BossFarmHeight",
     Step = 1,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.BossFarmHeight,
+        Default = 5,
     },
     Callback = function(Value)
-        _G.SlowHub.BossFarmHeight = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Attack Cooldown",
+    Flag = "BossFarmCooldown",
     Step = 0.05,
     Value = {
         Min = 0.05,
         Max = 0.5,
-        Default = _G.SlowHub.BossFarmCooldown,
+        Default = 0.15,
     },
     Callback = function(Value)
-        _G.SlowHub.BossFarmCooldown = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
+
+task.spawn(function()
+    task.wait(2)
+    if _G.SlowHub.AutoFarmBosses then
+        StartAutoFarm()
+    end
+end)
