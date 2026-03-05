@@ -78,3 +78,10 @@ Tab:Slider({
     Callback = function(Value)
     end
 })
+
+task.spawn(function()
+    task.wait(2)
+    if _G.SlowHub.AutoConquerorHaki then
+        StartAutoHaki()
+    end
+end)
