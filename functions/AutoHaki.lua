@@ -102,3 +102,11 @@ Tab:Toggle({
         end
     end
 })
+
+task.spawn(function()
+    task.wait(2)
+    if _G.SlowHub.AutoHaki then
+        startAutoHaki()
+        setupRespawnHandler()
+    end
+end)
