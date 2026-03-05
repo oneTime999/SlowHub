@@ -5,24 +5,40 @@ if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-local raceRollScript = game:HttpGet(githubBase .. "RaceRoll.lua")
-if raceRollScript and raceRollScript ~= "" then
-    local func = loadstring(raceRollScript)
-    if func then task.spawn(function() pcall(func) end) end
+local function loadFunction(url)
+    local success, content = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success or type(content) ~= "string" or content == "" 
+        or content:match("<!DOCTYPE html>") or content:match("<html>") then
+        return nil
+    end
+    
+    local func, err = loadstring(content)
+    if not func then
+        return nil
+    end
+    
+    return func
 end
 
+local function loadAndSpawn(url)
+    local func = loadFunction(url)
+    if func then
+        task.spawn(function()
+            pcall(func)
+        end)
+    end
+end
+
+-- Race Roll
+loadAndSpawn(githubBase .. "RaceRoll.lua")
 task.wait(0.05)
 
-local traitRollScript = game:HttpGet(githubBase .. "TraitRoll.lua")
-if traitRollScript and traitRollScript ~= "" then
-    local func = loadstring(traitRollScript)
-    if func then task.spawn(function() pcall(func) end) end
-end
-
+-- Trait Roll
+loadAndSpawn(githubBase .. "TraitRoll.lua")
 task.wait(0.05)
 
-local clanRollScript = game:HttpGet(githubBase .. "ClanRoll.lua")
-if clanRollScript and clanRollScript ~= "" then
-    local func = loadstring(clanRollScript)
-    if func then task.spawn(function() pcall(func) end) end
-end
+-- Clan Roll
+loadAndSpawn(githubBase .. "ClanRoll.lua")
