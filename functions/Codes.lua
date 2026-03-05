@@ -6,15 +6,15 @@ _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.CodeRedeemDelay = _G.SlowHub.CodeRedeemDelay or 0.5
 
 local Codes = {
-    "UPDATE2",
-    "DUNGEONS",
-    "20KMEMBERS",
-    "DELAYSORRY",
-    "2MVISITS",
-    "15KLIKES",
-    "5KCCU",
     "SORRYFORBUGS",
-    "3MVISITS"
+    "BADISSUESSORRY",
+    "BOSSRUSH",
+    "VERYBIGUPDATESOON",
+    "SINOFPRIDE",
+    "15KFOLLOWTY",
+    "ROGUEALLIES",
+    "RUSHKEYCODE",
+    "SORRYSUDDENRESTART"
 }
 
 local RedeemState = {
