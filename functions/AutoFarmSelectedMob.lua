@@ -498,10 +498,12 @@ Tab:Toggle({
 
 Tab:Slider({
     Title = "Farm Distance",
-    Min = 1,
-    Max = 10,
-    Default = _G.SlowHub.FarmDistance,
-    Suffix = "Studs",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.FarmDistance,
+    },
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         
@@ -513,10 +515,12 @@ Tab:Slider({
 
 Tab:Slider({
     Title = "Farm Height",
-    Min = 1,
-    Max = 10,
-    Default = _G.SlowHub.FarmHeight,
-    Suffix = "Studs",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.FarmHeight,
+    },
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         
@@ -528,10 +532,12 @@ Tab:Slider({
 
 Tab:Slider({
     Title = "Attack Cooldown",
-    Min = 0.05,
-    Max = 0.5,
-    Default = _G.SlowHub.FarmCooldown,
-    Suffix = "Seconds",
+    Step = 0.05,
+    Value = {
+        Min = 0.05,
+        Max = 0.5,
+        Default = _G.SlowHub.FarmCooldown,
+    },
     Callback = function(Value)
         _G.SlowHub.FarmCooldown = Value
         
@@ -543,10 +549,12 @@ Tab:Slider({
 
 Tab:Slider({
     Title = "Quest Interval",
-    Min = 1,
-    Max = 5,
-    Default = _G.SlowHub.AutoQuestInterval,
-    Suffix = "Seconds",
+    Step = 0.5,
+    Value = {
+        Min = 1,
+        Max = 5,
+        Default = _G.SlowHub.AutoQuestInterval,
+    },
     Callback = function(Value)
         _G.SlowHub.AutoQuestInterval = Value
         
