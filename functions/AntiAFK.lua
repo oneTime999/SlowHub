@@ -15,14 +15,12 @@ local function stopAntiAfk()
         idledConnection:Disconnect()
         idledConnection = nil
     end
-    _G.SlowHub.AntiAFK = false
 end
 
 local function startAntiAfk()
     if antiAfkConnection or idledConnection then
         stopAntiAfk()
     end
-    _G.SlowHub.AntiAFK = true
     idledConnection = Player.Idled:Connect(function()
         if not _G.SlowHub.AntiAFK then
             stopAntiAfk()
@@ -42,21 +40,20 @@ end
 
 _G.MiscTab:Toggle({
     Title = "Anti AFK",
-    Default = _G.SlowHub.AntiAFK or false,
+    Flag = "AntiAFK",
+    Default = false,
     Callback = function(Value)
         if Value then
             startAntiAfk()
         else
             stopAntiAfk()
         end
-        _G.SlowHub.AntiAFK = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
-if _G.SlowHub.AntiAFK then
+task.spawn(function()
     task.wait(2)
-    startAntiAfk()
-end
+    if _G.SlowHub.AntiAFK then
+        startAntiAfk()
+    end
+end)
