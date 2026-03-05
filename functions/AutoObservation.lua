@@ -1,78 +1,136 @@
-local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local autoObservationConnection = nil
-local lastToggleTime = 0
-local COOLDOWN_TIME = 3
+local Tab = _G.MiscTab
 
-local function isObservationActive()
-    local playerGui = Player.PlayerGui
-    if not playerGui then return false end
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoObservation = _G.SlowHub.AutoObservation or false
+_G.SlowHub.ObservationInterval = _G.SlowHub.ObservationInterval or 3
+
+local ObservationState = {
+    Connection = nil,
+    IsRunning = false,
+    LastToggleTime = 0,
+    PlayerGui = nil
+}
+
+local function InitializeObservationState()
+    ObservationState.PlayerGui = Player:FindFirstChild("PlayerGui")
+end
+
+InitializeObservationState()
+
+Player.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    ObservationState.PlayerGui = Player:FindFirstChild("PlayerGui")
+end)
+
+local function IsObservationActive()
+    if not ObservationState.PlayerGui then
+        ObservationState.PlayerGui = Player:FindFirstChild("PlayerGui")
+        if not ObservationState.PlayerGui then return false end
+    end
     
-    local dodgeUI = playerGui:FindFirstChild("DodgeCounterUI")
+    local dodgeUI = ObservationState.PlayerGui:FindFirstChild("DodgeCounterUI")
     if not dodgeUI then return false end
     
     local mainFrame = dodgeUI:FindFirstChild("MainFrame")
     if not mainFrame then return false end
     
-    return mainFrame.Visible
+    return mainFrame.Visible == true
 end
 
-local function toggleObservation()
+local function ToggleObservation()
     pcall(function()
-        ReplicatedStorage.RemoteEvents.ObservationHakiRemote:FireServer("Toggle")
+        local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+        if not remoteEvents then return end
+        
+        local observationRemote = remoteEvents:FindFirstChild("ObservationHakiRemote")
+        if not observationRemote then return end
+        
+        observationRemote:FireServer("Toggle")
     end)
 end
 
-local function stopAutoObservation()
-    if autoObservationConnection then
-        autoObservationConnection:Disconnect()
-        autoObservationConnection = nil
+local function ObservationLoop()
+    if not _G.SlowHub.AutoObservation then
+        StopAutoObservation()
+        return
     end
+    
+    local currentTime = tick()
+    local interval = _G.SlowHub.ObservationInterval
+    
+    if currentTime - ObservationState.LastToggleTime < interval then
+        return
+    end
+    
+    if not IsObservationActive() then
+        ToggleObservation()
+        ObservationState.LastToggleTime = currentTime
+    end
+end
+
+local function StopAutoObservation()
+    ObservationState.IsRunning = false
+    ObservationState.LastToggleTime = 0
+    
+    if ObservationState.Connection then
+        ObservationState.Connection:Disconnect()
+        ObservationState.Connection = nil
+    end
+    
     _G.SlowHub.AutoObservation = false
-    lastToggleTime = 0
 end
 
-local function startAutoObservation()
-    if autoObservationConnection then
-        stopAutoObservation()
+local function StartAutoObservation()
+    if ObservationState.IsRunning then
+        StopAutoObservation()
+        task.wait(0.2)
     end
-
+    
+    InitializeObservationState()
+    
+    ObservationState.IsRunning = true
     _G.SlowHub.AutoObservation = true
-    lastToggleTime = 0
-
-    autoObservationConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoObservation then
-            stopAutoObservation()
-            return
-        end
-
-        local now = tick()
-
-        if now - lastToggleTime >= COOLDOWN_TIME then
-            if not isObservationActive() then
-                toggleObservation()
-                lastToggleTime = now
-            end
-        end
-    end)
+    ObservationState.LastToggleTime = 0
+    
+    ObservationState.Connection = RunService.Heartbeat:Connect(ObservationLoop)
 end
 
-local Toggle = Tab:CreateToggle({
+Tab:CreateSection("Observation Haki")
+
+Tab:CreateToggle({
     Name = "Auto Observation Haki",
     CurrentValue = _G.SlowHub.AutoObservation,
     Flag = "AutoObservation",
     Callback = function(Value)
         if Value then
-            startAutoObservation()
+            StartAutoObservation()
         else
-            stopAutoObservation()
+            StopAutoObservation()
         end
         
         _G.SlowHub.AutoObservation = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
+})
+
+Tab:CreateSlider({
+    Name = "Observation Check Interval",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = "Seconds",
+    CurrentValue = _G.SlowHub.ObservationInterval,
+    Flag = "ObservationInterval",
+    Callback = function(Value)
+        _G.SlowHub.ObservationInterval = Value
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -80,6 +138,8 @@ local Toggle = Tab:CreateToggle({
 })
 
 if _G.SlowHub.AutoObservation then
-    task.wait(2)
-    startAutoObservation()
+    task.spawn(function()
+        task.wait(2)
+        StartAutoObservation()
+    end)
 end
