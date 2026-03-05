@@ -7,7 +7,7 @@ end
 
 Tab:CreateLabel("Race")
 
-local autoRollScript = game:HttpGet(githubBase .. "AutoRoll.lua")
+local autoRollScript = game:HttpGet(githubBase .. "RaceRoll.lua")
 if autoRollScript and autoRollScript ~= "" then
     local func = loadstring(autoRollScript)
     if func then task.spawn(function() pcall(func) end) end
