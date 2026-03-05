@@ -31,13 +31,6 @@ local NPCSafeZones = {
     ["AcademyTeacher"] = CFrame.new(1072.5455322265625, 1.7783551216125488, 1275.641845703125)
 }
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.FarmDistance = _G.SlowHub.FarmDistance or 8
-_G.SlowHub.FarmHeight = _G.SlowHub.FarmHeight or 4
-_G.SlowHub.FarmCooldown = _G.SlowHub.FarmCooldown or 0.15
-_G.SlowHub.QuestInterval = _G.SlowHub.QuestInterval or 2
-_G.SlowHub.IsAttackingBoss = false
-
 local State = {
     FarmConnection = nil,
     QuestConnection = nil,
@@ -68,9 +61,7 @@ Player.CharacterAdded:Connect(function(char)
     State.Character = char
     State.Humanoid = nil
     State.HumanoidRootPart = nil
-    
     task.wait(0.1)
-    
     State.Humanoid = char:FindFirstChildOfClass("Humanoid")
     State.HumanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
@@ -85,25 +76,20 @@ local function GetPlayerLevel()
     local success, result = pcall(function()
         local data = Player:FindFirstChild("Data")
         if not data then return 1 end
-        
         local levelValue = data:FindFirstChild("Level")
         if not levelValue then return 1 end
-        
         return levelValue.Value
     end)
-    
     return success and result or 1
 end
 
 local function GetCurrentConfig()
     local level = GetPlayerLevel()
-    
     for _, config in ipairs(LevelConfig) do
         if level >= config.minLevel and level <= config.maxLevel then
             return config
         end
     end
-    
     return LevelConfig[1]
 end
 
@@ -126,79 +112,60 @@ end
 
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
-    
     local success = pcall(function()
         if not State.Character then return false end
         if not State.Humanoid then return false end
-        
         local hasEquipped = State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon)
         if hasEquipped then return true end
-        
         local backpack = Player:FindFirstChild("Backpack")
         if not backpack then return false end
-        
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
         if weapon then
             State.Humanoid:EquipTool(weapon)
             return true
         end
-        
         return false
     end)
-    
     return success
 end
 
 local function TeleportToSafeZone(npcName)
     if not State.HumanoidRootPart then return false end
-    
     local safeCFrame = NPCSafeZones[npcName]
     if not safeCFrame then
         State.HasVisitedSafeZone = true
         return true
     end
-    
     State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
     State.HumanoidRootPart.CFrame = safeCFrame
-    
     return true
 end
 
 local function TeleportToNPC(npc)
     if not State.HumanoidRootPart then return false end
-    
     local npcRoot = npc:FindFirstChild("HumanoidRootPart")
     if not npcRoot then return false end
-    
     State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    
     local offset = CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
     local targetCFrame = npcRoot.CFrame * offset
-    
     if (State.HumanoidRootPart.Position - targetCFrame.Position).Magnitude > 2 then
         State.HumanoidRootPart.CFrame = targetCFrame
     end
-    
     return true
 end
 
 local function PerformAttack()
     local currentTime = tick()
     local cooldown = _G.SlowHub.FarmCooldown
-    
     if currentTime - State.LastAttackTime < cooldown then
         return
     end
-    
     State.LastAttackTime = currentTime
-    
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
-        
         local remotes = combatSystem:FindFirstChild("Remotes")
         if not remotes then return end
-        
         local requestHit = remotes:FindFirstChild("RequestHit")
         if requestHit then
             requestHit:FireServer()
@@ -208,14 +175,11 @@ end
 
 local function AcceptQuest()
     if _G.SlowHub.IsAttackingBoss then return end
-    
     pcall(function()
         local config = GetCurrentConfig()
         if not config then return end
-        
         local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
         if not remoteEvents then return end
-        
         local questAccept = remoteEvents:FindFirstChild("QuestAccept")
         if questAccept then
             questAccept:FireServer(config.quest)
@@ -234,18 +198,14 @@ end
 
 local function StopQuestLoop()
     State.IsQuesting = false
-    
     if State.QuestConnection then
-        State.QuestConnection:Disconnect()
         State.QuestConnection = nil
     end
 end
 
 local function StartQuestLoop()
     if State.IsQuesting then return end
-    
     State.IsQuesting = true
-    
     State.QuestConnection = task.spawn(function()
         while State.IsQuesting and _G.SlowHub.AutoFarmLevel do
             AcceptQuest()
@@ -256,19 +216,13 @@ end
 
 local function StopAutoLevel()
     if not State.IsFarming then return end
-    
     State.IsFarming = false
-    
     if State.FarmConnection then
         State.FarmConnection:Disconnect()
         State.FarmConnection = nil
     end
-    
     StopQuestLoop()
     ResetFarmState()
-    
-    _G.SlowHub.AutoFarmLevel = false
-    
     pcall(function()
         if State.HumanoidRootPart then
             State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
@@ -281,41 +235,32 @@ local function FarmLoop()
         StopAutoLevel()
         return
     end
-    
     if not State.Character or not State.Character.Parent then
         return
     end
-    
     if not State.HumanoidRootPart then
         State.HumanoidRootPart = State.Character:FindFirstChild("HumanoidRootPart")
         if not State.HumanoidRootPart then return end
     end
-    
     if not State.Humanoid then
         State.Humanoid = State.Character:FindFirstChildOfClass("Humanoid")
         if not State.Humanoid or State.Humanoid.Health <= 0 then return end
     end
-    
     if _G.SlowHub.IsAttackingBoss then
         State.WasAttackingBoss = true
         return
     end
-    
     if State.WasAttackingBoss then
         State.HasVisitedSafeZone = false
         State.WasAttackingBoss = false
     end
-    
     local now = tick()
     local config = GetCurrentConfig()
-    
     if not config then return end
-    
     if State.LastTargetName ~= config.npc then
         State.LastTargetName = config.npc
         State.HasVisitedSafeZone = false
     end
-    
     if not State.HasVisitedSafeZone then
         local success = TeleportToSafeZone(config.npc)
         if success then
@@ -324,10 +269,8 @@ local function FarmLoop()
         task.wait(0.1)
         return
     end
-    
     local npc = GetNPC(config.npc, State.CurrentNPCIndex)
     local isAlive = IsNPCAlive(npc)
-    
     if not isAlive then
         if (now - State.LastNPCSwitch) > 0 then
             State.CurrentNPCIndex = GetNextIndex(State.CurrentNPCIndex, config.count)
@@ -335,7 +278,6 @@ local function FarmLoop()
         end
     else
         State.LastNPCSwitch = now
-        
         local success = TeleportToNPC(npc)
         if success then
             EquipWeapon()
@@ -346,30 +288,22 @@ local function FarmLoop()
     end
 end
 
-local function StartAutoLevel()
+function StartAutoLevel()
     if State.IsFarming then
         StopAutoLevel()
         task.wait(0.2)
     end
-    
     InitializeState()
-    
     if not State.NPCsFolder then return false end
-    
     State.IsFarming = true
-    _G.SlowHub.AutoFarmLevel = true
-    
     ResetFarmState()
     StartQuestLoop()
-    
     State.FarmConnection = RunService.Heartbeat:Connect(FarmLoop)
-    
     return true
 end
 
 local function Notify(title, content, duration)
     duration = duration or 3
-    
     pcall(function()
         if _G.WindUI and _G.WindUI.Notify then
             _G.WindUI:Notify({
@@ -386,23 +320,17 @@ MainTab:Section({Title = "Auto Level"})
 
 MainTab:Toggle({
     Title = "Auto Farm Level",
-    Default = _G.SlowHub.AutoFarmLevel or false,
+    Flag = "AutoFarmLevel",
+    Default = false,
     Callback = function(Value)
-        _G.SlowHub.AutoFarmLevel = Value
-        
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 Notify("Error", "Select a weapon first!", 3)
                 return
             end
-            
             StartAutoLevel()
         else
             StopAutoLevel()
-        end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
@@ -411,73 +339,52 @@ MainTab:Section({Title = "Farm Settings"})
 
 MainTab:Slider({
     Title = "Farm Distance",
+    Flag = "FarmDistance",
     Step = 1,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.FarmDistance,
+        Default = 8,
     },
     Callback = function(Value)
-        _G.SlowHub.FarmDistance = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 MainTab:Slider({
     Title = "Farm Height",
+    Flag = "FarmHeight",
     Step = 1,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.FarmHeight,
+        Default = 4,
     },
     Callback = function(Value)
-        _G.SlowHub.FarmHeight = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 MainTab:Slider({
     Title = "Attack Cooldown",
+    Flag = "FarmCooldown",
     Step = 0.05,
     Value = {
         Min = 0.05,
         Max = 0.5,
-        Default = _G.SlowHub.FarmCooldown,
+        Default = 0.15,
     },
     Callback = function(Value)
-        _G.SlowHub.FarmCooldown = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 MainTab:Slider({
     Title = "Quest Interval",
+    Flag = "QuestInterval",
     Step = 0.5,
     Value = {
         Min = 1,
         Max = 5,
-        Default = _G.SlowHub.QuestInterval,
+        Default = 2,
     },
     Callback = function(Value)
-        _G.SlowHub.QuestInterval = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
-
-if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
-    task.wait(1)
-    StartAutoLevel()
-end
