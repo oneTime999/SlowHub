@@ -5,8 +5,6 @@ if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-Tab:CreateLabel("Race")
-
 local autoRollScript = game:HttpGet(githubBase .. "RaceRoll.lua")
 if autoRollScript and autoRollScript ~= "" then
     local func = loadstring(autoRollScript)
