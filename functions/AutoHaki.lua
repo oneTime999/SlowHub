@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
 local autoHakiConnection = nil
+local respawnConnection = nil
 local lastToggleTime = 0
 local COOLDOWN_TIME = 3
 
@@ -17,7 +18,7 @@ local armParts = {
 local function isAlive()
     local character = Player.Character
     if not character then return false end
-    local humanoid = character:FindFirstChild("Humanoid")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
     return humanoid and humanoid.Health > 0
 end
 
@@ -49,13 +50,18 @@ local function stopAutoHaki()
         autoHakiConnection:Disconnect()
         autoHakiConnection = nil
     end
+    if respawnConnection then
+        respawnConnection:Disconnect()
+        respawnConnection = nil
+    end
     _G.SlowHub.AutoHaki = false
     lastToggleTime = 0
 end
 
 local function startAutoHaki()
     if autoHakiConnection then
-        stopAutoHaki()
+        autoHakiConnection:Disconnect()
+        autoHakiConnection = nil
     end
 
     _G.SlowHub.AutoHaki = true
@@ -80,13 +86,36 @@ local function startAutoHaki()
     end)
 end
 
+local function setupRespawnHandler()
+    if respawnConnection then
+        respawnConnection:Disconnect()
+    end
+    
+    respawnConnection = Player.CharacterAdded:Connect(function(newCharacter)
+        if _G.SlowHub.AutoHaki then
+            task.wait(1)
+            
+            local humanoid = newCharacter:WaitForChild("Humanoid", 5)
+            if humanoid then
+                task.wait(0.5)
+                
+                if _G.SlowHub.AutoHaki and not hasHakiEffect() then
+                    toggleHaki()
+                    lastToggleTime = tick()
+                end
+            end
+        end
+    end)
+end
+
 local Toggle = Tab:CreateToggle({
-    Name = "Auto Haki fixing",
+    Name = "Auto Haki fixed",
     CurrentValue = _G.SlowHub.AutoHaki,
     Flag = "AutoHaki",
     Callback = function(Value)
         if Value then
             startAutoHaki()
+            setupRespawnHandler()
         else
             stopAutoHaki()
         end
@@ -99,6 +128,7 @@ local Toggle = Tab:CreateToggle({
 })
 
 if _G.SlowHub.AutoHaki then
+    setupRespawnHandler()
     task.wait(2)
     startAutoHaki()
 end
