@@ -3,7 +3,6 @@ local Player = Players.LocalPlayer
 
 local Tab = _G.TeleportsTab
 
-_G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedIsland = _G.SlowHub.SelectedIsland or nil
 
 local Locations = {
@@ -42,9 +41,7 @@ InitializeTeleportState()
 
 Player.CharacterAdded:Connect(function(char)
     TeleportState.Character = char
-    
     task.wait(0.1)
-    
     TeleportState.HumanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
 
@@ -53,64 +50,55 @@ local function TeleportToPosition(position)
         TeleportState.HumanoidRootPart = TeleportState.Character and TeleportState.Character:FindFirstChild("HumanoidRootPart")
         if not TeleportState.HumanoidRootPart then return false end
     end
-    
     TeleportState.HumanoidRootPart.CFrame = CFrame.new(position)
     return true
 end
 
 local function Notify(title, content, duration)
     duration = duration or 3
-    
     pcall(function()
-        if _G.Rayfield and _G.Rayfield.Notify then
-            _G.Rayfield:Notify({
+        if _G.WindUI and _G.WindUI.Notify then
+            _G.WindUI:Notify({
                 Title = title,
                 Content = content,
                 Duration = duration,
-                Image = 4483362458
+                Icon = "rbxassetid://4483362458"
             })
         end
     end)
 end
 
-Tab:CreateSection("Island Teleport")
+Tab:Section({Title = "Island Teleport"})
 
-Tab:CreateDropdown({
-    Name = "Select Island",
-    Options = LocationList,
-    CurrentOption = _G.SlowHub.SelectedIsland and {_G.SlowHub.SelectedIsland} or {""},
-    MultipleOptions = false,
-    Flag = "SelectIsland",
+Tab:Dropdown({
+    Title = "Select Island",
+    Values = LocationList,
+    Default = _G.SlowHub.SelectedIsland or "",
     Callback = function(Value)
         local selected = type(Value) == "table" and Value[1] or Value
         _G.SlowHub.SelectedIsland = selected
-        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
 })
 
-Tab:CreateButton({
-    Name = "Teleport to Island",
+Tab:Button({
+    Title = "Teleport to Island",
     Callback = function()
         local targetIsland = _G.SlowHub.SelectedIsland
-        
         if not targetIsland or targetIsland == "" then
             Notify("Island Teleport", "Select an island first!", 3)
             return
         end
-        
         local targetPosition = Locations[targetIsland]
         if not targetPosition then
             Notify("Island Teleport", "Invalid island selected!", 3)
             return
         end
-        
         local success = pcall(function()
             return TeleportToPosition(targetPosition)
         end)
-        
         if not success then
             Notify("Island Teleport", "Teleport failed!", 3)
         end
