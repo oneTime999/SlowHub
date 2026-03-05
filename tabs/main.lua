@@ -26,15 +26,3 @@ if mobScript and mobScript ~= "" then
         task.spawn(function() pcall(func) end)
     end
 end
-
-task.wait(0.2)
-
-local dungeonScript = game:HttpGet(githubBase .. "AutoDungeon.lua")
-if dungeonScript and dungeonScript ~= "" then
-    local func = loadstring(dungeonScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
-end
-
-_G.SlowHub.MainTabReady = true
