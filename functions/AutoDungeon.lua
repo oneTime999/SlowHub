@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local MainTab = _G.MainTab
+local MainTab = _G.DungeonTab
 
 _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.DungeonFarmDistance = _G.SlowHub.DungeonFarmDistance or 4
