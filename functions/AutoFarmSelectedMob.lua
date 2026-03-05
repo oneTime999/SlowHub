@@ -5,12 +5,6 @@ local Player = Players.LocalPlayer
 
 local Tab = _G.MainTab
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.FarmDistance = _G.SlowHub.FarmDistance or 8
-_G.SlowHub.FarmHeight = _G.SlowHub.FarmHeight or 4
-_G.SlowHub.FarmCooldown = _G.SlowHub.FarmCooldown or 0.15
-_G.SlowHub.AutoQuestInterval = _G.SlowHub.AutoQuestInterval or 2
-
 local MobList = {
     "Thief", 
     "Monkey", 
@@ -83,9 +77,7 @@ Player.CharacterAdded:Connect(function(char)
     State.Character = char
     State.Humanoid = nil
     State.HumanoidRootPart = nil
-    
     task.wait(0.1)
-    
     State.Humanoid = char:FindFirstChildOfClass("Humanoid")
     State.HumanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
@@ -141,72 +133,54 @@ end
 
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
-    
     local success = pcall(function()
         if not State.Character then return false end
         if not State.Humanoid then return false end
-        
         local hasEquipped = State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon)
         if hasEquipped then return true end
-        
         local backpack = Player:FindFirstChild("Backpack")
         if not backpack then return false end
-        
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
         if weapon then
             State.Humanoid:EquipTool(weapon)
             return true
         end
-        
         return false
     end)
-    
     return success
 end
 
 local function TeleportToSafeZone(mobName)
     if not State.HumanoidRootPart then return false end
-    
     local safeCFrame = MobSafeZones[mobName]
     if not safeCFrame then return true end
-    
     State.HumanoidRootPart.CFrame = safeCFrame
     State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    
     return true
 end
 
 local function TeleportToNPC(npc)
     if not State.HumanoidRootPart then return false end
-    
     local npcRoot = GetNPCRootPart(npc)
     if not npcRoot then return false end
-    
     State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    
     local offset = CFrame.new(0, _G.SlowHub.FarmHeight, _G.SlowHub.FarmDistance)
     State.HumanoidRootPart.CFrame = npcRoot.CFrame * offset
-    
     return true
 end
 
 local function PerformAttack()
     local currentTime = tick()
     local cooldown = _G.SlowHub.FarmCooldown
-    
     if currentTime - State.LastAttackTime < cooldown then
         return
     end
-    
     State.LastAttackTime = currentTime
-    
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
-        
         local remotes = combatSystem:FindFirstChild("Remotes")
         if not remotes then return end
-        
         local requestHit = remotes:FindFirstChild("RequestHit")
         if requestHit then
             requestHit:FireServer()
@@ -217,17 +191,13 @@ end
 local function AcceptQuest()
     if not _G.SlowHub.AutoQuestSelectedMob then return end
     if _G.SlowHub.IsAttackingBoss then return end
-    
     pcall(function()
         local currentMob = State.SelectedMobs[State.CurrentMobIndex]
         if not currentMob then return end
-        
         local questToAccept = GetQuestForMob(currentMob)
         if not questToAccept then return end
-        
         local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
         if not remoteEvents then return end
-        
         local questAccept = remoteEvents:FindFirstChild("QuestAccept")
         if questAccept then
             questAccept:FireServer(questToAccept)
@@ -254,18 +224,14 @@ end
 
 local function StopQuestLoop()
     State.IsQuesting = false
-    
     if State.QuestConnection then
-        State.QuestConnection:Disconnect()
         State.QuestConnection = nil
     end
 end
 
 local function StartQuestLoop()
     if State.IsQuesting then return end
-    
     State.IsQuesting = true
-    
     State.QuestConnection = task.spawn(function()
         while State.IsQuesting and _G.SlowHub.AutoFarmSelectedMob do
             AcceptQuest()
@@ -274,21 +240,15 @@ local function StartQuestLoop()
     end)
 end
 
-local function StopAutoFarm()
+function StopAutoFarm()
     if not State.IsFarming then return end
-    
     State.IsFarming = false
-    
     if State.FarmConnection then
         State.FarmConnection:Disconnect()
         State.FarmConnection = nil
     end
-    
     StopQuestLoop()
     ResetFarmState()
-    
-    _G.SlowHub.AutoFarmSelectedMob = false
-    
     pcall(function()
         if State.HumanoidRootPart then
             State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
@@ -301,36 +261,29 @@ local function FarmLoop()
         StopAutoFarm()
         return
     end
-    
     if not State.Character or not State.Character.Parent then
         return
     end
-    
     if not State.HumanoidRootPart then
         State.HumanoidRootPart = State.Character:FindFirstChild("HumanoidRootPart")
         if not State.HumanoidRootPart then return end
     end
-    
     if not State.Humanoid then
         State.Humanoid = State.Character:FindFirstChildOfClass("Humanoid")
         if not State.Humanoid or State.Humanoid.Health <= 0 then return end
     end
-    
     if _G.SlowHub.IsAttackingBoss then
         State.WasAttackingBoss = true
         return
     end
-    
     if State.WasAttackingBoss then
         State.HasVisitedSafeZone = false
         State.WasAttackingBoss = false
     end
-    
     if #State.SelectedMobs == 0 then
         StopAutoFarm()
         return
     end
-    
     local currentMobName = State.SelectedMobs[State.CurrentMobIndex]
     if not currentMobName then
         State.CurrentMobIndex = 1
@@ -340,14 +293,11 @@ local function FarmLoop()
             return
         end
     end
-    
     local config = GetMobConfig(currentMobName)
-    
     if currentMobName ~= State.LastTargetName then
         State.LastTargetName = currentMobName
         State.HasVisitedSafeZone = false
     end
-    
     if not State.HasVisitedSafeZone then
         local success = TeleportToSafeZone(currentMobName)
         if success then
@@ -356,13 +306,10 @@ local function FarmLoop()
         task.wait(0.1)
         return
     end
-    
     local npc = GetNPC(config.npc, State.CurrentNPCIndex)
     local isAlive = IsNPCAlive(npc)
-    
     if not isAlive then
         State.KillCount = State.KillCount + 1
-        
         if State.KillCount >= 5 then
             SwitchToNextMob()
             return
@@ -371,7 +318,6 @@ local function FarmLoop()
         end
     else
         local success = TeleportToNPC(npc)
-        
         if success then
             EquipWeapon()
             PerformAttack()
@@ -381,39 +327,29 @@ local function FarmLoop()
     end
 end
 
-local function StartAutoFarm()
+function StartAutoFarm()
     if State.IsFarming then
         StopAutoFarm()
         task.wait(0.2)
     end
-    
     InitializeState()
-    
     if #State.SelectedMobs == 0 then return false end
     if not State.NPCsFolder then return false end
-    
     State.IsFarming = true
-    _G.SlowHub.AutoFarmSelectedMob = true
-    
     ResetFarmState()
     StartQuestLoop()
-    
     State.FarmConnection = RunService.Heartbeat:Connect(FarmLoop)
-    
     return true
 end
 
 local function UpdateSelectedMobs(options)
     State.SelectedMobs = {}
-    
     if type(options) == "table" then
         for _, value in ipairs(options) do
             table.insert(State.SelectedMobs, tostring(value))
         end
     end
-    
     ResetFarmState()
-    
     if _G.SlowHub.AutoFarmSelectedMob and #State.SelectedMobs > 0 then
         StopAutoFarm()
         task.wait(0.1)
@@ -425,7 +361,6 @@ end
 
 local function Notify(title, content, duration)
     duration = duration or 3
-    
     pcall(function()
         if _G.WindUI and _G.WindUI.Notify then
             _G.WindUI:Notify({
@@ -442,15 +377,12 @@ Tab:Section({Title = "Mob Selection"})
 
 Tab:Dropdown({
     Title = "Select Mobs (Multi Select)",
+    Flag = "SelectedMobs",
     Values = MobList,
     Multi = true,
     Default = {},
     Callback = function(Option)
         UpdateSelectedMobs(Option)
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
@@ -458,108 +390,91 @@ Tab:Section({Title = "Farm Control"})
 
 Tab:Toggle({
     Title = "Auto Farm Selected Mobs",
+    Flag = "AutoFarmSelectedMob",
     Default = false,
     Callback = function(Value)
-        _G.SlowHub.AutoFarmSelectedMob = Value
-        
         if Value then
             if not _G.SlowHub.SelectedWeapon then
                 Notify("Error", "Please select a weapon first!", 3)
                 return
             end
-            
             if #State.SelectedMobs == 0 then
                 Notify("Error", "Please select at least one mob!", 3)
                 return
             end
-            
             StartAutoFarm()
         else
             StopAutoFarm()
-        end
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
 
 Tab:Toggle({
     Title = "Auto Quest",
+    Flag = "AutoQuestSelectedMob",
     Default = false,
     Callback = function(Value)
-        _G.SlowHub.AutoQuestSelectedMob = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Farm Distance",
+    Flag = "FarmDistance",
     Step = 1,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.FarmDistance,
+        Default = 8,
     },
     Callback = function(Value)
-        _G.SlowHub.FarmDistance = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Farm Height",
+    Flag = "FarmHeight",
     Step = 1,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.FarmHeight,
+        Default = 4,
     },
     Callback = function(Value)
-        _G.SlowHub.FarmHeight = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Attack Cooldown",
+    Flag = "FarmCooldown",
     Step = 0.05,
     Value = {
         Min = 0.05,
         Max = 0.5,
-        Default = _G.SlowHub.FarmCooldown,
+        Default = 0.15,
     },
     Callback = function(Value)
-        _G.SlowHub.FarmCooldown = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Quest Interval",
+    Flag = "AutoQuestInterval",
     Step = 0.5,
     Value = {
         Min = 1,
         Max = 5,
-        Default = _G.SlowHub.AutoQuestInterval,
+        Default = 2,
     },
     Callback = function(Value)
-        _G.SlowHub.AutoQuestInterval = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
+
+task.spawn(function()
+    task.wait(2)
+    if _G.SlowHub.SelectedMobs then
+        UpdateSelectedMobs(_G.SlowHub.SelectedMobs)
+    end
+    if _G.SlowHub.AutoFarmSelectedMob then
+        StartAutoFarm()
+    end
+end)
