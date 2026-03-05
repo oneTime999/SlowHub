@@ -5,7 +5,7 @@ local Player = Players.LocalPlayer
 local Tab = _G.MiscTab
 
 _G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.AutoHaki = _G.SlowHub.AutoHaki or true
+_G.SlowHub.AutoHaki = _G.SlowHub.AutoHaki or false
 
 local HakiState = {
     IsRunning = false,
@@ -13,8 +13,8 @@ local HakiState = {
 }
 
 local function FireHaki()
-    pcall(function()
-        local remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
+    local success = pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if not remotes then return end
 
         local hakiRemote = remotes:FindFirstChild("Haki")
@@ -22,6 +22,8 @@ local function FireHaki()
             hakiRemote:FireServer("Enable")
         end
     end)
+    
+    return success
 end
 
 local function StartHakiLoop()
