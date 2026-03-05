@@ -5,8 +5,6 @@ if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-Tab:CreateLabel("Merchant")
-
 local merchantScript = game:HttpGet(githubBase .. "Merchant.lua")
 if merchantScript and merchantScript ~= "" then
     local func = loadstring(merchantScript)
