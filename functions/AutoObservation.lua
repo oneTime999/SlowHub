@@ -1,15 +1,45 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.MiscTab
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoObservation = _G.SlowHub.AutoObservation or false
+_G.SlowHub.ObservationInterval = _G.SlowHub.ObservationInterval or 3
+
+local CONFIG_FOLDER = "SlowHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local function ensureFolder()
+    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
+end
+
+local function loadConfig()
+    ensureFolder()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
+        if ok and type(data) == "table" then return data end
+    end
+    return {}
+end
+
+local function saveConfig(key, value)
+    ensureFolder()
+    local current = loadConfig()
+    current[key] = value
+    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
+end
+
+local saved = loadConfig()
+if saved["AutoObservation"] ~= nil then _G.SlowHub.AutoObservation = saved["AutoObservation"] end
+if saved["ObservationInterval"] ~= nil then _G.SlowHub.ObservationInterval = saved["ObservationInterval"] end
 
 local ObservationState = {
     Connection = nil,
     IsRunning = false,
     LastToggleTime = 0,
-    PlayerGui = nil
+    PlayerGui = nil,
 }
 
 local function InitializeObservationState()
@@ -45,22 +75,6 @@ local function ToggleObservation()
     end)
 end
 
-local function ObservationLoop()
-    if not _G.SlowHub.AutoObservation then
-        StopAutoObservation()
-        return
-    end
-    local currentTime = tick()
-    local interval = _G.SlowHub.ObservationInterval
-    if currentTime - ObservationState.LastToggleTime < interval then
-        return
-    end
-    if not IsObservationActive() then
-        ToggleObservation()
-        ObservationState.LastToggleTime = currentTime
-    end
-end
-
 function StopAutoObservation()
     ObservationState.IsRunning = false
     ObservationState.LastToggleTime = 0
@@ -68,6 +82,7 @@ function StopAutoObservation()
         ObservationState.Connection:Disconnect()
         ObservationState.Connection = nil
     end
+    _G.SlowHub.AutoObservation = false
 end
 
 function StartAutoObservation()
@@ -77,34 +92,53 @@ function StartAutoObservation()
     end
     InitializeObservationState()
     ObservationState.IsRunning = true
+    _G.SlowHub.AutoObservation = true
     ObservationState.LastToggleTime = 0
-    ObservationState.Connection = RunService.Heartbeat:Connect(ObservationLoop)
+    ObservationState.Connection = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoObservation then StopAutoObservation(); return end
+        local currentTime = tick()
+        if currentTime - ObservationState.LastToggleTime < _G.SlowHub.ObservationInterval then return end
+        if not IsObservationActive() then
+            ToggleObservation()
+            ObservationState.LastToggleTime = currentTime
+        end
+    end)
 end
 
-Tab:Section({Title = "Observation Haki"})
+local MiscTab = _G.MiscTab
 
-Tab:Toggle({
-    Title = "Auto Observation Haki",
+MiscTab:CreateSection({ Title = "Observation Haki" })
+
+MiscTab:CreateToggle({
+    Name = "Auto Observation Haki",
     Flag = "AutoObservation",
-    Default = false,
-    Callback = function(Value)
-        if Value then
+    CurrentValue = _G.SlowHub.AutoObservation,
+    Callback = function(value)
+        _G.SlowHub.AutoObservation = value
+        saveConfig("AutoObservation", value)
+        if value then
             StartAutoObservation()
         else
             StopAutoObservation()
         end
-    end
+    end,
 })
 
-Tab:Slider({
-    Title = "Observation Check Interval",
+MiscTab:CreateSlider({
+    Name = "Observation Check Interval",
     Flag = "ObservationInterval",
-    Step = 0.5,
-    Value = {
-        Min = 1,
-        Max = 10,
-        Default = 3,
-    },
-    Callback = function(Value)
-    end
+    Range = { 1, 10 },
+    Increment = 0.5,
+    CurrentValue = _G.SlowHub.ObservationInterval,
+    Callback = function(value)
+        _G.SlowHub.ObservationInterval = value
+        saveConfig("ObservationInterval", value)
+    end,
 })
+
+if _G.SlowHub.AutoObservation then
+    task.spawn(function()
+        task.wait(2)
+        StartAutoObservation()
+    end)
+end
