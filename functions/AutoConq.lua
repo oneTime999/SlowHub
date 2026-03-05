@@ -70,7 +70,7 @@ local function StartAutoHaki()
     end)
 end
 
-Tab:CreateSection("Haki")
+Tab:CreateSection("Conqueror Haki")
 
 Tab:CreateToggle({
     Name = "Auto Conqueror Haki",
@@ -92,7 +92,7 @@ Tab:CreateToggle({
 })
 
 Tab:CreateSlider({
-    Name = "Haki Interval",
+    Name = "Conqueror Haki Interval",
     Range = {1, 10},
     Increment = 0.5,
     Suffix = "Seconds",
