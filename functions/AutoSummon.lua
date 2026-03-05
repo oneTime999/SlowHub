@@ -269,25 +269,24 @@ local function Notify(title, content, duration)
     duration = duration or 3
     
     pcall(function()
-        if Rayfield and Rayfield.Notify then
-            Rayfield:Notify({
+        if _G.WindUI and _G.WindUI.Notify then
+            _G.WindUI:Notify({
                 Title = title,
                 Content = content,
                 Duration = duration,
-                Image = 4483362458
+                Icon = "rbxassetid://4483362458"
             })
         end
     end)
 end
 
-Tab:CreateSection("Summon Settings")
+Tab:Section({Title = "Summon Settings"})
 
-Tab:CreateDropdown({
-    Name = "Select Bosses to Summon",
-    Options = BossList,
-    CurrentOption = {},
-    MultipleOptions = true,
-    Flag = "SelectBossSummon",
+Tab:Dropdown({
+    Title = "Select Bosses to Summon",
+    Values = BossList,
+    Multi = true,
+    Default = {},
     Callback = function(Value)
         SummonState.SelectedBosses = {}
         
@@ -303,12 +302,10 @@ Tab:CreateDropdown({
     end
 })
 
-Tab:CreateDropdown({
-    Name = "Select Difficulty",
-    Options = DifficultyList,
-    CurrentOption = {"Normal"},
-    MultipleOptions = false,
-    Flag = "SelectBossDifficulty",
+Tab:Dropdown({
+    Title = "Select Difficulty",
+    Values = DifficultyList,
+    Default = "Normal",
     Callback = function(Value)
         local val = type(Value) == "table" and Value[1] or Value
         SummonState.SelectedDifficulty = val
@@ -319,13 +316,14 @@ Tab:CreateDropdown({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Summon Interval",
-    Range = {0.1, 2},
-    Increment = 0.1,
-    Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.SummonInterval,
-    Flag = "SummonInterval",
+Tab:Slider({
+    Title = "Summon Interval",
+    Step = 0.1,
+    Value = {
+        Min = 0.1,
+        Max = 2,
+        Default = _G.SlowHub.SummonInterval,
+    },
     Callback = function(Value)
         _G.SlowHub.SummonInterval = Value
         
@@ -335,10 +333,9 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Summon Boss",
-    CurrentValue = false,
-    Flag = "AutoSummonBoss",
+Tab:Toggle({
+    Title = "Auto Summon Boss",
+    Default = false,
     Callback = function(Value)
         if Value then
             if not SummonState.SelectedBosses or #SummonState.SelectedBosses == 0 then
