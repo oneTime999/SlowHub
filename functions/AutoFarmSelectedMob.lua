@@ -427,24 +427,24 @@ local function Notify(title, content, duration)
     duration = duration or 3
     
     pcall(function()
-        if Rayfield and Rayfield.Notify then
-            Rayfield:Notify({
+        if _G.WindUI and _G.WindUI.Notify then
+            _G.WindUI:Notify({
                 Title = title,
                 Content = content,
-                Duration = duration
+                Duration = duration,
+                Icon = "rbxassetid://4483362458"
             })
         end
     end)
 end
 
-Tab:CreateSection("Mob Selection")
+Tab:Section({Title = "Mob Selection"})
 
-Tab:CreateDropdown({
-    Name = "Select Mobs (Multi Select)",
-    Options = MobList,
-    CurrentOption = {},
-    MultipleOptions = true,
-    Flag = "SelectMobs",
+Tab:Dropdown({
+    Title = "Select Mobs (Multi Select)",
+    Values = MobList,
+    Multi = true,
+    Default = {},
     Callback = function(Option)
         UpdateSelectedMobs(Option)
         
@@ -454,12 +454,11 @@ Tab:CreateDropdown({
     end
 })
 
-Tab:CreateSection("Farm Control")
+Tab:Section({Title = "Farm Control"})
 
-Tab:CreateToggle({
-    Name = "Auto Farm Selected Mobs",
-    CurrentValue = false,
-    Flag = "AutoFarmSelectedMob",
+Tab:Toggle({
+    Title = "Auto Farm Selected Mobs",
+    Default = false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmSelectedMob = Value
         
@@ -485,10 +484,9 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Quest",
-    CurrentValue = false,
-    Flag = "AutoQuestSelectedMob",
+Tab:Toggle({
+    Title = "Auto Quest",
+    Default = false,
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         
@@ -498,13 +496,12 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Farm Distance",
-    Range = {1, 10},
-    Increment = 1,
+Tab:Slider({
+    Title = "Farm Distance",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmDistance,
     Suffix = "Studs",
-    CurrentValue = _G.SlowHub.FarmDistance,
-    Flag = "FarmDistance",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         
@@ -514,13 +511,12 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Farm Height",
-    Range = {1, 10},
-    Increment = 1,
+Tab:Slider({
+    Title = "Farm Height",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmHeight,
     Suffix = "Studs",
-    CurrentValue = _G.SlowHub.FarmHeight,
-    Flag = "FarmHeight",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         
@@ -530,13 +526,12 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Attack Cooldown",
-    Range = {0.05, 0.5},
-    Increment = 0.05,
+Tab:Slider({
+    Title = "Attack Cooldown",
+    Min = 0.05,
+    Max = 0.5,
+    Default = _G.SlowHub.FarmCooldown,
     Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.FarmCooldown,
-    Flag = "FarmCooldown",
     Callback = function(Value)
         _G.SlowHub.FarmCooldown = Value
         
@@ -546,13 +541,12 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Quest Interval",
-    Range = {1, 5},
-    Increment = 0.5,
+Tab:Slider({
+    Title = "Quest Interval",
+    Min = 1,
+    Max = 5,
+    Default = _G.SlowHub.AutoQuestInterval,
     Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.AutoQuestInterval,
-    Flag = "AutoQuestInterval",
     Callback = function(Value)
         _G.SlowHub.AutoQuestInterval = Value
         
