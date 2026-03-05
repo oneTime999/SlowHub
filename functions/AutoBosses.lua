@@ -409,11 +409,12 @@ local function Notify(title, content, duration)
     duration = duration or 3
     
     local success = pcall(function()
-        if Rayfield and Rayfield.Notify then
-            Rayfield:Notify({
+        if _G.WindUI and _G.WindUI.Notify then
+            _G.WindUI:Notify({
                 Title = title,
                 Content = content,
-                Duration = duration
+                Duration = duration,
+                Icon = "rbxassetid://4483362458"
             })
         end
     end)
@@ -421,14 +422,13 @@ local function Notify(title, content, duration)
     return success
 end
 
-Tab:CreateSection("Boss Selection")
+Tab:Section({Title = "Boss Selection"})
 
-Tab:CreateDropdown({
-    Name = "Select Bosses to Farm",
-    Options = bossList,
-    CurrentOption = {},
-    MultipleOptions = true,
-    Flag = "MultiBossSelector",
+Tab:Dropdown({
+    Title = "Select Bosses to Farm",
+    Values = bossList,
+    Multi = true,
+    Default = {},
     Callback = function(Options)
         _G.SlowHub.SelectedBosses = {}
         for _, bossName in ipairs(Options) do
@@ -440,13 +440,12 @@ Tab:CreateDropdown({
     end
 })
 
-Tab:CreateSection("Pity System (Optional)")
+Tab:Section({Title = "Pity System (Optional)"})
 
-Tab:CreateDropdown({
-    Name = "Pity Target Boss",
-    Options = bossList,
-    CurrentOption = "",
-    Flag = "PityTargetBoss",
+Tab:Dropdown({
+    Title = "Pity Target Boss",
+    Values = bossList,
+    Default = "",
     Callback = function(Option)
         local selected = type(Option) == "table" and Option[1] or Option
         _G.SlowHub.PityTargetBoss = selected or ""
@@ -456,10 +455,9 @@ Tab:CreateDropdown({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Enable Pity System",
-    CurrentValue = false,
-    Flag = "PriorityPityEnabled",
+Tab:Toggle({
+    Title = "Enable Pity System",
+    Default = false,
     Callback = function(Value)
         _G.SlowHub.PriorityPityEnabled = Value
         if _G.SlowHub.AutoFarmBosses and State.IsRunning then
@@ -471,12 +469,11 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSection("Farm Control")
+Tab:Section({Title = "Farm Control"})
 
-Tab:CreateToggle({
-    Name = "Auto Farm Selected Bosses",
-    CurrentValue = false,
-    Flag = "AutoFarmBoss",
+Tab:Toggle({
+    Title = "Auto Farm Selected Bosses",
+    Default = false,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
@@ -494,13 +491,14 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Boss Farm Distance",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "Studs",
-    CurrentValue = _G.SlowHub.BossFarmDistance,
-    Flag = "BossFarmDistance",
+Tab:Slider({
+    Title = "Boss Farm Distance",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.BossFarmDistance,
+    },
     Callback = function(Value)
         _G.SlowHub.BossFarmDistance = Value
         if _G.SaveConfig then
@@ -509,13 +507,14 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Boss Farm Height",
-    Range = {1, 10},
-    Increment = 1,
-    Suffix = "Studs",
-    CurrentValue = _G.SlowHub.BossFarmHeight,
-    Flag = "BossFarmHeight",
+Tab:Slider({
+    Title = "Boss Farm Height",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.BossFarmHeight,
+    },
     Callback = function(Value)
         _G.SlowHub.BossFarmHeight = Value
         if _G.SaveConfig then
@@ -524,13 +523,14 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Attack Cooldown",
-    Range = {0.05, 0.5},
-    Increment = 0.05,
-    Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.BossFarmCooldown,
-    Flag = "BossFarmCooldown",
+Tab:Slider({
+    Title = "Attack Cooldown",
+    Step = 0.05,
+    Value = {
+        Min = 0.05,
+        Max = 0.5,
+        Default = _G.SlowHub.BossFarmCooldown,
+    },
     Callback = function(Value)
         _G.SlowHub.BossFarmCooldown = Value
         if _G.SaveConfig then
