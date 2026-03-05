@@ -81,7 +81,7 @@ local function startAutoHaki()
 end
 
 local Toggle = Tab:CreateToggle({
-    Name = "Auto Haki",
+    Name = "Auto Haki fixing",
     CurrentValue = _G.SlowHub.AutoHaki,
     Flag = "AutoHaki",
     Callback = function(Value)
