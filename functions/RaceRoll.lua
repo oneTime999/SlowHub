@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.RollsTab
+local Tab = _G.RollTab
 
 _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.AutoRoll = _G.SlowHub.AutoRoll or false
@@ -14,8 +14,9 @@ _G.SlowHub.StopOnLegendary = _G.SlowHub.StopOnLegendary or false
 
 local RollState = {
     IsRolling = false,
-    Thread = nil,
-    LastServerRace = nil
+    Connection = nil,
+    LastRollTime = 0,
+    CurrentRace = nil
 }
 
 local RacesData = {
@@ -40,6 +41,51 @@ local RacesData = {
     ["Sunborn"] = {rarity = "Mythical", order = 6}
 }
 
+local function ParseRaceText(text)
+    if not text then return nil end
+    local race = text:gsub("Race: ", ""):gsub("Race:", ""):match("^%s*(.-)%s*$")
+    return race ~= "" and race or nil
+end
+
+local function GetCurrentRace()
+    local success, raceText = pcall(function()
+        local playerGui = Player:WaitForChild("PlayerGui", 5)
+        if not playerGui then return nil end
+        
+        local statsPanel = playerGui:FindFirstChild("StatsPanelUI")
+        if not statsPanel then return nil end
+        
+        local mainFrame = statsPanel:FindFirstChild("MainFrame")
+        if not mainFrame then return nil end
+        
+        local frame = mainFrame:FindFirstChild("Frame")
+        if not frame then return nil end
+        
+        local content = frame:FindFirstChild("Content")
+        if not content then return nil end
+        
+        local sideFrame = content:FindFirstChild("SideFrame")
+        if not sideFrame then return nil end
+        
+        local userStats = sideFrame:FindFirstChild("UserStats")
+        if not userStats then return nil end
+        
+        local raceEquipped = userStats:FindFirstChild("RaceEquipped")
+        if not raceEquipped then return nil end
+        
+        local statName = raceEquipped:FindFirstChild("StatName")
+        if not statName then return nil end
+        
+        return statName.Text
+    end)
+    
+    if success and raceText then
+        return ParseRaceText(raceText)
+    end
+    
+    return nil
+end
+
 local function GetRaceRarity(raceName)
     local data = RacesData[raceName]
     return data and data.rarity or "Common"
@@ -47,99 +93,97 @@ end
 
 local function IsTargetRace(raceName)
     if not raceName then return false end
-
+    
     if _G.SlowHub.StopOnMythical and GetRaceRarity(raceName) == "Mythical" then
         return true
     end
-
+    
     if _G.SlowHub.StopOnLegendary and GetRaceRarity(raceName) == "Legendary" then
         return true
     end
-
+    
     for _, target in ipairs(_G.SlowHub.TargetRaces) do
         if target == raceName then
             return true
         end
     end
-
+    
     return false
 end
 
 local function FireRoll()
+    local args = {
+        [1] = "Use",
+        [2] = "Race Reroll",
+        [3] = 1,
+    }
+    
     pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer("Use", "Race Reroll", 1)
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer(unpack(args))
     end)
-end
-
-local function GetCurrentRace()
-    local raceValue = nil
-
-    pcall(function()
-        local dataFolder = Player:FindFirstChild("Data") or Player:WaitForChild("Data", 1)
-        if dataFolder then
-            local raceObj = dataFolder:FindFirstChild("Race")
-            if raceObj then
-                raceValue = raceObj.Value
-            end
-        end
-    end)
-
-    if not raceValue then
-        pcall(function()
-            raceValue = Player:GetAttribute("Race")
-        end)
-    end
-
-    return raceValue
 end
 
 local function StopRolling()
     RollState.IsRolling = false
-    RollState.Thread = nil
-
+    
+    if RollState.Connection then
+        RollState.Connection:Disconnect()
+        RollState.Connection = nil
+    end
+    
     if _G.SlowHub.AutoRoll then
         _G.SlowHub.AutoRoll = false
-
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
 end
 
+local function RollLoop()
+    if not RollState.IsRolling then return end
+    
+    local currentTime = tick()
+    local delay = _G.SlowHub.RollDelay
+    
+    if currentTime - RollState.LastRollTime < delay then
+        return
+    end
+    
+    local currentRace = GetCurrentRace()
+    
+    if currentRace and currentRace ~= RollState.CurrentRace then
+        RollState.CurrentRace = currentRace
+        
+        if IsTargetRace(currentRace) then
+            StopRolling()
+            return
+        end
+    end
+    
+    FireRoll()
+    RollState.LastRollTime = currentTime
+end
+
 local function StartRolling()
     if RollState.IsRolling then return end
-
+    
     RollState.IsRolling = true
-    RollState.LastServerRace = GetCurrentRace()
-
-    RollState.Thread = task.spawn(function()
-        while RollState.IsRolling do
-            local currentRace = GetCurrentRace()
-
-            if currentRace and currentRace ~= RollState.LastServerRace then
-                RollState.LastServerRace = currentRace
-
-                if IsTargetRace(currentRace) then
-                    StopRolling()
-                    break
-                end
-            end
-
-            FireRoll()
-            task.wait(_G.SlowHub.RollDelay)
-        end
-    end)
+    RollState.CurrentRace = GetCurrentRace()
+    RollState.LastRollTime = 0
+    
+    RollState.Connection = RunService.Heartbeat:Connect(RollLoop)
 end
 
 local function OnToggleChange(value)
     _G.SlowHub.AutoRoll = value
-
+    
     if value then
         StartRolling()
     else
         StopRolling()
     end
-
+    
     if _G.SaveConfig then
         _G.SaveConfig()
     end
@@ -176,7 +220,7 @@ Tab:CreateDropdown({
     Flag = "TargetRaces",
     Callback = function(selectedOptions)
         _G.SlowHub.TargetRaces = selectedOptions or {}
-
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -189,7 +233,7 @@ Tab:CreateToggle({
     Flag = "StopOnMythical",
     Callback = function(value)
         _G.SlowHub.StopOnMythical = value
-
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -202,7 +246,7 @@ Tab:CreateToggle({
     Flag = "StopOnLegendary",
     Callback = function(value)
         _G.SlowHub.StopOnLegendary = value
-
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -218,7 +262,7 @@ Tab:CreateSlider({
     Flag = "RollDelay",
     Callback = function(value)
         _G.SlowHub.RollDelay = value
-
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
