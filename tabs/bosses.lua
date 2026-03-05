@@ -1,42 +1,20 @@
-local Tab = _G.BossesTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-local waitCount = 0
-while not (_G.SlowHub.MainTabReady or _G.SlowHub.TabsLoaded) and waitCount < 50 do
-    task.wait(0.1)
-    waitCount = waitCount + 1
+local function loadScript(url)
+    local ok, content = pcall(game.HttpGet, game, url)
+    if not ok or type(content) ~= "string" or content == "" then return end
+    local func, _ = loadstring(content)
+    if func then task.spawn(function() pcall(func) end) end
 end
 
-local bossScript = game:HttpGet(githubBase .. "AutoBosses.lua")
-if bossScript and bossScript ~= "" then
-    local func = loadstring(bossScript)
-    if func then
-        pcall(func)
-    end
-end
-
+loadScript(githubBase .. "AutoBosses.lua")
 task.wait(0.1)
-
-local summonScript = game:HttpGet(githubBase .. "AutoSummon.lua")
-if summonScript and summonScript ~= "" then
-    local func = loadstring(summonScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
-end
-
+loadScript(githubBase .. "AutoSummon.lua")
 task.wait(0.1)
-
-local miniBossScript = game:HttpGet(githubBase .. "MiniBossFarm.lua")
-if miniBossScript and miniBossScript ~= "" then
-    local func = loadstring(miniBossScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
-end
+loadScript(githubBase .. "MiniBossFarm.lua")
 
 _G.SlowHub.BossesTabReady = true
