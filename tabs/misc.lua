@@ -1,3 +1,4 @@
+-- Misc Tab
 local Tab = _G.MiscTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
@@ -5,72 +6,88 @@ if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-local function loadFunction(url)
-    local success, content = pcall(function()
-        return game:HttpGet(url)
-    end)
-    
-    if not success or type(content) ~= "string" or content == "" 
-        or content:match("<!DOCTYPE html>") or content:match("<html>") then
-        return nil
-    end
-    
-    local func, err = loadstring(content)
-    if not func then
-        return nil
-    end
-    
-    return func
+local hakiScript = game:HttpGet(githubBase .. "AutoHaki.lua")
+if hakiScript and hakiScript ~= "" then
+    local func = loadstring(hakiScript)
+    if func then task.spawn(function() pcall(func) end) end
 end
 
-local function loadAndSpawn(url)
-    local func = loadFunction(url)
-    if func then
-        task.spawn(function()
-            pcall(func)
-        end)
-    end
+task.wait(0.05)
+
+local obsScript = game:HttpGet(githubBase .. "AutoObservation.lua")
+if obsScript and obsScript ~= "" then
+    local func = loadstring(obsScript)
+    if func then task.spawn(function() pcall(func) end) end
 end
 
--- Auto Haki
-loadAndSpawn(githubBase .. "AutoHaki.lua")
 task.wait(0.05)
 
--- Auto Observation
-loadAndSpawn(githubBase .. "AutoObservation.lua")
+local conqScript = game:HttpGet(githubBase .. "AutoConq.lua")
+if conqScript and conqScript ~= "" then
+    local func = loadstring(conqScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.05)
 
--- Auto Conqueror Haki
-loadAndSpawn(githubBase .. "AutoConq.lua")
-task.wait(0.05)
+local ascendScript = game:HttpGet(githubBase .. "AutoAscend.lua")
+if ascendScript and ascendScript ~= "" then
+    local func = loadstring(ascendScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
 
--- Auto Ascend
-loadAndSpawn(githubBase .. "AutoAscend.lua")
 task.wait(0.1)
 
--- Auto Skill
-loadAndSpawn(githubBase .. "AutoSkill.lua")
+local skillScript = game:HttpGet(githubBase .. "AutoSkill.lua")
+if skillScript and skillScript ~= "" then
+    local func = loadstring(skillScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.05)
 
--- Slime Key
-loadAndSpawn(githubBase .. "SlimeKey.lua")
+local slimeScript = game:HttpGet(githubBase .. "SlimeKey.lua")
+if slimeScript and slimeScript ~= "" then
+    local func = loadstring(slimeScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.05)
 
--- Divine Grail
-loadAndSpawn(githubBase .. "DivineGrail.lua")
+local grailScript = game:HttpGet(githubBase .. "DivineGrail.lua")
+if grailScript and grailScript ~= "" then
+    local func = loadstring(grailScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.1)
 
--- Codes
-loadAndSpawn(githubBase .. "Codes.lua")
+local codesScript = game:HttpGet(githubBase .. "Codes.lua")
+if codesScript and codesScript ~= "" then
+    local func = loadstring(codesScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.1)
 
--- Anti AFK
-loadAndSpawn(githubBase .. "AntiAFK.lua")
+local antiAFKScript = game:HttpGet(githubBase .. "AntiAFK.lua")
+if antiAFKScript and antiAFKScript ~= "" then
+    local func = loadstring(antiAFKScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.05)
 
--- Rejoin
-loadAndSpawn(githubBase .. "Rejoin.lua")
+local rejoinScript = game:HttpGet(githubBase .. "Rejoin.lua")
+if rejoinScript and rejoinScript ~= "" then
+    local func = loadstring(rejoinScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
 task.wait(0.05)
 
--- Server Hop
-loadAndSpawn(githubBase .. "ServerHop.lua")
+local hopScript = game:HttpGet(githubBase .. "ServerHop.lua")
+if hopScript and hopScript ~= "" then
+    local func = loadstring(hopScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
