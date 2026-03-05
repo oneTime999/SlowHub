@@ -1,28 +1,16 @@
-local Tab = _G.MainTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
-local weaponScript = game:HttpGet(githubBase .. "WeaponSelector.lua")
-if weaponScript and weaponScript ~= "" then
-    local func = loadstring(weaponScript)
-    if func then pcall(func) end
+local function loadScript(url)
+    local ok, content = pcall(game.HttpGet, game, url)
+    if not ok or type(content) ~= "string" or content == "" then return end
+    local func, _ = loadstring(content)
+    if func then task.spawn(function() pcall(func) end) end
 end
 
+loadScript(githubBase .. "WeaponSelector.lua")
 task.wait(0.1)
+loadScript(githubBase .. "AutoLevel.lua")
+task.wait(0.1)
+loadScript(githubBase .. "AutoFarmSelectedMob.lua")
 
-local levelScript = game:HttpGet(githubBase .. "AutoLevel.lua")
-if levelScript and levelScript ~= "" then
-    local func = loadstring(levelScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
-end
-
-task.wait(0.2)
-
-local mobScript = game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua")
-if mobScript and mobScript ~= "" then
-    local func = loadstring(mobScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
-end
+_G.SlowHub.MainTabReady = true
