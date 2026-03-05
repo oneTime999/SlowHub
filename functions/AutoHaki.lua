@@ -1,97 +1,158 @@
-local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
-local autoHakiConnection = nil
-local lastToggleTime = 0
-local COOLDOWN_TIME = 3
+local Tab = _G.MiscTab
 
-local armParts = {
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoHaki = _G.SlowHub.AutoHaki or false
+_G.SlowHub.HakiCheckInterval = _G.SlowHub.HakiCheckInterval or 3
+
+local HakiState = {
+    Connection = nil,
+    IsRunning = false,
+    LastToggleTime = 0,
+    Character = nil,
+    Humanoid = nil
+}
+
+local ArmParts = {
     "Left Arm",
     "Right Arm"
 }
 
-local function isAlive()
-    local character = Player.Character
-    if not character then return false end
-    local humanoid = character:FindFirstChild("Humanoid")
-    return humanoid and humanoid.Health > 0
+local function InitializeHakiState()
+    HakiState.Character = Player.Character
+    HakiState.Humanoid = HakiState.Character and HakiState.Character:FindFirstChildOfClass("Humanoid")
 end
 
-local function hasHakiEffect()
-    local character = Player.Character
-    if not character then return false end
+InitializeHakiState()
 
-    for _, armName in ipairs(armParts) do
-        local arm = character:FindFirstChild(armName)
-        if arm then
-            local effect = arm:FindFirstChild("3")
-            if effect and effect:IsA("ParticleEmitter") then
-                return true
-            end
+Player.CharacterAdded:Connect(function(char)
+    HakiState.Character = char
+    HakiState.Humanoid = nil
+    
+    task.wait(0.1)
+    
+    HakiState.Humanoid = char:FindFirstChildOfClass("Humanoid")
+end)
+
+local function IsAlive()
+    if not HakiState.Humanoid then
+        HakiState.Humanoid = HakiState.Character and HakiState.Character:FindFirstChildOfClass("Humanoid")
+    end
+    
+    return HakiState.Humanoid and HakiState.Humanoid.Health > 0
+end
+
+local function HasHakiEffect()
+    if not HakiState.Character then return false end
+    
+    for _, armName in ipairs(ArmParts) do
+        local arm = HakiState.Character:FindFirstChild(armName)
+        if not arm then continue end
+        
+        local effect = arm:FindFirstChild("3")
+        if effect and effect:IsA("ParticleEmitter") then
+            return true
         end
     end
-
+    
     return false
 end
 
-local function toggleHaki()
+local function ToggleHaki()
     pcall(function()
-        ReplicatedStorage.RemoteEvents.HakiRemote:FireServer("Toggle")
+        local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+        if not remoteEvents then return end
+        
+        local hakiRemote = remoteEvents:FindFirstChild("HakiRemote")
+        if not hakiRemote then return end
+        
+        hakiRemote:FireServer("Toggle")
     end)
 end
 
-local function stopAutoHaki()
-    if autoHakiConnection then
-        autoHakiConnection:Disconnect()
-        autoHakiConnection = nil
+local function HakiLoop()
+    if not _G.SlowHub.AutoHaki then
+        StopAutoHaki()
+        return
     end
+    
+    if not IsAlive() then return end
+    
+    local currentTime = tick()
+    local interval = _G.SlowHub.HakiCheckInterval
+    
+    if currentTime - HakiState.LastToggleTime < interval then
+        return
+    end
+    
+    if not HasHakiEffect() then
+        ToggleHaki()
+        HakiState.LastToggleTime = currentTime
+    end
+end
+
+local function StopAutoHaki()
+    HakiState.IsRunning = false
+    HakiState.LastToggleTime = 0
+    
+    if HakiState.Connection then
+        HakiState.Connection:Disconnect()
+        HakiState.Connection = nil
+    end
+    
     _G.SlowHub.AutoHaki = false
-    lastToggleTime = 0
 end
 
-local function startAutoHaki()
-    if autoHakiConnection then
-        stopAutoHaki()
+local function StartAutoHaki()
+    if HakiState.IsRunning then
+        StopAutoHaki()
+        task.wait(0.2)
     end
-
+    
+    InitializeHakiState()
+    
+    HakiState.IsRunning = true
     _G.SlowHub.AutoHaki = true
-    lastToggleTime = 0
-
-    autoHakiConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoHaki then
-            stopAutoHaki()
-            return
-        end
-
-        if not isAlive() then return end
-
-        local now = tick()
-
-        if now - lastToggleTime >= COOLDOWN_TIME then
-            if not hasHakiEffect() then
-                toggleHaki()
-                lastToggleTime = now
-            end
-        end
-    end)
+    HakiState.LastToggleTime = 0
+    
+    HakiState.Connection = RunService.Heartbeat:Connect(HakiLoop)
 end
 
-local Toggle = Tab:CreateToggle({
+Tab:CreateSection("Haki")
+
+Tab:CreateToggle({
     Name = "Auto Haki",
     CurrentValue = _G.SlowHub.AutoHaki,
     Flag = "AutoHaki",
     Callback = function(Value)
         if Value then
-            startAutoHaki()
+            StartAutoHaki()
         else
-            stopAutoHaki()
+            StopAutoHaki()
         end
-
+        
         _G.SlowHub.AutoHaki = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
+})
+
+Tab:CreateSlider({
+    Name = "Haki Check Interval",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = "Seconds",
+    CurrentValue = _G.SlowHub.HakiCheckInterval,
+    Flag = "HakiCheckInterval",
+    Callback = function(Value)
+        _G.SlowHub.HakiCheckInterval = Value
+        
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -99,6 +160,8 @@ local Toggle = Tab:CreateToggle({
 })
 
 if _G.SlowHub.AutoHaki then
-    task.wait(2)
-    startAutoHaki()
+    task.spawn(function()
+        task.wait(2)
+        StartAutoHaki()
+    end)
 end
