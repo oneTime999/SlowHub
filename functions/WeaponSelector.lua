@@ -1,41 +1,13 @@
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.SelectedWeapon = nil
-_G.SlowHub.EquipLoop = false
-_G.SlowHub.EquipInterval = _G.SlowHub.EquipInterval or 0.25
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-if saved["SelectedWeapon"] ~= nil then _G.SlowHub.SelectedWeapon = saved["SelectedWeapon"] end
-if saved["EquipInterval"] ~= nil then _G.SlowHub.EquipInterval = saved["EquipInterval"] end
+local Tab = _G.MainTab
 
 local WeaponState = {
-    Character=nil, Humanoid=nil, Backpack=nil, EquipLoopConnection=nil,
+    Character = nil,
+    Humanoid = nil,
+    Backpack = nil,
+    EquipLoopConnection = nil
 }
 
 local function InitializeWeaponState()
@@ -104,7 +76,7 @@ local function StartEquipLoop()
     WeaponState.EquipLoopConnection = task.spawn(function()
         while _G.SlowHub.EquipLoop do
             EquipSelectedTool()
-            task.wait(_G.SlowHub.EquipInterval)
+            task.wait(_G.SlowHub.EquipInterval or 0.25)
         end
     end)
 end
@@ -114,50 +86,80 @@ local function StopEquipLoop()
     WeaponState.EquipLoopConnection = nil
 end
 
-local MainTab = _G.MainTab
+Tab:Section({Title = "Weapon"})
 
-MainTab:Section({ Title = "Weapon" })
-
-local WeaponDropdown = MainTab:Dropdown({
-    Title = "Select Weapon", Flag = "SelectWeapon",
+local WeaponDropdown = Tab:Dropdown({
+    Title = "Select Weapon",
     Values = GetWeapons(),
     Default = _G.SlowHub.SelectedWeapon or "",
     Multi = false,
-    Callback = function(value)
-        local weapon = type(value) == "table" and value[1] or value
+    Callback = function(Value)
+        local weapon = type(Value) == "table" and Value[1] or Value
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
-            saveConfig("SelectedWeapon", weapon)
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
-            saveConfig("SelectedWeapon", nil)
         end
-    end,
+        -- Salva imediatamente
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
 })
 
-MainTab:Button({
+Tab:Button({
     Title = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
         WeaponDropdown:Refresh(newWeapons)
-    end,
+    end
 })
 
-MainTab:Toggle({
-    Title = "Loop Equip Tool", Flag = "LoopEquipTool",
-    Default = false,
+Tab:Toggle({
+    Title = "Loop Equip Tool",
+    Default = _G.SlowHub.EquipLoop or false,
     Callback = function(state)
-        if state then StartEquipLoop() else StopEquipLoop() end
-    end,
+        if state then 
+            StartEquipLoop() 
+        else 
+            StopEquipLoop() 
+        end
+        -- Salva imediatamente
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
 })
 
-MainTab:Slider({
-    Title = "Equip Interval", Flag = "EquipInterval",
-    Value = { Min = 0.1, Max = 1, Default = _G.SlowHub.EquipInterval },
+Tab:Slider({
+    Title = "Equip Interval",
     Step = 0.05,
-    Callback = function(value)
-        _G.SlowHub.EquipInterval = value
-        saveConfig("EquipInterval", value)
-    end,
+    Value = {
+        Min = 0.1,
+        Max = 1,
+        Default = _G.SlowHub.EquipInterval or 0.25,
+    },
+    Callback = function(Value)
+        _G.SlowHub.EquipInterval = Value
+        -- Salva imediatamente
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
 })
+
+-- Inicialização automática
+if _G.SlowHub.SelectedWeapon then
+    task.spawn(function()
+        task.wait(1)
+        EquipSelectedTool()
+    end)
+end
+
+if _G.SlowHub.EquipLoop then
+    task.spawn(function()
+        task.wait(1.5)
+        StartEquipLoop()
+    end)
+end
