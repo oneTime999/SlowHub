@@ -1,42 +1,32 @@
-local Tab = _G.BossesTab
+local Tab = _G.DungeonsTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
 if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-local waitCount = 0
-while not (_G.SlowHub.MainTabReady or _G.SlowHub.TabsLoaded) and waitCount < 50 do
-    task.wait(0.1)
-    waitCount = waitCount + 1
-end
-
-local bossScript = game:HttpGet(githubBase .. "AutoBosses.lua")
-if bossScript and bossScript ~= "" then
-    local func = loadstring(bossScript)
-    if func then
-        pcall(func)
+local function loadFunction(url)
+    local success, content = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success or type(content) ~= "string" or content == "" 
+        or content:match("<!DOCTYPE html>") or content:match("<html>") then
+        return nil
     end
-end
-
-task.wait(0.1)
-
-local summonScript = game:HttpGet(githubBase .. "AutoSummon.lua")
-if summonScript and summonScript ~= "" then
-    local func = loadstring(summonScript)
-    if func then
-        task.spawn(function() pcall(func) end)
+    
+    local func, err = loadstring(content)
+    if not func then
+        return nil
     end
+    
+    return func
 end
 
-task.wait(0.1)
-
-local miniBossScript = game:HttpGet(githubBase .. "MiniBossFarm.lua")
-if miniBossScript and miniBossScript ~= "" then
-    local func = loadstring(miniBossScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
+-- Auto Dungeon
+local dungeonFunc = loadFunction(githubBase .. "AutoDungeon.lua")
+if dungeonFunc then
+    task.spawn(function()
+        pcall(dungeonFunc)
+    end)
 end
-
-_G.SlowHub.BossesTabReady = true
