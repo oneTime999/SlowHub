@@ -1,8 +1,61 @@
-local Tab = _G.DungeonsTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
+
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoFarmDungeon = _G.SlowHub.AutoFarmDungeon or false
+_G.SlowHub.DungeonFarmDistance = _G.SlowHub.DungeonFarmDistance or 4
+_G.SlowHub.DungeonFarmHeight = _G.SlowHub.DungeonFarmHeight or 9
+_G.SlowHub.DungeonFarmCooldown = _G.SlowHub.DungeonFarmCooldown or 0.1
+_G.SlowHub.DungeonVoteDifficulty = _G.SlowHub.DungeonVoteDifficulty or "Easy"
+_G.SlowHub.VoteInterval = _G.SlowHub.VoteInterval or 2
+_G.SlowHub.AutoVoteDungeon = _G.SlowHub.AutoVoteDungeon or false
+_G.SlowHub.ReplayInterval = _G.SlowHub.ReplayInterval or 5
+_G.SlowHub.AutoReplayDungeon = _G.SlowHub.AutoReplayDungeon or false
+
+local CONFIG_FOLDER = "SlowHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local function ensureFolder()
+    if not isfolder(CONFIG_FOLDER) then
+        makefolder(CONFIG_FOLDER)
+    end
+end
+
+local function loadConfig()
+    ensureFolder()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(CONFIG_FILE))
+        end)
+        if ok and type(data) == "table" then
+            return data
+        end
+    end
+    return {}
+end
+
+local function saveConfig(key, value)
+    ensureFolder()
+    local current = loadConfig()
+    current[key] = value
+    pcall(function()
+        writefile(CONFIG_FILE, HttpService:JSONEncode(current))
+    end)
+end
+
+local saved = loadConfig()
+if saved["AutoFarmDungeon"] ~= nil then _G.SlowHub.AutoFarmDungeon = saved["AutoFarmDungeon"] end
+if saved["DungeonFarmDistance"] ~= nil then _G.SlowHub.DungeonFarmDistance = saved["DungeonFarmDistance"] end
+if saved["DungeonFarmHeight"] ~= nil then _G.SlowHub.DungeonFarmHeight = saved["DungeonFarmHeight"] end
+if saved["DungeonFarmCooldown"] ~= nil then _G.SlowHub.DungeonFarmCooldown = saved["DungeonFarmCooldown"] end
+if saved["DungeonVoteDifficulty"] ~= nil then _G.SlowHub.DungeonVoteDifficulty = saved["DungeonVoteDifficulty"] end
+if saved["VoteInterval"] ~= nil then _G.SlowHub.VoteInterval = saved["VoteInterval"] end
+if saved["AutoVoteDungeon"] ~= nil then _G.SlowHub.AutoVoteDungeon = saved["AutoVoteDungeon"] end
+if saved["ReplayInterval"] ~= nil then _G.SlowHub.ReplayInterval = saved["ReplayInterval"] end
+if saved["AutoReplayDungeon"] ~= nil then _G.SlowHub.AutoReplayDungeon = saved["AutoReplayDungeon"] end
 
 local State = {
     FarmConnection = nil,
@@ -15,7 +68,7 @@ local State = {
     Character = nil,
     HumanoidRootPart = nil,
     Humanoid = nil,
-    NPCsFolder = nil
+    NPCsFolder = nil,
 }
 
 local function InitializeState()
@@ -45,18 +98,13 @@ end)
 local function EquipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     local success = pcall(function()
-        if not State.Character then return false end
-        if not State.Humanoid then return false end
-        local hasEquipped = State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if hasEquipped then return true end
+        if not State.Character then return end
+        if not State.Humanoid then return end
+        if State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
         local backpack = Player:FindFirstChild("Backpack")
-        if not backpack then return false end
+        if not backpack then return end
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon then
-            State.Humanoid:EquipTool(weapon)
-            return true
-        end
-        return false
+        if weapon then State.Humanoid:EquipTool(weapon) end
     end)
     return success
 end
@@ -94,10 +142,7 @@ end
 
 local function PerformAttack()
     local currentTime = tick()
-    local cooldown = _G.SlowHub.DungeonFarmCooldown
-    if currentTime - State.LastAttackTime < cooldown then
-        return
-    end
+    if currentTime - State.LastAttackTime < _G.SlowHub.DungeonFarmCooldown then return end
     State.LastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
@@ -105,9 +150,7 @@ local function PerformAttack()
         local remotes = combatSystem:FindFirstChild("Remotes")
         if not remotes then return end
         local requestHit = remotes:FindFirstChild("RequestHit")
-        if requestHit then
-            requestHit:FireServer()
-        end
+        if requestHit then requestHit:FireServer() end
     end)
 end
 
@@ -118,9 +161,7 @@ local function VoteDifficulty()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if not remotes then return end
         local dungeonWaveVote = remotes:FindFirstChild("DungeonWaveVote")
-        if dungeonWaveVote then
-            dungeonWaveVote:FireServer(_G.SlowHub.DungeonVoteDifficulty)
-        end
+        if dungeonWaveVote then dungeonWaveVote:FireServer(_G.SlowHub.DungeonVoteDifficulty) end
     end)
 end
 
@@ -130,17 +171,13 @@ local function VoteReplay()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if not remotes then return end
         local dungeonWaveReplayVote = remotes:FindFirstChild("DungeonWaveReplayVote")
-        if dungeonWaveReplayVote then
-            dungeonWaveReplayVote:FireServer("sponsor")
-        end
+        if dungeonWaveReplayVote then dungeonWaveReplayVote:FireServer("sponsor") end
     end)
 end
 
 local function StopVoteLoop()
     State.IsVoting = false
-    if State.VoteConnection then
-        State.VoteConnection = nil
-    end
+    State.VoteConnection = nil
 end
 
 local function StartVoteLoop()
@@ -156,9 +193,7 @@ end
 
 local function StopReplayLoop()
     State.IsReplaying = false
-    if State.ReplayConnection then
-        State.ReplayConnection = nil
-    end
+    State.ReplayConnection = nil
 end
 
 local function StartReplayLoop()
@@ -191,9 +226,7 @@ local function FarmLoop()
         StopDungeonFarm()
         return
     end
-    if not State.Character or not State.Character.Parent then
-        return
-    end
+    if not State.Character or not State.Character.Parent then return end
     if not State.HumanoidRootPart then
         State.HumanoidRootPart = State.Character:FindFirstChild("HumanoidRootPart")
         if not State.HumanoidRootPart then return end
@@ -227,152 +260,134 @@ function StartDungeonFarm()
     State.FarmConnection = RunService.Heartbeat:Connect(FarmLoop)
 end
 
-local function Notify(title, content, duration)
-    duration = duration or 3
-    pcall(function()
-        if _G.WindUI and _G.WindUI.Notify then
-            _G.WindUI:Notify({
-                Title = title,
-                Content = content,
-                Duration = duration,
-                Icon = "rbxassetid://4483362458"
-            })
-        end
-    end)
-end
+local DungeonsTab = _G.DungeonsTab
 
-Tab:Section({Title = "Dungeon Farm"})
+DungeonsTab:CreateSection({ Title = "Dungeon Farm" })
 
-Tab:Toggle({
-    Title = "Auto Farm Dungeon or Boss Rush",
+DungeonsTab:CreateToggle({
+    Name = "Auto Farm Dungeon or Boss Rush",
     Flag = "AutoFarmDungeon",
-    Default = false,
-    Callback = function(Value)
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                Notify("Error", "Please select a weapon first!", 3)
-                return
-            end
+    CurrentValue = _G.SlowHub.AutoFarmDungeon,
+    Callback = function(value)
+        _G.SlowHub.AutoFarmDungeon = value
+        saveConfig("AutoFarmDungeon", value)
+        if value then
             StartDungeonFarm()
         else
             StopDungeonFarm()
         end
-    end
+    end,
 })
 
-Tab:Slider({
-    Title = "Farm Distance",
+DungeonsTab:CreateSlider({
+    Name = "Farm Distance",
     Flag = "DungeonFarmDistance",
-    Step = 1,
-    Value = {
-        Min = 1,
-        Max = 10,
-        Default = 4,
-    },
-    Callback = function(Value)
-    end
+    Range = { 1, 10 },
+    Increment = 1,
+    CurrentValue = _G.SlowHub.DungeonFarmDistance,
+    Callback = function(value)
+        _G.SlowHub.DungeonFarmDistance = value
+        saveConfig("DungeonFarmDistance", value)
+    end,
 })
 
-Tab:Slider({
-    Title = "Farm Height",
+DungeonsTab:CreateSlider({
+    Name = "Farm Height",
     Flag = "DungeonFarmHeight",
-    Step = 1,
-    Value = {
-        Min = 1,
-        Max = 10,
-        Default = 9,
-    },
-    Callback = function(Value)
-    end
+    Range = { 1, 10 },
+    Increment = 1,
+    CurrentValue = _G.SlowHub.DungeonFarmHeight,
+    Callback = function(value)
+        _G.SlowHub.DungeonFarmHeight = value
+        saveConfig("DungeonFarmHeight", value)
+    end,
 })
 
-Tab:Slider({
-    Title = "Attack Cooldown",
+DungeonsTab:CreateSlider({
+    Name = "Attack Cooldown",
     Flag = "DungeonFarmCooldown",
-    Step = 0.05,
-    Value = {
-        Min = 0.05,
-        Max = 0.5,
-        Default = 0.1,
-    },
-    Callback = function(Value)
-    end
+    Range = { 0.05, 0.5 },
+    Increment = 0.05,
+    CurrentValue = _G.SlowHub.DungeonFarmCooldown,
+    Callback = function(value)
+        _G.SlowHub.DungeonFarmCooldown = value
+        saveConfig("DungeonFarmCooldown", value)
+    end,
 })
 
-Tab:Section({Title = "Voting"})
+DungeonsTab:CreateSection({ Title = "Voting" })
 
-Tab:Dropdown({
-    Title = "Select Difficulty",
+DungeonsTab:CreateDropdown({
+    Name = "Select Difficulty",
     Flag = "DungeonVoteDifficulty",
-    Values = {"Easy", "Medium", "Hard", "Extreme"},
-    Default = "",
-    Callback = function(Option)
-    end
+    Options = { "Easy", "Medium", "Hard", "Extreme" },
+    CurrentOption = _G.SlowHub.DungeonVoteDifficulty,
+    MultipleOptions = false,
+    Callback = function(option)
+        _G.SlowHub.DungeonVoteDifficulty = option
+        saveConfig("DungeonVoteDifficulty", option)
+    end,
 })
 
-Tab:Slider({
-    Title = "Vote Interval",
+DungeonsTab:CreateSlider({
+    Name = "Vote Interval",
     Flag = "VoteInterval",
-    Step = 0.5,
-    Value = {
-        Min = 1,
-        Max = 5,
-        Default = 2,
-    },
-    Callback = function(Value)
-    end
+    Range = { 1, 5 },
+    Increment = 0.5,
+    CurrentValue = _G.SlowHub.VoteInterval,
+    Callback = function(value)
+        _G.SlowHub.VoteInterval = value
+        saveConfig("VoteInterval", value)
+    end,
 })
 
-Tab:Toggle({
-    Title = "Auto Vote Difficulty",
+DungeonsTab:CreateToggle({
+    Name = "Auto Vote Difficulty",
     Flag = "AutoVoteDungeon",
-    Default = false,
-    Callback = function(Value)
-        if Value then
+    CurrentValue = _G.SlowHub.AutoVoteDungeon,
+    Callback = function(value)
+        _G.SlowHub.AutoVoteDungeon = value
+        saveConfig("AutoVoteDungeon", value)
+        if value then
             StartVoteLoop()
         else
             StopVoteLoop()
         end
-    end
+    end,
 })
 
-Tab:Section({Title = "Replay"})
+DungeonsTab:CreateSection({ Title = "Replay" })
 
-Tab:Slider({
-    Title = "Replay Interval",
+DungeonsTab:CreateSlider({
+    Name = "Replay Interval",
     Flag = "ReplayInterval",
-    Step = 0.5,
-    Value = {
-        Min = 3,
-        Max = 10,
-        Default = 5,
-    },
-    Callback = function(Value)
-    end
+    Range = { 3, 10 },
+    Increment = 0.5,
+    CurrentValue = _G.SlowHub.ReplayInterval,
+    Callback = function(value)
+        _G.SlowHub.ReplayInterval = value
+        saveConfig("ReplayInterval", value)
+    end,
 })
 
-Tab:Toggle({
-    Title = "Auto Replay Dungeon or Boss Rush",
+DungeonsTab:CreateToggle({
+    Name = "Auto Replay Dungeon or Boss Rush",
     Flag = "AutoReplayDungeon",
-    Default = false,
-    Callback = function(Value)
-        if Value then
+    CurrentValue = _G.SlowHub.AutoReplayDungeon,
+    Callback = function(value)
+        _G.SlowHub.AutoReplayDungeon = value
+        saveConfig("AutoReplayDungeon", value)
+        if value then
             StartReplayLoop()
         else
             StopReplayLoop()
         end
-    end
+    end,
 })
 
 task.spawn(function()
     task.wait(2)
-    if _G.SlowHub.AutoFarmDungeon then
-        StartDungeonFarm()
-    end
-    if _G.SlowHub.AutoVoteDungeon then
-        StartVoteLoop()
-    end
-    if _G.SlowHub.AutoReplayDungeon then
-        StartReplayLoop()
-    end
+    if _G.SlowHub.AutoFarmDungeon then StartDungeonFarm() end
+    if _G.SlowHub.AutoVoteDungeon then StartVoteLoop() end
+    if _G.SlowHub.AutoReplayDungeon then StartReplayLoop() end
 end)
