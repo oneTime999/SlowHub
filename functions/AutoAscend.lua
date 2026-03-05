@@ -60,15 +60,16 @@ local function StartAutoAscend()
     end)
 end
 
-Tab:CreateSection("Ascend")
+Tab:Section({Title = "Ascend"})
 
-Tab:CreateSlider({
-    Name = "Ascend Interval",
-    Range = {5, 60},
-    Increment = 5,
-    Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.AscendInterval,
-    Flag = "AscendInterval",
+Tab:Slider({
+    Title = "Ascend Interval",
+    Step = 5,
+    Value = {
+        Min = 5,
+        Max = 60,
+        Default = _G.SlowHub.AscendInterval,
+    },
     Callback = function(Value)
         _G.SlowHub.AscendInterval = Value
         
@@ -78,10 +79,9 @@ Tab:CreateSlider({
     end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Ascend",
-    CurrentValue = _G.SlowHub.AutoAscend,
-    Flag = "AutoAscend",
+Tab:Toggle({
+    Title = "Auto Ascend",
+    Default = _G.SlowHub.AutoAscend,
     Callback = function(Value)
         _G.SlowHub.AutoAscend = Value
         getgenv().AutoAscend = Value
