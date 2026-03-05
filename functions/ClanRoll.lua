@@ -1,43 +1,63 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.RollsTab
-
+_G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.AutoClanRoll = _G.SlowHub.AutoClanRoll or false
 _G.SlowHub.TargetClans = _G.SlowHub.TargetClans or {}
 _G.SlowHub.ClanRollDelay = _G.SlowHub.ClanRollDelay or 0.25
 _G.SlowHub.StopOnLegendaryClan = _G.SlowHub.StopOnLegendaryClan or true
 _G.SlowHub.StopOnEpicClan = _G.SlowHub.StopOnEpicClan or false
 
-local ClanRollState = {
-    IsRolling = false,
-    Connection = nil,
-    LastRollTime = 0,
-    CurrentClan = nil
-}
+local CONFIG_FOLDER = "SlowHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local function ensureFolder()
+    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
+end
+
+local function loadConfig()
+    ensureFolder()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
+        if ok and type(data) == "table" then return data end
+    end
+    return {}
+end
+
+local function saveConfig(key, value)
+    ensureFolder()
+    local current = loadConfig()
+    current[key] = value
+    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
+end
+
+local saved = loadConfig()
+local clanFlags = {"AutoClanRoll","TargetClans","ClanRollDelay","StopOnLegendaryClan","StopOnEpicClan"}
+for _, flag in ipairs(clanFlags) do
+    if saved[flag] ~= nil then _G.SlowHub[flag] = saved[flag] end
+end
 
 local ClansData = {
-    ["Voldigoat"] = {rarity = "Legendary", order = 5},
-    ["Monarch"] = {rarity = "Legendary", order = 5},
-    ["Pride"] = {rarity = "Legendary", order = 5},
-    ["Mugetsu"] = {rarity = "Epic", order = 4},
-    ["Yamato"] = {rarity = "Epic", order = 4},
-    ["Zoldyck"] = {rarity = "Rare", order = 3},
-    ["Raikage"] = {rarity = "Uncommon", order = 2},
-    ["Sasaki"] = {rarity = "Common", order = 1},
-    ["None"] = {rarity = "Common", order = 1}
+    ["Voldigoat"]={rarity="Legendary",order=5},["Monarch"]={rarity="Legendary",order=5},
+    ["Pride"]={rarity="Legendary",order=5},["Mugetsu"]={rarity="Epic",order=4},
+    ["Yamato"]={rarity="Epic",order=4},["Zoldyck"]={rarity="Rare",order=3},
+    ["Raikage"]={rarity="Uncommon",order=2},["Sasaki"]={rarity="Common",order=1},
+    ["None"]={rarity="Common",order=1},
 }
+
+local ClanRollState = {IsRolling=false, Connection=nil, LastRollTime=0, CurrentClan=nil}
 
 local function ParseClanText(text)
     if not text then return nil end
-    local clan = text:gsub("Clan: ", ""):gsub("Clan:", ""):match("^%s*(.-)%s*$")
+    local clan = text:gsub("Clan: ",""):gsub("Clan:",""):match("^%s*(.-)%s*$")
     return clan ~= "" and clan or nil
 end
 
 local function GetCurrentClan()
-    local success, clanText = pcall(function()
+    local ok, clanText = pcall(function()
         local playerGui = Player:WaitForChild("PlayerGui", 5)
         if not playerGui then return nil end
         local statsPanel = playerGui:FindFirstChild("StatsPanelUI")
@@ -58,9 +78,7 @@ local function GetCurrentClan()
         if not statName then return nil end
         return statName.Text
     end)
-    if success and clanText then
-        return ParseClanText(clanText)
-    end
+    if ok and clanText then return ParseClanText(clanText) end
     return nil
 end
 
@@ -71,28 +89,17 @@ end
 
 local function IsTargetClan(clanName)
     if not clanName then return false end
-    if _G.SlowHub.StopOnLegendaryClan and GetClanRarity(clanName) == "Legendary" then
-        return true
-    end
-    if _G.SlowHub.StopOnEpicClan and GetClanRarity(clanName) == "Epic" then
-        return true
-    end
+    if _G.SlowHub.StopOnLegendaryClan and GetClanRarity(clanName) == "Legendary" then return true end
+    if _G.SlowHub.StopOnEpicClan and GetClanRarity(clanName) == "Epic" then return true end
     for _, target in ipairs(_G.SlowHub.TargetClans) do
-        if target == clanName then
-            return true
-        end
+        if target == clanName then return true end
     end
     return false
 end
 
 local function FireClanRoll()
-    local args = {
-        [1] = "Use",
-        [2] = "Clan Reroll",
-        [3] = 1,
-    }
     pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer(unpack(args))
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer("Use","Clan Reroll",1)
     end)
 end
 
@@ -104,29 +111,8 @@ local function StopClanRolling()
     end
     if _G.SlowHub.AutoClanRoll then
         _G.SlowHub.AutoClanRoll = false
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        saveConfig("AutoClanRoll", false)
     end
-end
-
-local function ClanRollLoop()
-    if not ClanRollState.IsRolling then return end
-    local currentTime = tick()
-    local delay = _G.SlowHub.ClanRollDelay
-    if currentTime - ClanRollState.LastRollTime < delay then
-        return
-    end
-    local currentClan = GetCurrentClan()
-    if currentClan and currentClan ~= ClanRollState.CurrentClan then
-        ClanRollState.CurrentClan = currentClan
-        if IsTargetClan(currentClan) then
-            StopClanRolling()
-            return
-        end
-    end
-    FireClanRoll()
-    ClanRollState.LastRollTime = currentTime
 end
 
 local function StartClanRolling()
@@ -134,106 +120,85 @@ local function StartClanRolling()
     ClanRollState.IsRolling = true
     ClanRollState.CurrentClan = GetCurrentClan()
     ClanRollState.LastRollTime = 0
-    ClanRollState.Connection = RunService.Heartbeat:Connect(ClanRollLoop)
-end
-
-local function OnClanToggleChange(value)
-    _G.SlowHub.AutoClanRoll = value
-    if value then
-        StartClanRolling()
-    else
-        StopClanRolling()
-    end
-    if _G.SaveConfig then
-        _G.SaveConfig()
-    end
+    ClanRollState.Connection = RunService.Heartbeat:Connect(function()
+        if not ClanRollState.IsRolling then return end
+        local currentTime = tick()
+        if currentTime - ClanRollState.LastRollTime < _G.SlowHub.ClanRollDelay then return end
+        local currentClan = GetCurrentClan()
+        if currentClan and currentClan ~= ClanRollState.CurrentClan then
+            ClanRollState.CurrentClan = currentClan
+            if IsTargetClan(currentClan) then StopClanRolling(); return end
+        end
+        FireClanRoll()
+        ClanRollState.LastRollTime = currentTime
+    end)
 end
 
 local AllClans = {}
 for clanName, data in pairs(ClansData) do
     if clanName ~= "None" then
-        table.insert(AllClans, {
-            name = clanName,
-            rarity = data.rarity,
-            order = data.order
-        })
+        table.insert(AllClans, {name=clanName, rarity=data.rarity, order=data.order})
     end
 end
-
-table.sort(AllClans, function(a, b)
-    if a.order ~= b.order then
-        return a.order > b.order
-    end
+table.sort(AllClans, function(a,b)
+    if a.order ~= b.order then return a.order > b.order end
     return a.name < b.name
 end)
 
-Tab:Section({Title = "Auto Clan Roll"})
-
 local clanOptions = {}
-for _, clanInfo in ipairs(AllClans) do
-    table.insert(clanOptions, clanInfo.name)
-end
+for _, info in ipairs(AllClans) do table.insert(clanOptions, info.name) end
 
-Tab:Dropdown({
-    Title = "Target Clans",
-    Values = clanOptions,
-    Multi = true,
-    Default = _G.SlowHub.TargetClans,
+local RollsTab = _G.RollsTab
+
+RollsTab:CreateSection({ Title = "Auto Clan Roll" })
+
+RollsTab:CreateDropdown({
+    Name = "Target Clans", Flag = "TargetClans",
+    Options = clanOptions, CurrentOption = _G.SlowHub.TargetClans, MultipleOptions = true,
     Callback = function(selectedOptions)
         _G.SlowHub.TargetClans = selectedOptions or {}
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end
+        saveConfig("TargetClans", _G.SlowHub.TargetClans)
+    end,
 })
 
-Tab:Toggle({
-    Title = "Stop on Legendary",
-    Default = _G.SlowHub.StopOnLegendaryClan or false,
+RollsTab:CreateToggle({
+    Name = "Stop on Legendary", Flag = "StopOnLegendaryClan",
+    CurrentValue = _G.SlowHub.StopOnLegendaryClan,
     Callback = function(value)
         _G.SlowHub.StopOnLegendaryClan = value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end
+        saveConfig("StopOnLegendaryClan", value)
+    end,
 })
 
-Tab:Toggle({
-    Title = "Stop on Epic",
-    Default = _G.SlowHub.StopOnEpicClan or false,
+RollsTab:CreateToggle({
+    Name = "Stop on Epic", Flag = "StopOnEpicClan",
+    CurrentValue = _G.SlowHub.StopOnEpicClan,
     Callback = function(value)
         _G.SlowHub.StopOnEpicClan = value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end
+        saveConfig("StopOnEpicClan", value)
+    end,
 })
 
-Tab:Slider({
-    Title = "Clan Roll Delay",
-    Step = 0.05,
-    Value = {
-        Min = 0.15,
-        Max = 1.0,
-        Default = _G.SlowHub.ClanRollDelay,
-    },
+RollsTab:CreateSlider({
+    Name = "Clan Roll Delay", Flag = "ClanRollDelay",
+    Range = { 0.15, 1.0 }, Increment = 0.05,
+    CurrentValue = _G.SlowHub.ClanRollDelay,
     Callback = function(value)
         _G.SlowHub.ClanRollDelay = value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end
+        saveConfig("ClanRollDelay", value)
+    end,
 })
 
-Tab:Toggle({
-    Title = "Auto Clan Roll",
-    Default = _G.SlowHub.AutoClanRoll or false,
-    Callback = OnClanToggleChange
+RollsTab:CreateToggle({
+    Name = "Auto Clan Roll", Flag = "AutoClanRoll",
+    CurrentValue = _G.SlowHub.AutoClanRoll,
+    Callback = function(value)
+        _G.SlowHub.AutoClanRoll = value
+        saveConfig("AutoClanRoll", value)
+        if value then StartClanRolling() else StopClanRolling() end
+    end,
 })
 
 if _G.SlowHub.AutoClanRoll then
-    task.spawn(function()
-        task.wait(2)
-        StartClanRolling()
-    end)
+    task.spawn(function() task.wait(2); StartClanRolling() end)
 end
