@@ -1,58 +1,41 @@
+-- Main Tab
 local Tab = _G.MainTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
-local function loadFunction(url)
-    local success, content = pcall(function()
-        return game:HttpGet(url)
-    end)
-    
-    if not success or type(content) ~= "string" or content == "" 
-        or content:match("<!DOCTYPE html>") or content:match("<html>") then
-        return false
-    end
-    
-    local func, err = loadstring(content)
-    if not func then
-        return false
-    end
-    
-    return func
-end
-
--- Weapon Selector (executa imediatamente)
-local weaponFunc = loadFunction(githubBase .. "WeaponSelector.lua")
-if weaponFunc then
-    pcall(weaponFunc)
+local weaponScript = game:HttpGet(githubBase .. "WeaponSelector.lua")
+if weaponScript and weaponScript ~= "" then
+    local func = loadstring(weaponScript)
+    if func then pcall(func) end
 end
 
 task.wait(0.1)
 
--- Auto Level
-local levelFunc = loadFunction(githubBase .. "AutoLevel.lua")
-if levelFunc then
-    task.spawn(function()
-        pcall(levelFunc)
-    end)
+local levelScript = game:HttpGet(githubBase .. "AutoLevel.lua")
+if levelScript and levelScript ~= "" then
+    local func = loadstring(levelScript)
+    if func then
+        task.spawn(function() pcall(func) end)
+    end
 end
 
 task.wait(0.2)
 
--- Auto Farm Selected Mob
-local mobFunc = loadFunction(githubBase .. "AutoFarmSelectedMob.lua")
-if mobFunc then
-    task.spawn(function()
-        pcall(mobFunc)
-    end)
+local mobScript = game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua")
+if mobScript and mobScript ~= "" then
+    local func = loadstring(mobScript)
+    if func then
+        task.spawn(function() pcall(func) end)
+    end
 end
 
 task.wait(0.2)
 
--- Auto Dungeon
-local dungeonFunc = loadFunction(githubBase .. "AutoDungeon.lua")
-if dungeonFunc then
-    task.spawn(function()
-        pcall(dungeonFunc)
-    end)
+local dungeonScript = game:HttpGet(githubBase .. "AutoDungeon.lua")
+if dungeonScript and dungeonScript ~= "" then
+    local func = loadstring(dungeonScript)
+    if func then
+        task.spawn(function() pcall(func) end)
+    end
 end
 
 _G.SlowHub.MainTabReady = true
