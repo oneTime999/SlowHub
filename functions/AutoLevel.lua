@@ -371,23 +371,22 @@ local function Notify(title, content, duration)
     duration = duration or 3
     
     pcall(function()
-        if Rayfield and Rayfield.Notify then
-            Rayfield:Notify({
+        if _G.WindUI and _G.WindUI.Notify then
+            _G.WindUI:Notify({
                 Title = title,
                 Content = content,
                 Duration = duration,
-                Image = 4483362458
+                Icon = "rbxassetid://4483362458"
             })
         end
     end)
 end
 
-MainTab:CreateSection("Auto Level")
+MainTab:Section({Title = "Auto Level"})
 
-MainTab:CreateToggle({
-    Name = "Auto Farm Level",
-    CurrentValue = _G.SlowHub.AutoFarmLevel or false,
-    Flag = "AutoFarmLevel",
+MainTab:Toggle({
+    Title = "Auto Farm Level",
+    Default = _G.SlowHub.AutoFarmLevel or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
         
@@ -408,15 +407,14 @@ MainTab:CreateToggle({
     end
 })
 
-MainTab:CreateSection("Farm Settings")
+MainTab:Section({Title = "Farm Settings"})
 
-MainTab:CreateSlider({
-    Name = "Farm Distance",
-    Range = {1, 10},
-    Increment = 1,
+MainTab:Slider({
+    Title = "Farm Distance",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmDistance,
     Suffix = "Studs",
-    CurrentValue = _G.SlowHub.FarmDistance,
-    Flag = "FarmDistance",
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         
@@ -426,13 +424,12 @@ MainTab:CreateSlider({
     end
 })
 
-MainTab:CreateSlider({
-    Name = "Farm Height",
-    Range = {1, 10},
-    Increment = 1,
+MainTab:Slider({
+    Title = "Farm Height",
+    Min = 1,
+    Max = 10,
+    Default = _G.SlowHub.FarmHeight,
     Suffix = "Studs",
-    CurrentValue = _G.SlowHub.FarmHeight,
-    Flag = "FarmHeight",
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         
@@ -442,13 +439,12 @@ MainTab:CreateSlider({
     end
 })
 
-MainTab:CreateSlider({
-    Name = "Attack Cooldown",
-    Range = {0.05, 0.5},
-    Increment = 0.05,
+MainTab:Slider({
+    Title = "Attack Cooldown",
+    Min = 0.05,
+    Max = 0.5,
+    Default = _G.SlowHub.FarmCooldown,
     Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.FarmCooldown,
-    Flag = "FarmCooldown",
     Callback = function(Value)
         _G.SlowHub.FarmCooldown = Value
         
@@ -458,13 +454,12 @@ MainTab:CreateSlider({
     end
 })
 
-MainTab:CreateSlider({
-    Name = "Quest Interval",
-    Range = {1, 5},
-    Increment = 0.5,
+MainTab:Slider({
+    Title = "Quest Interval",
+    Min = 1,
+    Max = 5,
+    Default = _G.SlowHub.QuestInterval,
     Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.QuestInterval,
-    Flag = "QuestInterval",
     Callback = function(Value)
         _G.SlowHub.QuestInterval = Value
         
