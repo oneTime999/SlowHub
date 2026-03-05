@@ -70,12 +70,11 @@ local function StartAutoHaki()
     end)
 end
 
-Tab:CreateSection("Conqueror Haki")
+Tab:Section({Title = "Conqueror Haki"})
 
-Tab:CreateToggle({
-    Name = "Auto Conqueror Haki",
-    CurrentValue = _G.SlowHub.AutoHaki,
-    Flag = "AutoHaki",
+Tab:Toggle({
+    Title = "Auto Conqueror Haki",
+    Default = _G.SlowHub.AutoHaki,
     Callback = function(Value)
         if Value then
             StartAutoHaki()
@@ -91,13 +90,14 @@ Tab:CreateToggle({
     end
 })
 
-Tab:CreateSlider({
-    Name = "Conqueror Haki Interval",
-    Range = {1, 10},
-    Increment = 0.5,
-    Suffix = "Seconds",
-    CurrentValue = _G.SlowHub.HakiInterval,
-    Flag = "HakiInterval",
+Tab:Slider({
+    Title = "Conqueror Haki Interval",
+    Step = 0.5,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.HakiInterval,
+    },
     Callback = function(Value)
         _G.SlowHub.HakiInterval = Value
         
