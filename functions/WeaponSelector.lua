@@ -3,10 +3,6 @@ local Player = Players.LocalPlayer
 
 local Tab = _G.MainTab
 
-_G.SlowHub.SelectedWeapon = nil
-_G.SlowHub.EquipLoop = false
-_G.SlowHub.EquipInterval = _G.SlowHub.EquipInterval or 0.25
-
 local WeaponState = {
     Character = nil,
     Humanoid = nil,
@@ -84,7 +80,7 @@ function EquipSelectedTool()
     return success
 end
 
-local function StartEquipLoop()
+function StartEquipLoop()
     if _G.SlowHub.EquipLoop then return end
     _G.SlowHub.EquipLoop = true
     WeaponState.EquipLoopConnection = task.spawn(function()
@@ -95,7 +91,7 @@ local function StartEquipLoop()
     end)
 end
 
-local function StopEquipLoop()
+function StopEquipLoop()
     _G.SlowHub.EquipLoop = false
     if WeaponState.EquipLoopConnection then
         WeaponState.EquipLoopConnection = nil
@@ -104,6 +100,7 @@ end
 
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
+    Flag = "SelectedWeapon",
     Values = GetWeapons(),
     Default = "",
     Multi = false,
@@ -114,9 +111,6 @@ local WeaponDropdown = Tab:Dropdown({
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
-        end
-        if _G.SaveConfig then
-            _G.SaveConfig()
         end
     end
 })
@@ -131,6 +125,7 @@ Tab:Button({
 
 Tab:Toggle({
     Title = "Loop Equip Tool",
+    Flag = "EquipLoop",
     Default = false,
     Callback = function(state)
         if state then
@@ -138,24 +133,18 @@ Tab:Toggle({
         else
             StopEquipLoop()
         end
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Equip Interval",
+    Flag = "EquipInterval",
     Step = 0.1,
     Value = {
         Min = 0.1,
         Max = 1,
-        Default = _G.SlowHub.EquipInterval,
+        Default = 0.25,
     },
     Callback = function(Value)
-        _G.SlowHub.EquipInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
