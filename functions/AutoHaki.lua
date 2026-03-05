@@ -2,7 +2,6 @@ local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 local Player = Players.LocalPlayer
 
 local autoHakiConnection = nil
@@ -25,7 +24,6 @@ end
 local function hasHakiEffect()
     local character = Player.Character
     if not character then return false end
-
     for _, armName in ipairs(armParts) do
         local arm = character:FindFirstChild(armName)
         if arm then
@@ -35,7 +33,6 @@ local function hasHakiEffect()
             end
         end
     end
-
     return false
 end
 
@@ -63,20 +60,15 @@ local function startAutoHaki()
         autoHakiConnection:Disconnect()
         autoHakiConnection = nil
     end
-
     _G.SlowHub.AutoHaki = true
     lastToggleTime = 0
-
     autoHakiConnection = RunService.Heartbeat:Connect(function()
         if not _G.SlowHub.AutoHaki then
             stopAutoHaki()
             return
         end
-
         if not isAlive() then return end
-
         local now = tick()
-
         if now - lastToggleTime >= COOLDOWN_TIME then
             if not hasHakiEffect() then
                 toggleHaki()
@@ -90,15 +82,12 @@ local function setupRespawnHandler()
     if respawnConnection then
         respawnConnection:Disconnect()
     end
-    
     respawnConnection = Player.CharacterAdded:Connect(function(newCharacter)
         if _G.SlowHub.AutoHaki then
             task.wait(1)
-            
             local humanoid = newCharacter:WaitForChild("Humanoid", 5)
             if humanoid then
                 task.wait(0.5)
-                
                 if _G.SlowHub.AutoHaki and not hasHakiEffect() then
                     toggleHaki()
                     lastToggleTime = tick()
@@ -108,10 +97,9 @@ local function setupRespawnHandler()
     end)
 end
 
-local Toggle = Tab:CreateToggle({
-    Name = "Auto Haki",
-    CurrentValue = _G.SlowHub.AutoHaki,
-    Flag = "AutoHaki",
+Tab:Toggle({
+    Title = "Auto Haki",
+    Default = _G.SlowHub.AutoHaki or false,
     Callback = function(Value)
         if Value then
             startAutoHaki()
@@ -119,7 +107,6 @@ local Toggle = Tab:CreateToggle({
         else
             stopAutoHaki()
         end
-
         _G.SlowHub.AutoHaki = Value
         if _G.SaveConfig then
             _G.SaveConfig()
