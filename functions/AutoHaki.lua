@@ -109,7 +109,7 @@ local function setupRespawnHandler()
 end
 
 local Toggle = Tab:CreateToggle({
-    Name = "Auto Haki fixed",
+    Name = "Auto Haki",
     CurrentValue = _G.SlowHub.AutoHaki,
     Flag = "AutoHaki",
     Callback = function(Value)
