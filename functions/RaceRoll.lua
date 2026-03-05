@@ -16,7 +16,8 @@ local RollState = {
     IsRolling = false,
     Connection = nil,
     LastRollTime = 0,
-    CurrentRace = nil
+    CurrentRace = nil,
+    LastServerRace = nil
 }
 
 local RacesData = {
@@ -74,23 +75,30 @@ local function FireRoll()
     }
     
     pcall(function()
-        ReplicatedStorage.Remotes.UseItem:FireServer(unpack(args))
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer(unpack(args))
     end)
 end
 
-local function CheckCurrentRace()
-    local success, result = pcall(function()
-        local playerData = Player:FindFirstChild("Data")
-        if playerData then
-            local race = playerData:FindFirstChild("Race")
-            if race then
-                return race.Value
+local function GetCurrentRace()
+    local raceValue = nil
+    
+    pcall(function()
+        local dataFolder = Player:FindFirstChild("Data") or Player:WaitForChild("Data", 1)
+        if dataFolder then
+            local raceObj = dataFolder:FindFirstChild("Race")
+            if raceObj then
+                raceValue = raceObj.Value
             end
         end
-        return nil
     end)
     
-    return success and result or nil
+    if not raceValue then
+        pcall(function()
+            raceValue = Player:GetAttribute("Race")
+        end)
+    end
+    
+    return raceValue
 end
 
 local function StopRolling()
@@ -120,10 +128,10 @@ local function RollLoop()
         return
     end
     
-    local currentRace = CheckCurrentRace()
+    local currentRace = GetCurrentRace()
     
-    if currentRace and currentRace ~= RollState.CurrentRace then
-        RollState.CurrentRace = currentRace
+    if currentRace and currentRace ~= RollState.LastServerRace then
+        RollState.LastServerRace = currentRace
         
         if IsTargetRace(currentRace) then
             StopRolling()
@@ -139,7 +147,7 @@ local function StartRolling()
     if RollState.IsRolling then return end
     
     RollState.IsRolling = true
-    RollState.CurrentRace = CheckCurrentRace()
+    RollState.LastServerRace = GetCurrentRace()
     RollState.LastRollTime = 0
     
     RollState.Connection = RunService.Heartbeat:Connect(RollLoop)
