@@ -61,7 +61,7 @@ end
 Tab:CreateSection("Haki")
 
 Tab:CreateToggle({
-    Name = "Auto Haki fix",
+    Name = "Auto Haki",
     CurrentValue = _G.SlowHub.AutoHaki,
     Flag = "AutoHaki",
     Callback = OnToggleChange
