@@ -5,8 +5,6 @@ if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-Tab:CreateLabel("Hakis and Ascend")
-
 local hakiScript = game:HttpGet(githubBase .. "AutoHaki.lua")
 if hakiScript and hakiScript ~= "" then
     local func = loadstring(hakiScript)
@@ -39,8 +37,6 @@ end
 
 task.wait(0.1)
 
-Tab:CreateLabel("Auto Skill and Key Craft")
-
 local skillScript = game:HttpGet(githubBase .. "AutoSkill.lua")
 if skillScript and skillScript ~= "" then
     local func = loadstring(skillScript)
@@ -65,8 +61,6 @@ end
 
 task.wait(0.1)
 
-Tab:CreateLabel("Codes")
-
 local codesScript = game:HttpGet(githubBase .. "Codes.lua")
 if codesScript and codesScript ~= "" then
     local func = loadstring(codesScript)
@@ -74,8 +68,6 @@ if codesScript and codesScript ~= "" then
 end
 
 task.wait(0.1)
-
-Tab:CreateLabel("Config")
 
 local antiAFKScript = game:HttpGet(githubBase .. "AntiAFK.lua")
 if antiAFKScript and antiAFKScript ~= "" then
