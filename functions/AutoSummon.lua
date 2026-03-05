@@ -1,9 +1,16 @@
-local Tab = _G.BossesTab
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
+
+local Tab = _G.BossesTab
+
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoSummonBoss = false
+_G.SlowHub.SummonInterval = _G.SlowHub.SummonInterval or 0.5
 
 local BossConfigs = {
-        ["Anos"] = {
+    ["Anos"] = {
         Method = "AnosSpecific",
         InternalName = "Anos"
     },
@@ -42,6 +49,8 @@ for name, _ in pairs(BossConfigs) do
     table.insert(BossList, name)
 end
 
+table.sort(BossList)
+
 local DifficultyList = {
     "Normal",
     "Medium",
@@ -49,183 +58,248 @@ local DifficultyList = {
     "Extreme"
 }
 
-local autoSummonBossConnection = nil
-local isSummoningBoss = false
-local selectedBosses = {} 
-local selectedDifficulty = "Normal"
+local SummonState = {
+    Connection = nil,
+    IsSummoning = false,
+    SelectedBosses = {},
+    SelectedDifficulty = "Normal"
+}
 
--- Health check function
-local function isBossAlive(bossName)
+local function IsBossAlive(bossName)
     local found = false
+    
     pcall(function()
+        if not workspace:FindFirstChild("NPCs") then return end
+        
         local boss = workspace.NPCs:FindFirstChild(bossName)
-        if boss then
-            local humanoid = boss:FindFirstChild("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                found = true
-            end
+        if not boss then return end
+        
+        local humanoid = boss:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            found = true
         end
     end)
+    
     return found
 end
 
--- Check if pity system is active and pity target time (pity >= 24)
-local function isPityTargetTime()
-    if _G.SlowHub and _G.SlowHub.IsPityTargetTime then
+local function IsPitySystemEnabled()
+    if not _G.SlowHub then return false end
+    return _G.SlowHub.PriorityPityEnabled == true
+end
+
+local function GetPityTargetBoss()
+    if not _G.SlowHub then return "" end
+    return _G.SlowHub.PityTargetBoss or ""
+end
+
+local function IsPityTargetTime()
+    if not _G.SlowHub then return false end
+    if _G.SlowHub.IsPityTargetTime then
         return _G.SlowHub.IsPityTargetTime()
     end
     return false
 end
 
--- Get pity target boss
-local function getPityTargetBoss()
-    if _G.SlowHub and _G.SlowHub.PityTargetBoss then
-        return _G.SlowHub.PityTargetBoss
-    end
-    return ""
-end
-
--- Check if pity system is enabled
-local function isPitySystemEnabled()
-    if _G.SlowHub and _G.SlowHub.PriorityPityEnabled then
-        return _G.SlowHub.PriorityPityEnabled
-    end
-    return false
-end
-
--- Check if boss is the pity target
-local function isPityTargetBoss(bossName)
-    local pityTarget = getPityTargetBoss()
+local function IsPityTargetBoss(bossName)
+    local pityTarget = GetPityTargetBoss()
     if pityTarget == "" then return false end
     return bossName == pityTarget
 end
 
-local function stopAutoSummonBoss()
-    isSummoningBoss = false
-    if autoSummonBossConnection then
-        autoSummonBossConnection:Disconnect()
-        autoSummonBossConnection = nil
-    end
-    if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
-end
-
-local function startAutoSummonBoss()
-    if autoSummonBossConnection then stopAutoSummonBoss() end
+local function GetFilteredBossesToSummon()
+    local bossesToSummon = {}
     
-    isSummoningBoss = true
-    if _G.SlowHub then _G.SlowHub.AutoSummonBoss = true end
+    local pityEnabled = IsPitySystemEnabled()
+    local pityTargetTime = IsPityTargetTime()
     
-    autoSummonBossConnection = RunService.Heartbeat:Connect(function()
-        if (_G.SlowHub and not _G.SlowHub.AutoSummonBoss) or not isSummoningBoss then
-            stopAutoSummonBoss()
-            return
-        end
+    for _, selectedBoss in ipairs(SummonState.SelectedBosses) do
+        local config = BossConfigs[selectedBoss]
+        if not config then continue end
         
-        -- Check pity system status
-        local pityEnabled = isPitySystemEnabled()
-        local pityTargetTime = isPityTargetTime()
-        local pityTargetBoss = getPityTargetBoss()
-        
-        -- Filter bosses to summon based on pity system
-        local bossesToSummon = {}
-        
-        for _, selectedBoss in pairs(selectedBosses) do
-            local config = BossConfigs[selectedBoss]
-            if not config then continue end
-            
-            -- If pity system is enabled
-            if pityEnabled and pityTargetBoss ~= "" then
-                if isPityTargetBoss(selectedBoss) then
-                    -- This is the pity target boss, only summon when pity >= 24
-                    if pityTargetTime then
-                        table.insert(bossesToSummon, selectedBoss)
-                    end
-                    -- If pity < 24, skip this boss (don't summon)
-                else
-                    -- This is NOT the pity target boss, only summon when pity < 24
-                    if not pityTargetTime then
-                        table.insert(bossesToSummon, selectedBoss)
-                    end
-                    -- If pity >= 24, skip this boss (don't summon)
+        if pityEnabled then
+            if IsPityTargetBoss(selectedBoss) then
+                if pityTargetTime then
+                    table.insert(bossesToSummon, selectedBoss)
                 end
             else
-                -- Pity system disabled, summon all selected bosses
-                table.insert(bossesToSummon, selectedBoss)
+                if not pityTargetTime then
+                    table.insert(bossesToSummon, selectedBoss)
+                end
+            end
+        else
+            table.insert(bossesToSummon, selectedBoss)
+        end
+    end
+    
+    return bossesToSummon
+end
+
+local function GetNamesToCheck(config, currentBossName)
+    local namesToCheck = {}
+    
+    if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" or config.Method == "AnosSpecific" then
+        table.insert(namesToCheck, config.InternalName .. "_" .. SummonState.SelectedDifficulty)
+        table.insert(namesToCheck, currentBossName .. "_" .. SummonState.SelectedDifficulty)
+    else
+        table.insert(namesToCheck, currentBossName)
+        table.insert(namesToCheck, config.InternalName)
+    end
+    
+    return namesToCheck
+end
+
+local function SummonBoss(currentBossName, config)
+    local success = pcall(function()
+        if config.Method == "RimuruSpecific" then
+            local args = {SummonState.SelectedDifficulty}
+            
+            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            
+            if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnRimuru") then
+                remoteEvents.RequestSpawnRimuru:FireServer(unpack(args))
+            elseif remotes and remotes:FindFirstChild("RequestSpawnRimuru") then
+                remotes.RequestSpawnRimuru:FireServer(unpack(args))
+            end
+            
+        elseif config.Method == "Gilgamesh" then
+            local args = {
+                config.InternalName,
+                SummonState.SelectedDifficulty
+            }
+            
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
+                remotes.RequestSummonBoss:FireServer(unpack(args))
+            end
+            
+        elseif config.Method == "New" then
+            local args = {
+                config.InternalName,
+                SummonState.SelectedDifficulty
+            }
+            
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            if remotes and remotes:FindFirstChild("RequestSpawnStrongestBoss") then
+                remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
+            end
+            
+        elseif config.Method == "AnosSpecific" then
+            local args = {
+                config.InternalName,
+                SummonState.SelectedDifficulty
+            }
+            
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            if remotes and remotes:FindFirstChild("RequestSpawnAnosBoss") then
+                remotes.RequestSpawnAnosBoss:FireServer(unpack(args))
+            end
+            
+        else
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
+                remotes.RequestSummonBoss:FireServer(currentBossName)
             end
         end
-        
-        -- Summon filtered bosses
-        for _, currentBossName in pairs(bossesToSummon) do
-            local config = BossConfigs[currentBossName]
-            
-            if config then
-                -- Build names to check
-                local namesToCheck = {}
-                if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" or config.Method == "AnosSpecific" then
-                    table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
-                    table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
-                else
-                    table.insert(namesToCheck, currentBossName)
-                    table.insert(namesToCheck, config.InternalName)
-                end
-                
-                local bossAlreadyAlive = false
-                for _, name in ipairs(namesToCheck) do
-                    if isBossAlive(name) then
-                        bossAlreadyAlive = true
-                        break
-                    end
-                end
-                
-                -- Summon if not alive
-                if not bossAlreadyAlive then
-                    pcall(function()
-                        if config.Method == "RimuruSpecific" then
-                            local args = { [1] = selectedDifficulty }
-                            if ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("RequestSpawnRimuru") then
-                                ReplicatedStorage.RemoteEvents.RequestSpawnRimuru:FireServer(unpack(args))
-                            elseif ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("RequestSpawnRimuru") then
-                                ReplicatedStorage.Remotes.RequestSpawnRimuru:FireServer(unpack(args))
-                            end
-                        elseif config.Method == "Gilgamesh" then
-                            local args = {
-                                [1] = config.InternalName,
-                                [2] = selectedDifficulty
-                            }
-                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(unpack(args))
-                        elseif config.Method == "New" then
-                            local args = {
-                                [1] = config.InternalName,
-                                [2] = selectedDifficulty
-                            }
-                            ReplicatedStorage.Remotes.RequestSpawnStrongestBoss:FireServer(unpack(args))
-                        elseif config.Method == "AnosSpecific" then
-                            local args = {
-                                [1] = config.InternalName,
-                                [2] = selectedDifficulty
-                            }
-                            ReplicatedStorage.Remotes.RequestSpawnAnosBoss:FireServer(unpack(args))
-                        else
-                            ReplicatedStorage.Remotes.RequestSummonBoss:FireServer(currentBossName)
-                        end
-                    end)
-                end
-            end
+    end)
+    
+    return success
+end
+
+local function ProcessBossSummon(currentBossName)
+    local config = BossConfigs[currentBossName]
+    if not config then return end
+    
+    local namesToCheck = GetNamesToCheck(config, currentBossName)
+    
+    local bossAlreadyAlive = false
+    for _, name in ipairs(namesToCheck) do
+        if IsBossAlive(name) then
+            bossAlreadyAlive = true
+            break
+        end
+    end
+    
+    if not bossAlreadyAlive then
+        SummonBoss(currentBossName, config)
+    end
+end
+
+local function SummonLoop()
+    if not _G.SlowHub.AutoSummonBoss then
+        StopAutoSummonBoss()
+        return
+    end
+    
+    local bossesToSummon = GetFilteredBossesToSummon()
+    
+    for _, bossName in ipairs(bossesToSummon) do
+        ProcessBossSummon(bossName)
+    end
+end
+
+local function StopAutoSummonBoss()
+    SummonState.IsSummoning = false
+    
+    if SummonState.Connection then
+        SummonState.Connection:Disconnect()
+        SummonState.Connection = nil
+    end
+    
+    _G.SlowHub.AutoSummonBoss = false
+end
+
+local function StartAutoSummonBoss()
+    if SummonState.IsSummoning then
+        StopAutoSummonBoss()
+        task.wait(0.2)
+    end
+    
+    SummonState.IsSummoning = true
+    _G.SlowHub.AutoSummonBoss = true
+    
+    SummonState.Connection = RunService.Heartbeat:Connect(function()
+        SummonLoop()
+        task.wait(_G.SlowHub.SummonInterval)
+    end)
+end
+
+local function Notify(title, content, duration)
+    duration = duration or 3
+    
+    pcall(function()
+        if Rayfield and Rayfield.Notify then
+            Rayfield:Notify({
+                Title = title,
+                Content = content,
+                Duration = duration,
+                Image = 4483362458
+            })
         end
     end)
 end
 
--- UI
 Tab:CreateSection("Summon Settings")
 
 Tab:CreateDropdown({
     Name = "Select Bosses to Summon",
     Options = BossList,
-    CurrentOption = {""},
+    CurrentOption = {},
     MultipleOptions = true,
     Flag = "SelectBossSummon",
     Callback = function(Value)
-        selectedBosses = Value
+        SummonState.SelectedBosses = {}
+        
+        if type(Value) == "table" then
+            for _, boss in ipairs(Value) do
+                table.insert(SummonState.SelectedBosses, boss)
+            end
+        end
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -236,8 +310,28 @@ Tab:CreateDropdown({
     MultipleOptions = false,
     Flag = "SelectBossDifficulty",
     Callback = function(Value)
-        local val = (type(Value) == "table" and Value[1]) or Value
-        selectedDifficulty = val
+        local val = type(Value) == "table" and Value[1] or Value
+        SummonState.SelectedDifficulty = val
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
+})
+
+Tab:CreateSlider({
+    Name = "Summon Interval",
+    Range = {0.1, 2},
+    Increment = 0.1,
+    Suffix = "Seconds",
+    CurrentValue = _G.SlowHub.SummonInterval,
+    Flag = "SummonInterval",
+    Callback = function(Value)
+        _G.SlowHub.SummonInterval = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
@@ -247,20 +341,20 @@ Tab:CreateToggle({
     Flag = "AutoSummonBoss",
     Callback = function(Value)
         if Value then
-            if not selectedBosses or #selectedBosses == 0 then
-                Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Please select at least one Boss to summon!",
-                    Duration = 3,
-                    Image = 4483362458,
-                })
-                if _G.SlowHub then _G.SlowHub.AutoSummonBoss = false end
+            if not SummonState.SelectedBosses or #SummonState.SelectedBosses == 0 then
+                Notify("Error", "Please select at least one Boss to summon!", 3)
                 return
             end
-            startAutoSummonBoss()
+            
+            StartAutoSummonBoss()
         else
-            stopAutoSummonBoss()
+            StopAutoSummonBoss()
         end
-        if _G.SlowHub then _G.SlowHub.AutoSummonBoss = Value end
+        
+        _G.SlowHub.AutoSummonBoss = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
