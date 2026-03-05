@@ -302,20 +302,6 @@ function StartAutoLevel()
     return true
 end
 
-local function Notify(title, content, duration)
-    duration = duration or 3
-    pcall(function()
-        if _G.WindUI and _G.WindUI.Notify then
-            _G.WindUI:Notify({
-                Title = title,
-                Content = content,
-                Duration = duration,
-                Icon = "rbxassetid://4483362458"
-            })
-        end
-    end)
-end
-
 MainTab:Section({Title = "Auto Level"})
 
 MainTab:Toggle({
@@ -325,7 +311,6 @@ MainTab:Toggle({
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
-                Notify("Error", "Select a weapon first!", 3)
                 return
             end
             StartAutoLevel()
