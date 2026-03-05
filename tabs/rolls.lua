@@ -5,8 +5,16 @@ if not _G.SlowHub then
     repeat task.wait(0.1) until _G.SlowHub
 end
 
-local autoRollScript = game:HttpGet(githubBase .. "RaceRoll.lua")
-if autoRollScript and autoRollScript ~= "" then
-    local func = loadstring(autoRollScript)
+local raceRollScript = game:HttpGet(githubBase .. "RaceRoll.lua")
+if raceRollScript and raceRollScript ~= "" then
+    local func = loadstring(raceRollScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
+
+task.wait(0.05)
+
+local traitRollScript = game:HttpGet(githubBase .. "TraitRoll.lua")
+if traitRollScript and traitRollScript ~= "" then
+    local func = loadstring(traitRollScript)
     if func then task.spawn(function() pcall(func) end) end
 end
