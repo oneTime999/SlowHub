@@ -116,13 +116,13 @@ end
 
 local MainTab = _G.MainTab
 
-MainTab:CreateSection({ Title = "Weapon" })
+MainTab:Section({ Title = "Weapon" })
 
-local WeaponDropdown = MainTab:CreateDropdown({
-    Name = "Select Weapon", Flag = "SelectWeapon",
-    Options = GetWeapons(),
-    CurrentOption = _G.SlowHub.SelectedWeapon or "",
-    MultipleOptions = false,
+local WeaponDropdown = MainTab:Dropdown({
+    Title = "Select Weapon", Flag = "SelectWeapon",
+    Values = GetWeapons(),
+    Default = _G.SlowHub.SelectedWeapon or "",
+    Multi = false,
     Callback = function(value)
         local weapon = type(value) == "table" and value[1] or value
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
@@ -136,26 +136,26 @@ local WeaponDropdown = MainTab:CreateDropdown({
     end,
 })
 
-MainTab:CreateButton({
-    Name = "Refresh Weapons",
+MainTab:Button({
+    Title = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
         WeaponDropdown:Refresh(newWeapons)
     end,
 })
 
-MainTab:CreateToggle({
-    Name = "Loop Equip Tool", Flag = "LoopEquipTool",
-    CurrentValue = false,
+MainTab:Toggle({
+    Title = "Loop Equip Tool", Flag = "LoopEquipTool",
+    Default = false,
     Callback = function(state)
         if state then StartEquipLoop() else StopEquipLoop() end
     end,
 })
 
-MainTab:CreateSlider({
-    Name = "Equip Interval", Flag = "EquipInterval",
-    Range = { 0.1, 1 }, Increment = 0.05,
-    CurrentValue = _G.SlowHub.EquipInterval,
+MainTab:Slider({
+    Title = "Equip Interval", Flag = "EquipInterval",
+    Value = { Min = 0.1, Max = 1, Default = _G.SlowHub.EquipInterval },
+    Step = 0.05,
     Callback = function(value)
         _G.SlowHub.EquipInterval = value
         saveConfig("EquipInterval", value)
