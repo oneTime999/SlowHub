@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.RollTab
+local Tab = _G.RollsTab
 
 _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.AutoRoll = _G.SlowHub.AutoRoll or false
