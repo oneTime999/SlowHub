@@ -1,13 +1,41 @@
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-local Tab = _G.MainTab
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.SelectedWeapon = nil
+_G.SlowHub.EquipLoop = false
+_G.SlowHub.EquipInterval = _G.SlowHub.EquipInterval or 0.25
+
+local CONFIG_FOLDER = "SlowHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local function ensureFolder()
+    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
+end
+
+local function loadConfig()
+    ensureFolder()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
+        if ok and type(data) == "table" then return data end
+    end
+    return {}
+end
+
+local function saveConfig(key, value)
+    ensureFolder()
+    local current = loadConfig()
+    current[key] = value
+    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
+end
+
+local saved = loadConfig()
+if saved["SelectedWeapon"] ~= nil then _G.SlowHub.SelectedWeapon = saved["SelectedWeapon"] end
+if saved["EquipInterval"] ~= nil then _G.SlowHub.EquipInterval = saved["EquipInterval"] end
 
 local WeaponState = {
-    Character = nil,
-    Humanoid = nil,
-    Backpack = nil,
-    EquipLoopConnection = nil
+    Character=nil, Humanoid=nil, Backpack=nil, EquipLoopConnection=nil,
 }
 
 local function InitializeWeaponState()
@@ -34,7 +62,7 @@ end)
 local function GetWeapons()
     local weapons = {}
     local added = {}
-    local success = pcall(function()
+    pcall(function()
         if not WeaponState.Backpack then
             WeaponState.Backpack = Player:WaitForChild("Backpack")
         end
@@ -53,34 +81,24 @@ local function GetWeapons()
             end
         end
     end)
-    if not success or #weapons == 0 then
-        return {"No weapons found"}
-    end
+    if #weapons == 0 then return {"No weapons found"} end
     return weapons
 end
 
 function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
-    if not weaponName or weaponName == "" or weaponName == "No weapons found" then
-        return false
-    end
-    local success = pcall(function()
-        if not WeaponState.Character then return false end
-        if not WeaponState.Humanoid then return false end
-        if WeaponState.Humanoid.Health <= 0 then return false end
-        if WeaponState.Character:FindFirstChild(weaponName) then return true end
-        if not WeaponState.Backpack then return false end
+    if not weaponName or weaponName == "" or weaponName == "No weapons found" then return false end
+    return pcall(function()
+        if not WeaponState.Character or not WeaponState.Humanoid then return end
+        if WeaponState.Humanoid.Health <= 0 then return end
+        if WeaponState.Character:FindFirstChild(weaponName) then return end
+        if not WeaponState.Backpack then return end
         local tool = WeaponState.Backpack:FindFirstChild(weaponName)
-        if tool and tool:IsA("Tool") then
-            WeaponState.Humanoid:EquipTool(tool)
-            return true
-        end
-        return false
+        if tool and tool:IsA("Tool") then WeaponState.Humanoid:EquipTool(tool) end
     end)
-    return success
 end
 
-function StartEquipLoop()
+local function StartEquipLoop()
     if _G.SlowHub.EquipLoop then return end
     _G.SlowHub.EquipLoop = true
     WeaponState.EquipLoopConnection = task.spawn(function()
@@ -91,60 +109,55 @@ function StartEquipLoop()
     end)
 end
 
-function StopEquipLoop()
+local function StopEquipLoop()
     _G.SlowHub.EquipLoop = false
-    if WeaponState.EquipLoopConnection then
-        WeaponState.EquipLoopConnection = nil
-    end
+    WeaponState.EquipLoopConnection = nil
 end
 
-local WeaponDropdown = Tab:Dropdown({
-    Title = "Select Weapon",
-    Flag = "SelectedWeapon",
-    Values = GetWeapons(),
-    Default = "",
-    Multi = false,
-    Callback = function(Value)
-        local weapon = type(Value) == "table" and Value[1] or Value
+local MainTab = _G.MainTab
+
+MainTab:CreateSection({ Title = "Weapon" })
+
+local WeaponDropdown = MainTab:CreateDropdown({
+    Name = "Select Weapon", Flag = "SelectWeapon",
+    Options = GetWeapons(),
+    CurrentOption = _G.SlowHub.SelectedWeapon or "",
+    MultipleOptions = false,
+    Callback = function(value)
+        local weapon = type(value) == "table" and value[1] or value
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
+            saveConfig("SelectedWeapon", weapon)
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
+            saveConfig("SelectedWeapon", nil)
         end
-    end
+    end,
 })
 
-Tab:Button({
-    Title = "Refresh Weapons",
+MainTab:CreateButton({
+    Name = "Refresh Weapons",
     Callback = function()
         local newWeapons = GetWeapons()
         WeaponDropdown:Refresh(newWeapons)
-    end
+    end,
 })
 
-Tab:Toggle({
-    Title = "Loop Equip Tool",
-    Flag = "EquipLoop",
-    Default = false,
+MainTab:CreateToggle({
+    Name = "Loop Equip Tool", Flag = "LoopEquipTool",
+    CurrentValue = false,
     Callback = function(state)
-        if state then
-            StartEquipLoop()
-        else
-            StopEquipLoop()
-        end
-    end
+        if state then StartEquipLoop() else StopEquipLoop() end
+    end,
 })
 
-Tab:Slider({
-    Title = "Equip Interval",
-    Flag = "EquipInterval",
-    Step = 0.1,
-    Value = {
-        Min = 0.1,
-        Max = 1,
-        Default = 0.25,
-    },
-    Callback = function(Value)
-    end
+MainTab:CreateSlider({
+    Name = "Equip Interval", Flag = "EquipInterval",
+    Range = { 0.1, 1 }, Increment = 0.05,
+    CurrentValue = _G.SlowHub.EquipInterval,
+    Callback = function(value)
+        _G.SlowHub.EquipInterval = value
+        saveConfig("EquipInterval", value)
+    end,
 })
