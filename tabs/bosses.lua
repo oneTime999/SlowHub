@@ -11,8 +11,6 @@ while not (_G.SlowHub.MainTabReady or _G.SlowHub.TabsLoaded) and waitCount < 50 
     waitCount = waitCount + 1
 end
 
-Tab:CreateLabel("Boss Farm")
-
 local bossScript = game:HttpGet(githubBase .. "AutoBosses.lua")
 if bossScript and bossScript ~= "" then
     local func = loadstring(bossScript)
@@ -23,8 +21,6 @@ end
 
 task.wait(0.1)
 
-Tab:CreateLabel("Summon")
-
 local summonScript = game:HttpGet(githubBase .. "AutoSummon.lua")
 if summonScript and summonScript ~= "" then
     local func = loadstring(summonScript)
@@ -34,8 +30,6 @@ if summonScript and summonScript ~= "" then
 end
 
 task.wait(0.1)
-
-Tab:CreateLabel("Mini Boss Farm")
 
 local miniBossScript = game:HttpGet(githubBase .. "MiniBossFarm.lua")
 if miniBossScript and miniBossScript ~= "" then
