@@ -5,9 +5,6 @@ local Player = Players.LocalPlayer
 
 local Tab = _G.MiscTab
 
-_G.SlowHub.AutoObservation = _G.SlowHub.AutoObservation or false
-_G.SlowHub.ObservationInterval = _G.SlowHub.ObservationInterval or 3
-
 local ObservationState = {
     Connection = nil,
     IsRunning = false,
@@ -64,24 +61,22 @@ local function ObservationLoop()
     end
 end
 
-local function StopAutoObservation()
+function StopAutoObservation()
     ObservationState.IsRunning = false
     ObservationState.LastToggleTime = 0
     if ObservationState.Connection then
         ObservationState.Connection:Disconnect()
         ObservationState.Connection = nil
     end
-    _G.SlowHub.AutoObservation = false
 end
 
-local function StartAutoObservation()
+function StartAutoObservation()
     if ObservationState.IsRunning then
         StopAutoObservation()
         task.wait(0.2)
     end
     InitializeObservationState()
     ObservationState.IsRunning = true
-    _G.SlowHub.AutoObservation = true
     ObservationState.LastToggleTime = 0
     ObservationState.Connection = RunService.Heartbeat:Connect(ObservationLoop)
 end
@@ -90,39 +85,26 @@ Tab:Section({Title = "Observation Haki"})
 
 Tab:Toggle({
     Title = "Auto Observation Haki",
-    Default = _G.SlowHub.AutoObservation or false,
+    Flag = "AutoObservation",
+    Default = false,
     Callback = function(Value)
         if Value then
             StartAutoObservation()
         else
             StopAutoObservation()
         end
-        _G.SlowHub.AutoObservation = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Observation Check Interval",
+    Flag = "ObservationInterval",
     Step = 0.5,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.ObservationInterval,
+        Default = 3,
     },
     Callback = function(Value)
-        _G.SlowHub.ObservationInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
-
-if _G.SlowHub.AutoObservation then
-    task.spawn(function()
-        task.wait(2)
-        StartAutoObservation()
-    end)
-end
