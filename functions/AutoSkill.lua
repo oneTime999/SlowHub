@@ -1,121 +1,239 @@
-local Tab = _G.MiscTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
 
-if not _G.SlowHub.AutoSkillZ then _G.SlowHub.AutoSkillZ = false end
-if not _G.SlowHub.AutoSkillX then _G.SlowHub.AutoSkillX = false end
-if not _G.SlowHub.AutoSkillC then _G.SlowHub.AutoSkillC = false end
-if not _G.SlowHub.AutoSkillV then _G.SlowHub.AutoSkillV = false end
-if not _G.SlowHub.AutoSkillF then _G.SlowHub.AutoSkillF = false end
+local Tab = _G.MiscTab
 
-local skillLoopRunning = false
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoSkillZ = _G.SlowHub.AutoSkillZ or false
+_G.SlowHub.AutoSkillX = _G.SlowHub.AutoSkillX or false
+_G.SlowHub.AutoSkillC = _G.SlowHub.AutoSkillC or false
+_G.SlowHub.AutoSkillV = _G.SlowHub.AutoSkillV or false
+_G.SlowHub.AutoSkillF = _G.SlowHub.AutoSkillF or false
+_G.SlowHub.SkillInterval = _G.SlowHub.SkillInterval or 0.2
 
-local function anySkillActive()
+local SkillState = {
+    LoopConnection = nil,
+    IsRunning = false,
+    LastSkillTime = 0
+}
+
+local SkillMapping = {
+    ["AutoSkillZ"] = 1,
+    ["AutoSkillX"] = 2,
+    ["AutoSkillC"] = 3,
+    ["AutoSkillV"] = 4,
+    ["AutoSkillF"] = 5
+}
+
+local FruitKeys = {
+    ["AutoSkillZ"] = "Z",
+    ["AutoSkillX"] = "X",
+    ["AutoSkillC"] = "C",
+    ["AutoSkillV"] = "V"
+}
+
+local FruitPowers = {"Light", "Flame", "Quake"}
+
+local function IsAnySkillActive()
     return _G.SlowHub.AutoSkillZ or _G.SlowHub.AutoSkillX or _G.SlowHub.AutoSkillC
         or _G.SlowHub.AutoSkillV or _G.SlowHub.AutoSkillF
 end
 
-local function startSkillLoop()
-    if skillLoopRunning then return end
-    skillLoopRunning = true
-
-    task.spawn(function()
-        while skillLoopRunning and anySkillActive() do
-            pcall(function()
-                if _G.SlowHub.AutoSkillZ then
-                    ReplicatedStorage.AbilitySystem.Remotes.RequestAbility:FireServer(1)
-                end
-                if _G.SlowHub.AutoSkillX then
-                    ReplicatedStorage.AbilitySystem.Remotes.RequestAbility:FireServer(2)
-                end
-                if _G.SlowHub.AutoSkillC then
-                    ReplicatedStorage.AbilitySystem.Remotes.RequestAbility:FireServer(3)
-                end
-                if _G.SlowHub.AutoSkillV then
-                    ReplicatedStorage.AbilitySystem.Remotes.RequestAbility:FireServer(4)
-                end
-                if _G.SlowHub.AutoSkillF then
-                    ReplicatedStorage.AbilitySystem.Remotes.RequestAbility:FireServer(5)
-                end
-
-                -- Fruit powers
-                local fruits = {"Light", "Flame", "Quake"}
-                local keys = {}
-                if _G.SlowHub.AutoSkillZ then table.insert(keys, "Z") end
-                if _G.SlowHub.AutoSkillX then table.insert(keys, "X") end
-                if _G.SlowHub.AutoSkillC then table.insert(keys, "C") end
-                if _G.SlowHub.AutoSkillV then table.insert(keys, "V") end
-
-                if #keys > 0 then
-                    for _, fruit in ipairs(fruits) do
-                        for _, key in ipairs(keys) do
-                            ReplicatedStorage.RemoteEvents.FruitPowerRemote:FireServer("UseAbility", {
-                                KeyCode = Enum.KeyCode[key],
-                                FruitPower = fruit
-                            })
-                        end
-                    end
-                end
-            end)
-
-            task.wait(0.2) -- Throttle: 5x por segundo, sem impacto nos outros scripts
+local function GetActiveAbilityIndices()
+    local indices = {}
+    
+    for flag, index in pairs(SkillMapping) do
+        if _G.SlowHub[flag] then
+            table.insert(indices, index)
         end
+    end
+    
+    return indices
+end
 
-        skillLoopRunning = false
+local function GetActiveFruitKeys()
+    local keys = {}
+    
+    for flag, key in pairs(FruitKeys) do
+        if _G.SlowHub[flag] then
+            table.insert(keys, key)
+        end
+    end
+    
+    return keys
+end
+
+local function FireAbilityRequest(index)
+    pcall(function()
+        local abilitySystem = ReplicatedStorage:FindFirstChild("AbilitySystem")
+        if not abilitySystem then return end
+        
+        local remotes = abilitySystem:FindFirstChild("Remotes")
+        if not remotes then return end
+        
+        local requestAbility = remotes:FindFirstChild("RequestAbility")
+        if requestAbility then
+            requestAbility:FireServer(index)
+        end
     end)
 end
 
-local function stopSkillLoop()
-    skillLoopRunning = false
+local function FireFruitPower(key, fruit)
+    pcall(function()
+        local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+        if not remoteEvents then return end
+        
+        local fruitPowerRemote = remoteEvents:FindFirstChild("FruitPowerRemote")
+        if not fruitPowerRemote then return end
+        
+        local keyCode = Enum.KeyCode[key]
+        if not keyCode then return end
+        
+        fruitPowerRemote:FireServer("UseAbility", {
+            KeyCode = keyCode,
+            FruitPower = fruit
+        })
+    end)
 end
 
-local function onToggleChange(flag, value)
-    _G.SlowHub[flag] = value
-    if value then
-        startSkillLoop()
-    elseif not anySkillActive() then
-        stopSkillLoop()
+local function ProcessAbilities()
+    local currentTime = tick()
+    local interval = _G.SlowHub.SkillInterval
+    
+    if currentTime - SkillState.LastSkillTime < interval then
+        return
     end
-    if _G.SaveConfig then _G.SaveConfig() end
+    
+    SkillState.LastSkillTime = currentTime
+    
+    local abilityIndices = GetActiveAbilityIndices()
+    for _, index in ipairs(abilityIndices) do
+        FireAbilityRequest(index)
+    end
+    
+    local fruitKeys = GetActiveFruitKeys()
+    if #fruitKeys == 0 then return end
+    
+    for _, fruit in ipairs(FruitPowers) do
+        for _, key in ipairs(fruitKeys) do
+            FireFruitPower(key, fruit)
+        end
+    end
 end
+
+local function SkillLoop()
+    if not IsAnySkillActive() then
+        StopSkillLoop()
+        return
+    end
+    
+    ProcessAbilities()
+end
+
+local function StopSkillLoop()
+    SkillState.IsRunning = false
+    
+    if SkillState.LoopConnection then
+        SkillState.LoopConnection:Disconnect()
+        SkillState.LoopConnection = nil
+    end
+end
+
+local function StartSkillLoop()
+    if SkillState.IsRunning then return end
+    
+    if not IsAnySkillActive() then return end
+    
+    SkillState.IsRunning = true
+    SkillState.LastSkillTime = 0
+    
+    SkillState.LoopConnection = RunService.Heartbeat:Connect(function()
+        SkillLoop()
+        task.wait(_G.SlowHub.SkillInterval)
+    end)
+end
+
+local function OnToggleChange(flag, value)
+    _G.SlowHub[flag] = value
+    
+    if value then
+        StartSkillLoop()
+    elseif not IsAnySkillActive() then
+        StopSkillLoop()
+    end
+    
+    if _G.SaveConfig then
+        _G.SaveConfig()
+    end
+end
+
+Tab:CreateSection("Auto Skills")
 
 Tab:CreateToggle({
     Name = "Auto Skill Z",
     CurrentValue = _G.SlowHub.AutoSkillZ,
     Flag = "AutoSkillZ",
-    Callback = function(value) onToggleChange("AutoSkillZ", value) end
+    Callback = function(value)
+        OnToggleChange("AutoSkillZ", value)
+    end
 })
 
 Tab:CreateToggle({
     Name = "Auto Skill X",
     CurrentValue = _G.SlowHub.AutoSkillX,
     Flag = "AutoSkillX",
-    Callback = function(value) onToggleChange("AutoSkillX", value) end
+    Callback = function(value)
+        OnToggleChange("AutoSkillX", value)
+    end
 })
 
 Tab:CreateToggle({
     Name = "Auto Skill C",
     CurrentValue = _G.SlowHub.AutoSkillC,
     Flag = "AutoSkillC",
-    Callback = function(value) onToggleChange("AutoSkillC", value) end
+    Callback = function(value)
+        OnToggleChange("AutoSkillC", value)
+    end
 })
 
 Tab:CreateToggle({
     Name = "Auto Skill V",
     CurrentValue = _G.SlowHub.AutoSkillV,
     Flag = "AutoSkillV",
-    Callback = function(value) onToggleChange("AutoSkillV", value) end
+    Callback = function(value)
+        OnToggleChange("AutoSkillV", value)
+    end
 })
 
 Tab:CreateToggle({
     Name = "Auto Skill F",
     CurrentValue = _G.SlowHub.AutoSkillF,
     Flag = "AutoSkillF",
-    Callback = function(value) onToggleChange("AutoSkillF", value) end
+    Callback = function(value)
+        OnToggleChange("AutoSkillF", value)
+    end
 })
 
--- Auto-start se configs salvas estiverem ativas
-if anySkillActive() then
-    startSkillLoop()
+Tab:CreateSlider({
+    Name = "Skill Interval",
+    Range = {0.05, 1},
+    Increment = 0.05,
+    Suffix = "Seconds",
+    CurrentValue = _G.SlowHub.SkillInterval,
+    Flag = "SkillInterval",
+    Callback = function(Value)
+        _G.SlowHub.SkillInterval = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+    end
+})
+
+if IsAnySkillActive() then
+    task.spawn(function()
+        task.wait(1)
+        StartSkillLoop()
+    end)
 end
