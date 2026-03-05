@@ -6,24 +6,58 @@ local Tab = _G.MainTab
 _G.SlowHub = _G.SlowHub or {}
 _G.SlowHub.SelectedWeapon = nil
 _G.SlowHub.EquipLoop = false
+_G.SlowHub.EquipInterval = _G.SlowHub.EquipInterval or 0.25
 
--- 1. Função de pegar armas
+local WeaponState = {
+    Character = nil,
+    Humanoid = nil,
+    Backpack = nil,
+    EquipLoopConnection = nil
+}
+
+local function InitializeWeaponState()
+    WeaponState.Character = Player.Character
+    WeaponState.Humanoid = WeaponState.Character and WeaponState.Character:FindFirstChildOfClass("Humanoid")
+    WeaponState.Backpack = Player:FindFirstChild("Backpack")
+end
+
+InitializeWeaponState()
+
+Player.CharacterAdded:Connect(function(char)
+    WeaponState.Character = char
+    WeaponState.Humanoid = nil
+    WeaponState.Backpack = nil
+    
+    task.wait(0.1)
+    
+    WeaponState.Humanoid = char:FindFirstChildOfClass("Humanoid")
+    WeaponState.Backpack = Player:FindFirstChild("Backpack")
+    
+    task.wait(0.9)
+    
+    if _G.SlowHub.EquipLoop and _G.SlowHub.SelectedWeapon then
+        EquipSelectedTool()
+    end
+end)
+
 local function GetWeapons()
     local weapons = {}
     local added = {}
-
-    pcall(function()
-        local backpack = Player:WaitForChild("Backpack")
-
-        for _, item in ipairs(backpack:GetChildren()) do
+    
+    local success = pcall(function()
+        if not WeaponState.Backpack then
+            WeaponState.Backpack = Player:WaitForChild("Backpack")
+        end
+        
+        for _, item in ipairs(WeaponState.Backpack:GetChildren()) do
             if item:IsA("Tool") and not added[item.Name] then
                 added[item.Name] = true
                 table.insert(weapons, item.Name)
             end
         end
-
-        if Player.Character then
-            for _, item in ipairs(Player.Character:GetChildren()) do
+        
+        if WeaponState.Character then
+            for _, item in ipairs(WeaponState.Character:GetChildren()) do
                 if item:IsA("Tool") and not added[item.Name] then
                     added[item.Name] = true
                     table.insert(weapons, item.Name)
@@ -31,38 +65,63 @@ local function GetWeapons()
             end
         end
     end)
-
-    return #weapons > 0 and weapons or {"No weapons found"}
+    
+    if not success or #weapons == 0 then
+        return {"No weapons found"}
+    end
+    
+    return weapons
 end
 
--- 2. Função de encontrar e equipar
-local function EquipSelectedTool()
+function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
-
+    
     if not weaponName or weaponName == "" or weaponName == "No weapons found" then
-        return
+        return false
     end
+    
+    local success = pcall(function()
+        if not WeaponState.Character then return false end
+        if not WeaponState.Humanoid then return false end
+        if WeaponState.Humanoid.Health <= 0 then return false end
+        
+        if WeaponState.Character:FindFirstChild(weaponName) then return true end
+        
+        if not WeaponState.Backpack then return false end
+        
+        local tool = WeaponState.Backpack:FindFirstChild(weaponName)
+        if tool and tool:IsA("Tool") then
+            WeaponState.Humanoid:EquipTool(tool)
+            return true
+        end
+        
+        return false
+    end)
+    
+    return success
+end
 
-    pcall(function()
-        local char = Player.Character
-        if not char then return end
-
-        local humanoid = char:FindFirstChild("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return end
-
-        if char:FindFirstChild(weaponName) then return end
-
-        local backpack = Player:FindFirstChild("Backpack")
-        if backpack then
-            local tool = backpack:FindFirstChild(weaponName)
-            if tool and tool:IsA("Tool") then
-                humanoid:EquipTool(tool)
-            end
+local function StartEquipLoop()
+    if _G.SlowHub.EquipLoop then return end
+    
+    _G.SlowHub.EquipLoop = true
+    
+    WeaponState.EquipLoopConnection = task.spawn(function()
+        while _G.SlowHub.EquipLoop do
+            EquipSelectedTool()
+            task.wait(_G.SlowHub.EquipInterval)
         end
     end)
 end
 
--- 3. Dropdown de seleção de arma
+local function StopEquipLoop()
+    _G.SlowHub.EquipLoop = false
+    
+    if WeaponState.EquipLoopConnection then
+        WeaponState.EquipLoopConnection = nil
+    end
+end
+
 local WeaponDropdown = Tab:CreateDropdown({
     Name = "Select Weapon",
     Options = GetWeapons(),
@@ -70,18 +129,21 @@ local WeaponDropdown = Tab:CreateDropdown({
     MultipleOptions = false,
     Flag = "SelectWeapon",
     Callback = function(Value)
-        local weapon = (type(Value) == "table" and Value[1]) or Value
-
+        local weapon = type(Value) == "table" and Value[1] or Value
+        
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
         end
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 })
 
--- 4. Botão de Refresh
 Tab:CreateButton({
     Name = "Refresh Weapons",
     Callback = function()
@@ -90,31 +152,35 @@ Tab:CreateButton({
     end
 })
 
--- 5. Toggle de Loop
 Tab:CreateToggle({
     Name = "Loop Equip Tool",
     CurrentValue = false,
     Flag = "LoopEquipTool",
     Callback = function(state)
-        _G.SlowHub.EquipLoop = state
-
         if state then
-            task.spawn(function()
-                while _G.SlowHub.EquipLoop do
-                    EquipSelectedTool()
-                    task.wait(0.25)
-                end
-            end)
+            StartEquipLoop()
+        else
+            StopEquipLoop()
+        end
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
         end
     end
 })
 
--- 6. Conexão ao renascer — CORRIGIDO: Backpack é filho do Player, não do Character
-Player.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid")
-    Player:WaitForChild("Backpack") -- ✅ corrigido
-    task.wait(1)
-    if _G.SlowHub.EquipLoop then
-        EquipSelectedTool()
+Tab:CreateSlider({
+    Name = "Equip Interval",
+    Range = {0.1, 1},
+    Increment = 0.05,
+    Suffix = "Seconds",
+    CurrentValue = _G.SlowHub.EquipInterval,
+    Flag = "EquipInterval",
+    Callback = function(Value)
+        _G.SlowHub.EquipInterval = Value
+        
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
-end)
+})
