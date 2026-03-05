@@ -3,10 +3,6 @@ local RunService = game:GetService("RunService")
 
 local Tab = _G.MiscTab
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.AutoHaki = _G.SlowHub.AutoHaki or false
-_G.SlowHub.HakiInterval = _G.SlowHub.HakiInterval or 3
-
 local HakiState = {
     Connection = nil,
     IsRunning = false,
@@ -14,102 +10,71 @@ local HakiState = {
 }
 
 local function ActivateHaki()
-    local success = pcall(function()
+    pcall(function()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if not remotes then return end
-        
         local conquerorHaki = remotes:FindFirstChild("ConquerorHakiRemote")
         if not conquerorHaki then return end
-        
         conquerorHaki:FireServer("Activate")
     end)
-    
-    return success
 end
 
 local function HakiLoop()
-    if not _G.SlowHub.AutoHaki then
+    if not _G.SlowHub.AutoConquerorHaki then
         StopAutoHaki()
         return
     end
-    
     local currentTime = tick()
     local interval = _G.SlowHub.HakiInterval
-    
     if currentTime - HakiState.LastExecution < interval then
         return
     end
-    
     HakiState.LastExecution = currentTime
     ActivateHaki()
 end
 
-local function StopAutoHaki()
+function StopAutoHaki()
     HakiState.IsRunning = false
-    
     if HakiState.Connection then
         HakiState.Connection:Disconnect()
         HakiState.Connection = nil
     end
-    
-    _G.SlowHub.AutoHaki = false
 end
 
-local function StartAutoHaki()
+function StartAutoHaki()
     if HakiState.IsRunning then
         StopAutoHaki()
         task.wait(0.2)
     end
-    
     HakiState.IsRunning = true
-    _G.SlowHub.AutoHaki = true
     HakiState.LastExecution = 0
-    
-    HakiState.Connection = RunService.Heartbeat:Connect(function()
-        HakiLoop()
-    end)
+    HakiState.Connection = RunService.Heartbeat:Connect(HakiLoop)
 end
 
 Tab:Section({Title = "Conqueror Haki"})
 
 Tab:Toggle({
     Title = "Auto Conqueror Haki",
-    Default = _G.SlowHub.AutoHaki,
+    Flag = "AutoConquerorHaki",
+    Default = false,
     Callback = function(Value)
         if Value then
             StartAutoHaki()
         else
             StopAutoHaki()
         end
-        
-        _G.SlowHub.AutoHaki = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
 
 Tab:Slider({
     Title = "Conqueror Haki Interval",
+    Flag = "HakiInterval",
     Step = 0.5,
     Value = {
         Min = 1,
         Max = 10,
-        Default = _G.SlowHub.HakiInterval,
+        Default = 3,
     },
     Callback = function(Value)
-        _G.SlowHub.HakiInterval = Value
-        
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
-
-if _G.SlowHub.AutoHaki then
-    task.spawn(function()
-        task.wait(2)
-        StartAutoHaki()
-    end)
-end
