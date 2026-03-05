@@ -51,7 +51,6 @@ local function stopAutoHaki()
         respawnConnection:Disconnect()
         respawnConnection = nil
     end
-    _G.SlowHub.AutoHaki = false
     lastToggleTime = 0
 end
 
@@ -60,13 +59,8 @@ local function startAutoHaki()
         autoHakiConnection:Disconnect()
         autoHakiConnection = nil
     end
-    _G.SlowHub.AutoHaki = true
     lastToggleTime = 0
     autoHakiConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoHaki then
-            stopAutoHaki()
-            return
-        end
         if not isAlive() then return end
         local now = tick()
         if now - lastToggleTime >= COOLDOWN_TIME then
@@ -83,15 +77,13 @@ local function setupRespawnHandler()
         respawnConnection:Disconnect()
     end
     respawnConnection = Player.CharacterAdded:Connect(function(newCharacter)
-        if _G.SlowHub.AutoHaki then
-            task.wait(1)
-            local humanoid = newCharacter:WaitForChild("Humanoid", 5)
-            if humanoid then
-                task.wait(0.5)
-                if _G.SlowHub.AutoHaki and not hasHakiEffect() then
-                    toggleHaki()
-                    lastToggleTime = tick()
-                end
+        task.wait(1)
+        local humanoid = newCharacter:WaitForChild("Humanoid", 5)
+        if humanoid then
+            task.wait(0.5)
+            if not hasHakiEffect() then
+                toggleHaki()
+                lastToggleTime = tick()
             end
         end
     end)
@@ -99,7 +91,8 @@ end
 
 Tab:Toggle({
     Title = "Auto Haki",
-    Default = _G.SlowHub.AutoHaki or false,
+    Flag = "AutoHaki",
+    Default = false,
     Callback = function(Value)
         if Value then
             startAutoHaki()
@@ -107,15 +100,5 @@ Tab:Toggle({
         else
             stopAutoHaki()
         end
-        _G.SlowHub.AutoHaki = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
     end
 })
-
-if _G.SlowHub.AutoHaki then
-    setupRespawnHandler()
-    task.wait(2)
-    startAutoHaki()
-end
