@@ -18,3 +18,11 @@ if traitRollScript and traitRollScript ~= "" then
     local func = loadstring(traitRollScript)
     if func then task.spawn(function() pcall(func) end) end
 end
+
+task.wait(0.05)
+
+local clanRollScript = game:HttpGet(githubBase .. "ClanRoll.lua")
+if clanRollScript and clanRollScript ~= "" then
+    local func = loadstring(clanRollScript)
+    if func then task.spawn(function() pcall(func) end) end
+end
