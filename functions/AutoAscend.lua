@@ -1,10 +1,48 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
-local Tab = _G.MiscTab
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoAscend = _G.SlowHub.AutoAscend or false
+_G.SlowHub.AscendInterval = _G.SlowHub.AscendInterval or 10
+
+local CONFIG_FOLDER = "SlowHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local function ensureFolder()
+    if not isfolder(CONFIG_FOLDER) then
+        makefolder(CONFIG_FOLDER)
+    end
+end
+
+local function loadConfig()
+    ensureFolder()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(CONFIG_FILE))
+        end)
+        if ok and type(data) == "table" then
+            return data
+        end
+    end
+    return {}
+end
+
+local function saveConfig(key, value)
+    ensureFolder()
+    local current = loadConfig()
+    current[key] = value
+    pcall(function()
+        writefile(CONFIG_FILE, HttpService:JSONEncode(current))
+    end)
+end
+
+local saved = loadConfig()
+if saved["AutoAscend"] ~= nil then _G.SlowHub.AutoAscend = saved["AutoAscend"] end
+if saved["AscendInterval"] ~= nil then _G.SlowHub.AscendInterval = saved["AscendInterval"] end
 
 local AscendState = {
     LoopConnection = nil,
-    IsRunning = false
+    IsRunning = false,
 }
 
 local function PerformAscend()
@@ -17,61 +55,56 @@ local function PerformAscend()
     end)
 end
 
-local function AscendLoop()
-    if not _G.SlowHub.AutoAscend then
-        StopAutoAscend()
-        return
-    end
-    PerformAscend()
-    task.wait(_G.SlowHub.AscendInterval)
-end
-
 function StopAutoAscend()
     AscendState.IsRunning = false
-    if AscendState.LoopConnection then
-        AscendState.LoopConnection = nil
-    end
+    AscendState.LoopConnection = nil
+    _G.SlowHub.AutoAscend = false
     getgenv().AutoAscend = false
 end
 
 function StartAutoAscend()
     if AscendState.IsRunning then return end
     AscendState.IsRunning = true
+    _G.SlowHub.AutoAscend = true
     getgenv().AutoAscend = true
     AscendState.LoopConnection = task.spawn(function()
         while AscendState.IsRunning and _G.SlowHub.AutoAscend do
-            AscendLoop()
+            PerformAscend()
+            task.wait(_G.SlowHub.AscendInterval)
         end
     end)
 end
 
-Tab:Section({Title = "Ascend"})
+local MiscTab = _G.MiscTab
 
-Tab:Slider({
-    Title = "Ascend Interval",
+MiscTab:CreateSection({ Title = "Ascend" })
+
+MiscTab:CreateSlider({
+    Name = "Ascend Interval",
     Flag = "AscendInterval",
-    Step = 5,
-    Value = {
-        Min = 5,
-        Max = 60,
-        Default = 10,
-    },
-    Callback = function(Value)
-    end
+    Range = { 5, 60 },
+    Increment = 5,
+    CurrentValue = _G.SlowHub.AscendInterval,
+    Callback = function(value)
+        _G.SlowHub.AscendInterval = value
+        saveConfig("AscendInterval", value)
+    end,
 })
 
-Tab:Toggle({
-    Title = "Auto Ascend",
+MiscTab:CreateToggle({
+    Name = "Auto Ascend",
     Flag = "AutoAscend",
-    Default = false,
-    Callback = function(Value)
-        getgenv().AutoAscend = Value
-        if Value then
+    CurrentValue = _G.SlowHub.AutoAscend,
+    Callback = function(value)
+        _G.SlowHub.AutoAscend = value
+        getgenv().AutoAscend = value
+        if value then
             StartAutoAscend()
         else
             StopAutoAscend()
         end
-    end
+        saveConfig("AutoAscend", value)
+    end,
 })
 
 task.spawn(function()
