@@ -39,6 +39,7 @@ end
 
 local farmConnection = nil
 local isRunning = false
+local isFarmLoopRunning = false
 local currentBoss = nil
 local lastTarget = nil
 local hasVisitedSafeZone = false
@@ -65,6 +66,16 @@ end)
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "NPCs" then
         npcsFolder = child
+        if _G.SlowHub.AutoFarmBosses and not isRunning then
+            startAutoFarm()
+        end
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "NPCs" then
+        npcsFolder = nil
+        resetState()
     end
 end)
 
@@ -237,6 +248,7 @@ local function resetState()
     currentBoss = nil
     lastTarget = nil
     hasVisitedSafeZone = false
+    isFarmLoopRunning = false
     _G.SlowHub.IsAttackingBoss = false
 end
 
@@ -251,46 +263,58 @@ local function stopAutoFarm()
 end
 
 local function farmLoop()
+    if isFarmLoopRunning then return end
+    isFarmLoopRunning = true
+
     if not _G.SlowHub.AutoFarmBosses or not isRunning then
+        isFarmLoopRunning = false
         stopAutoFarm()
         return
     end
-    if not character or not character.Parent then return end
+    if not character or not character.Parent then
+        isFarmLoopRunning = false
+        return
+    end
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoidRootPart then return end
+        if not humanoidRootPart then
+            isFarmLoopRunning = false
+            return
+        end
     end
     if currentBoss and shouldSwitchBoss(currentBoss) then
         resetState()
-        task.wait(0.1)
         return
     end
     if not currentBoss then
         currentBoss = findValidBoss()
         if not currentBoss then
             _G.SlowHub.IsAttackingBoss = false
+            isFarmLoopRunning = false
             return
         end
         hasVisitedSafeZone = false
         lastTarget = currentBoss
+        equipWeapon()
     end
     local boss = currentBoss
     _G.SlowHub.IsAttackingBoss = true
     if boss ~= lastTarget then
         lastTarget = boss
         hasVisitedSafeZone = false
+        equipWeapon()
     end
     if not hasVisitedSafeZone then
         local success = teleportToSafeZone(boss)
         if success then hasVisitedSafeZone = true end
-        task.wait(0.1)
+        isFarmLoopRunning = false
         return
     end
     local success = teleportToBoss(boss)
     if success then
-        equipWeapon()
         performAttack()
     end
+    isFarmLoopRunning = false
 end
 
 local function startAutoFarm()
