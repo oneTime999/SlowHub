@@ -112,32 +112,11 @@ end
 
 Tab:Section({Title = "Weapon"})
 
--- ✅ CORREÇÃO PRINCIPAL: monta a lista inicial já incluindo o valor salvo
--- assim quando Load() rodar, o valor estará na lista e será encontrado
-local initialWeapons = GetWeapons()
-local savedWeapon = _G.SlowHub.SelectedWeapon
-if savedWeapon and savedWeapon ~= "" and savedWeapon ~= "No weapons found" then
-    local alreadyInList = false
-    for _, w in ipairs(initialWeapons) do
-        if w == savedWeapon then
-            alreadyInList = true
-            break
-        end
-    end
-    if not alreadyInList then
-        -- remove "No weapons found" se estava lá e adiciona a arma salva
-        if initialWeapons[1] == "No weapons found" then
-            initialWeapons = {}
-        end
-        table.insert(initialWeapons, savedWeapon)
-    end
-end
-
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
-    Flag = "SelectedWeapon",
-    Values = initialWeapons,
-    Value = savedWeapon or "",
+    -- ✅ SEM Flag: dropdown dinâmico não funciona com o sistema de config do WindUI
+    Values = GetWeapons(),
+    Value = "",
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
@@ -188,12 +167,16 @@ Tab:Slider({
     end
 })
 
--- Atualiza a lista real após a mochila carregar
+-- ✅ Espera mochila carregar, atualiza a lista e restaura
+-- a arma salva em _G.SlowHub.SelectedWeapon manualmente
 task.spawn(function()
     task.wait(1.5)
     local realWeapons = GetWeapons()
     WeaponDropdown:Refresh(realWeapons)
-    if _G.SlowHub.SelectedWeapon then
+
+    local saved = _G.SlowHub.SelectedWeapon
+    if saved and saved ~= "" and saved ~= "No weapons found" then
+        WeaponDropdown:Set(saved)
         EquipSelectedTool()
     end
 end)
