@@ -7,7 +7,7 @@ local WeaponState = {
     Character = nil,
     Humanoid = nil,
     Backpack = nil,
-    EquipLoopConnection = nil
+    EquipLoopThread = nil
 }
 
 local function InitializeWeaponState()
@@ -34,67 +34,83 @@ end)
 local function GetWeapons()
     local weapons = {}
     local added = {}
-    local success = pcall(function()
-        if not WeaponState.Backpack then
-            WeaponState.Backpack = Player:WaitForChild("Backpack")
-        end
-        for _, item in ipairs(WeaponState.Backpack:GetChildren()) do
+
+    local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
             if item:IsA("Tool") and not added[item.Name] then
                 added[item.Name] = true
                 table.insert(weapons, item.Name)
             end
         end
-        if WeaponState.Character then
-            for _, item in ipairs(WeaponState.Character:GetChildren()) do
-                if item:IsA("Tool") and not added[item.Name] then
-                    added[item.Name] = true
-                    table.insert(weapons, item.Name)
-                end
+    end
+
+    local char = WeaponState.Character or Player.Character
+    if char then
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Tool") and not added[item.Name] then
+                added[item.Name] = true
+                table.insert(weapons, item.Name)
             end
         end
-    end)
-    if not success or #weapons == 0 then
+    end
+
+    if #weapons == 0 then
         return {"No weapons found"}
     end
     return weapons
 end
 
+-- CORRIGIDO: sem pcall engolindo os returns internos
 function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
     if not weaponName or weaponName == "" or weaponName == "No weapons found" then
         return false
     end
-    local success = pcall(function()
-        if not WeaponState.Character then return false end
-        if not WeaponState.Humanoid then return false end
-        if WeaponState.Humanoid.Health <= 0 then return false end
-        if WeaponState.Character:FindFirstChild(weaponName) then return true end
-        if not WeaponState.Backpack then return false end
-        local tool = WeaponState.Backpack:FindFirstChild(weaponName)
-        if tool and tool:IsA("Tool") then
-            WeaponState.Humanoid:EquipTool(tool)
-            return true
-        end
-        return false
-    end)
-    return success
+
+    local char = WeaponState.Character or Player.Character
+    if not char then return false end
+
+    local humanoid = WeaponState.Humanoid or char:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+
+    -- Já está equipada
+    if char:FindFirstChild(weaponName) then return true end
+
+    local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
+    if not backpack then return false end
+
+    local tool = backpack:FindFirstChild(weaponName)
+    if tool and tool:IsA("Tool") then
+        local ok = pcall(function()
+            humanoid:EquipTool(tool)
+        end)
+        return ok
+    end
+
+    return false
 end
 
 local function StartEquipLoop()
-    if _G.SlowHub.EquipLoop then return end
+    if WeaponState.EquipLoopThread then return end -- já está rodando
     _G.SlowHub.EquipLoop = true
-    WeaponState.EquipLoopConnection = task.spawn(function()
+
+    -- CORRIGIDO: guarda a thread para poder cancelar
+    WeaponState.EquipLoopThread = task.spawn(function()
         while _G.SlowHub.EquipLoop do
             EquipSelectedTool()
             task.wait(_G.SlowHub.EquipInterval or 0.25)
         end
+        WeaponState.EquipLoopThread = nil
     end)
 end
 
 local function StopEquipLoop()
     _G.SlowHub.EquipLoop = false
-    if WeaponState.EquipLoopConnection then
-        WeaponState.EquipLoopConnection = nil
+    -- CORRIGIDO: cancela a thread de verdade
+    if WeaponState.EquipLoopThread then
+        task.cancel(WeaponState.EquipLoopThread)
+        WeaponState.EquipLoopThread = nil
     end
 end
 
@@ -113,9 +129,7 @@ local WeaponDropdown = Tab:Dropdown({
         else
             _G.SlowHub.SelectedWeapon = nil
         end
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -136,9 +150,7 @@ Tab:Toggle({
         else
             StopEquipLoop()
         end
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -152,12 +164,11 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.EquipInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
+-- Restaura estado salvo ao carregar
 if _G.SlowHub.SelectedWeapon then
     task.spawn(function()
         task.wait(1)
