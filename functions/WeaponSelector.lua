@@ -119,7 +119,7 @@ Tab:Section({Title = "Weapon"})
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
     Values = GetWeapons(),
-    Default = _G.SlowHub.SelectedWeapon or "",
+    Value = _G.SlowHub.SelectedWeapon or "",
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
@@ -143,7 +143,7 @@ Tab:Button({
 
 Tab:Toggle({
     Title = "Loop Equip Tool",
-    Default = _G.SlowHub.EquipLoop or false,
+    Value = _G.SlowHub.EquipLoop or false,
     Callback = function(state)
         if state then
             StartEquipLoop()
