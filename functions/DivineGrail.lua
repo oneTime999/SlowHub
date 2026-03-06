@@ -61,7 +61,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Craft Divine Grail",
-    Default = _G.SlowHub.AutoCraftDivineGrail or false,
+    Value = _G.SlowHub.AutoCraftDivineGrail or false,
     Callback = function(Value)
         _G.SlowHub.AutoCraftDivineGrail = Value
         if _G.SaveConfig then
