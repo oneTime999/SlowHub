@@ -114,7 +114,7 @@ Tab:Section({Title = "Weapon"})
 
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
-    Flag = "SelectedWeapon",      -- ✅ único campo adicionado
+    Flag = "SelectedWeapon",
     Values = GetWeapons(),
     Value = _G.SlowHub.SelectedWeapon or "",
     Multi = false,
@@ -140,7 +140,7 @@ Tab:Button({
 
 Tab:Toggle({
     Title = "Loop Equip Tool",
-    Flag = "EquipLoop",           -- ✅ único campo adicionado
+    Flag = "EquipLoop",
     Value = _G.SlowHub.EquipLoop or false,
     Callback = function(state)
         if state then
@@ -154,7 +154,7 @@ Tab:Toggle({
 
 Tab:Slider({
     Title = "Equip Interval",
-    Flag = "EquipInterval",       -- ✅ único campo adicionado
+    Flag = "EquipInterval",
     Step = 0.05,
     Value = {
         Min = 0.1,
@@ -167,12 +167,18 @@ Tab:Slider({
     end
 })
 
-if _G.SlowHub.SelectedWeapon then
-    task.spawn(function()
-        task.wait(1)
+-- ✅ CORREÇÃO: espera a mochila carregar, atualiza a lista
+-- e força o valor salvo aparecer no dropdown visualmente
+task.spawn(function()
+    task.wait(1.5)
+    local currentWeapons = GetWeapons()
+    WeaponDropdown:Refresh(currentWeapons)
+
+    if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
+        WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
         EquipSelectedTool()
-    end)
-end
+    end
+end)
 
 if _G.SlowHub.EquipLoop then
     task.spawn(function()
