@@ -91,7 +91,7 @@ end
 
 Tab:Toggle({
     Title = "Auto Haki",
-    Default = _G.SlowHub.AutoHaki or false,
+    Value = _G.SlowHub.AutoHaki or false,
     Callback = function(Value)
         if Value then
             startAutoHaki()
