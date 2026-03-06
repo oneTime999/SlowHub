@@ -1,48 +1,10 @@
+local Tab = _G.RollsTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.AutoTraitRoll = _G.SlowHub.AutoTraitRoll or false
-_G.SlowHub.TargetTraits = _G.SlowHub.TargetTraits or {}
-_G.SlowHub.TraitRollDelay = _G.SlowHub.TraitRollDelay or 0.35
-_G.SlowHub.StopOnSecret = _G.SlowHub.StopOnSecret or true
-_G.SlowHub.StopOnMythicalTrait = _G.SlowHub.StopOnMythicalTrait or true
-_G.SlowHub.StopOnLegendaryTrait = _G.SlowHub.StopOnLegendaryTrait or false
-_G.SlowHub.StopOnEpicTrait = _G.SlowHub.StopOnEpicTrait or false
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-local traitFlags = {"AutoTraitRoll","TargetTraits","TraitRollDelay","StopOnSecret","StopOnMythicalTrait","StopOnLegendaryTrait","StopOnEpicTrait"}
-for _, flag in ipairs(traitFlags) do
-    if saved[flag] ~= nil then _G.SlowHub[flag] = saved[flag] end
-end
-
-local TraitsData = {
+local traitsData = {
     ["Celestial"]={rarity="Secret",order=7},["Singularity"]={rarity="Secret",order=7},
     ["Overlord"]={rarity="Secret",order=7},["Cataclysm"]={rarity="Secret",order=7},
     ["Malevolent"]={rarity="Mythical",order=6},["Infinity"]={rarity="Mythical",order=6},
@@ -57,15 +19,18 @@ local TraitsData = {
     ["Tough"]={rarity="Common",order=1},["Agile"]={rarity="Common",order=1},
 }
 
-local TraitRollState = {IsRolling=false, Connection=nil, LastRollTime=0, CurrentTrait=nil}
+local rollConnection = nil
+local isRolling = false
+local lastRollTime = 0
+local currentTrait = nil
 
-local function ParseTraitText(text)
+local function parseTraitText(text)
     if not text then return nil end
     local trait = text:gsub("Trait: ",""):gsub("Trait:",""):match("^%s*(.-)%s*$")
     return trait ~= "" and trait or nil
 end
 
-local function GetCurrentTrait()
+local function getCurrentTrait()
     local ok, traitText = pcall(function()
         local playerGui = Player:WaitForChild("PlayerGui", 5)
         if not playerGui then return nil end
@@ -87,143 +52,171 @@ local function GetCurrentTrait()
         if not statName then return nil end
         return statName.Text
     end)
-    if ok and traitText then return ParseTraitText(traitText) end
+    if ok and traitText then return parseTraitText(traitText) end
     return nil
 end
 
-local function GetTraitRarity(traitName)
-    local data = TraitsData[traitName]
+local function getTraitRarity(traitName)
+    local data = traitsData[traitName]
     return data and data.rarity or "Common"
 end
 
-local function IsTargetTrait(traitName)
+local function isTargetTrait(traitName)
     if not traitName then return false end
-    if _G.SlowHub.StopOnSecret and GetTraitRarity(traitName) == "Secret" then return true end
-    if _G.SlowHub.StopOnMythicalTrait and GetTraitRarity(traitName) == "Mythical" then return true end
-    if _G.SlowHub.StopOnLegendaryTrait and GetTraitRarity(traitName) == "Legendary" then return true end
-    if _G.SlowHub.StopOnEpicTrait and GetTraitRarity(traitName) == "Epic" then return true end
-    for _, target in ipairs(_G.SlowHub.TargetTraits) do
-        if target == traitName then return true end
+    if _G.SlowHub.StopOnSecret and getTraitRarity(traitName) == "Secret" then return true end
+    if _G.SlowHub.StopOnMythicalTrait and getTraitRarity(traitName) == "Mythical" then return true end
+    if _G.SlowHub.StopOnLegendaryTrait and getTraitRarity(traitName) == "Legendary" then return true end
+    if _G.SlowHub.StopOnEpicTrait and getTraitRarity(traitName) == "Epic" then return true end
+    if _G.SlowHub.TargetTraits then
+        for _, target in ipairs(_G.SlowHub.TargetTraits) do
+            if target == traitName then return true end
+        end
     end
     return false
 end
 
-local function FireTraitRoll()
+local function fireTraitRoll()
     pcall(function() ReplicatedStorage.RemoteEvents.TraitReroll:FireServer() end)
 end
 
-local function StopTraitRolling()
-    TraitRollState.IsRolling = false
-    if TraitRollState.Connection then
-        TraitRollState.Connection:Disconnect()
-        TraitRollState.Connection = nil
+local function stopTraitRolling()
+    isRolling = false
+    if rollConnection then
+        rollConnection:Disconnect()
+        rollConnection = nil
     end
     if _G.SlowHub.AutoTraitRoll then
         _G.SlowHub.AutoTraitRoll = false
-        saveConfig("AutoTraitRoll", false)
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 end
 
-local function StartTraitRolling()
-    if TraitRollState.IsRolling then return end
-    TraitRollState.IsRolling = true
-    TraitRollState.CurrentTrait = GetCurrentTrait()
-    TraitRollState.LastRollTime = 0
-    TraitRollState.Connection = RunService.Heartbeat:Connect(function()
-        if not TraitRollState.IsRolling then return end
+local function startTraitRolling()
+    if isRolling then return end
+    isRolling = true
+    currentTrait = getCurrentTrait()
+    lastRollTime = 0
+    rollConnection = RunService.Heartbeat:Connect(function()
+        if not isRolling then return end
         local currentTime = tick()
-        if currentTime - TraitRollState.LastRollTime < _G.SlowHub.TraitRollDelay then return end
-        local currentTrait = GetCurrentTrait()
-        if currentTrait and currentTrait ~= TraitRollState.CurrentTrait then
-            TraitRollState.CurrentTrait = currentTrait
-            if IsTargetTrait(currentTrait) then StopTraitRolling(); return end
+        if currentTime - lastRollTime < (_G.SlowHub.TraitRollDelay or 0.35) then return end
+        local currentTraitNow = getCurrentTrait()
+        if currentTraitNow and currentTraitNow ~= currentTrait then
+            currentTrait = currentTraitNow
+            if isTargetTrait(currentTrait) then stopTraitRolling(); return end
         end
-        FireTraitRoll()
-        TraitRollState.LastRollTime = currentTime
+        fireTraitRoll()
+        lastRollTime = currentTime
     end)
 end
 
-local AllTraits = {}
-for traitName, data in pairs(TraitsData) do
-    table.insert(AllTraits, {name=traitName, rarity=data.rarity, order=data.order})
+local allTraits = {}
+for traitName, data in pairs(traitsData) do
+    table.insert(allTraits, {name=traitName, rarity=data.rarity, order=data.order})
 end
-table.sort(AllTraits, function(a,b)
+table.sort(allTraits, function(a,b)
     if a.order ~= b.order then return a.order > b.order end
     return a.name < b.name
 end)
 
 local traitOptions = {}
-for _, info in ipairs(AllTraits) do table.insert(traitOptions, info.name) end
+for _, info in ipairs(allTraits) do table.insert(traitOptions, info.name) end
 
-local RollsTab = _G.RollsTab
+Tab:Section({Title = "Auto Trait Roll"})
 
-RollsTab:CreateSection({ Title = "Auto Trait Roll" })
-
-RollsTab:CreateDropdown({
-    Name = "Target Traits", Flag = "TargetTraits",
-    Options = traitOptions, CurrentOption = _G.SlowHub.TargetTraits, MultipleOptions = true,
+Tab:Dropdown({
+    Title = "Target Traits",
+    Flag = "TargetTraits",
+    Values = traitOptions,
+    Multi = true,
+    Default = _G.SlowHub.TargetTraits or {},
     Callback = function(selectedOptions)
         _G.SlowHub.TargetTraits = selectedOptions or {}
-        saveConfig("TargetTraits", _G.SlowHub.TargetTraits)
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Stop on Secret", Flag = "StopOnSecret",
-    CurrentValue = _G.SlowHub.StopOnSecret,
-    Callback = function(value)
-        _G.SlowHub.StopOnSecret = value
-        saveConfig("StopOnSecret", value)
+Tab:Toggle({
+    Title = "Stop on Secret",
+    Default = _G.SlowHub.StopOnSecret or true,
+    Callback = function(Value)
+        _G.SlowHub.StopOnSecret = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Stop on Mythical", Flag = "StopOnMythicalTrait",
-    CurrentValue = _G.SlowHub.StopOnMythicalTrait,
-    Callback = function(value)
-        _G.SlowHub.StopOnMythicalTrait = value
-        saveConfig("StopOnMythicalTrait", value)
+Tab:Toggle({
+    Title = "Stop on Mythical",
+    Default = _G.SlowHub.StopOnMythicalTrait or true,
+    Callback = function(Value)
+        _G.SlowHub.StopOnMythicalTrait = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Stop on Legendary", Flag = "StopOnLegendaryTrait",
-    CurrentValue = _G.SlowHub.StopOnLegendaryTrait,
-    Callback = function(value)
-        _G.SlowHub.StopOnLegendaryTrait = value
-        saveConfig("StopOnLegendaryTrait", value)
+Tab:Toggle({
+    Title = "Stop on Legendary",
+    Default = _G.SlowHub.StopOnLegendaryTrait or false,
+    Callback = function(Value)
+        _G.SlowHub.StopOnLegendaryTrait = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Stop on Epic", Flag = "StopOnEpicTrait",
-    CurrentValue = _G.SlowHub.StopOnEpicTrait,
-    Callback = function(value)
-        _G.SlowHub.StopOnEpicTrait = value
-        saveConfig("StopOnEpicTrait", value)
+Tab:Toggle({
+    Title = "Stop on Epic",
+    Default = _G.SlowHub.StopOnEpicTrait or false,
+    Callback = function(Value)
+        _G.SlowHub.StopOnEpicTrait = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateSlider({
-    Name = "Trait Roll Delay", Flag = "TraitRollDelay",
-    Range = { 0.15, 1.0 }, Increment = 0.05,
-    CurrentValue = _G.SlowHub.TraitRollDelay,
-    Callback = function(value)
-        _G.SlowHub.TraitRollDelay = value
-        saveConfig("TraitRollDelay", value)
+Tab:Slider({
+    Title = "Trait Roll Delay",
+    Flag = "TraitRollDelay",
+    Step = 0.05,
+    Value = {
+        Min = 0.15,
+        Max = 1.0,
+        Default = _G.SlowHub.TraitRollDelay or 0.35,
+    },
+    Callback = function(Value)
+        _G.SlowHub.TraitRollDelay = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Auto Trait Roll", Flag = "AutoTraitRoll",
-    CurrentValue = _G.SlowHub.AutoTraitRoll,
-    Callback = function(value)
-        _G.SlowHub.AutoTraitRoll = value
-        saveConfig("AutoTraitRoll", value)
-        if value then StartTraitRolling() else StopTraitRolling() end
+Tab:Toggle({
+    Title = "Auto Trait Roll",
+    Default = _G.SlowHub.AutoTraitRoll or false,
+    Callback = function(Value)
+        _G.SlowHub.AutoTraitRoll = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if Value then
+            startTraitRolling()
+        else
+            stopTraitRolling()
+        end
     end,
 })
 
 if _G.SlowHub.AutoTraitRoll then
-    task.spawn(function() task.wait(2); StartTraitRolling() end)
+    task.spawn(function() task.wait(2); startTraitRolling() end)
 end
