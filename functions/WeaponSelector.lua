@@ -112,11 +112,32 @@ end
 
 Tab:Section({Title = "Weapon"})
 
+-- ✅ CORREÇÃO PRINCIPAL: monta a lista inicial já incluindo o valor salvo
+-- assim quando Load() rodar, o valor estará na lista e será encontrado
+local initialWeapons = GetWeapons()
+local savedWeapon = _G.SlowHub.SelectedWeapon
+if savedWeapon and savedWeapon ~= "" and savedWeapon ~= "No weapons found" then
+    local alreadyInList = false
+    for _, w in ipairs(initialWeapons) do
+        if w == savedWeapon then
+            alreadyInList = true
+            break
+        end
+    end
+    if not alreadyInList then
+        -- remove "No weapons found" se estava lá e adiciona a arma salva
+        if initialWeapons[1] == "No weapons found" then
+            initialWeapons = {}
+        end
+        table.insert(initialWeapons, savedWeapon)
+    end
+end
+
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
     Flag = "SelectedWeapon",
-    Values = GetWeapons(),
-    Value = _G.SlowHub.SelectedWeapon or "",
+    Values = initialWeapons,
+    Value = savedWeapon or "",
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
@@ -167,15 +188,12 @@ Tab:Slider({
     end
 })
 
--- ✅ CORREÇÃO: espera a mochila carregar, atualiza a lista
--- e força o valor salvo aparecer no dropdown visualmente
+-- Atualiza a lista real após a mochila carregar
 task.spawn(function()
     task.wait(1.5)
-    local currentWeapons = GetWeapons()
-    WeaponDropdown:Refresh(currentWeapons)
-
-    if _G.SlowHub.SelectedWeapon and _G.SlowHub.SelectedWeapon ~= "" then
-        WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
+    local realWeapons = GetWeapons()
+    WeaponDropdown:Refresh(realWeapons)
+    if _G.SlowHub.SelectedWeapon then
         EquipSelectedTool()
     end
 end)
