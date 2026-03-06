@@ -92,31 +92,31 @@ Tab:Section({Title = "Auto Skills"})
 
 Tab:Toggle({
     Title = "Auto Skill Z",
-    Default = _G.SlowHub.AutoSkillZ or false,
+    Value = _G.SlowHub.AutoSkillZ or false,
     Callback = function(v) onToggleChange("AutoSkillZ", v) end,
 })
 
 Tab:Toggle({
     Title = "Auto Skill X",
-    Default = _G.SlowHub.AutoSkillX or false,
+    Value = _G.SlowHub.AutoSkillX or false,
     Callback = function(v) onToggleChange("AutoSkillX", v) end,
 })
 
 Tab:Toggle({
     Title = "Auto Skill C",
-    Default = _G.SlowHub.AutoSkillC or false,
+    Value = _G.SlowHub.AutoSkillC or false,
     Callback = function(v) onToggleChange("AutoSkillC", v) end,
 })
 
 Tab:Toggle({
     Title = "Auto Skill V",
-    Default = _G.SlowHub.AutoSkillV or false,
+    Value = _G.SlowHub.AutoSkillV or false,
     Callback = function(v) onToggleChange("AutoSkillV", v) end,
 })
 
 Tab:Toggle({
     Title = "Auto Skill F",
-    Default = _G.SlowHub.AutoSkillF or false,
+    Value = _G.SlowHub.AutoSkillF or false,
     Callback = function(v) onToggleChange("AutoSkillF", v) end,
 })
 
