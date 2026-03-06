@@ -1,46 +1,10 @@
+local Tab = _G.RollsTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.AutoRoll = _G.SlowHub.AutoRoll or false
-_G.SlowHub.TargetRaces = _G.SlowHub.TargetRaces or {}
-_G.SlowHub.RollDelay = _G.SlowHub.RollDelay or 0.35
-_G.SlowHub.StopOnMythical = _G.SlowHub.StopOnMythical or true
-_G.SlowHub.StopOnLegendary = _G.SlowHub.StopOnLegendary or false
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-local raceFlags = {"AutoRoll","TargetRaces","RollDelay","StopOnMythical","StopOnLegendary"}
-for _, flag in ipairs(raceFlags) do
-    if saved[flag] ~= nil then _G.SlowHub[flag] = saved[flag] end
-end
-
-local RacesData = {
+local racesData = {
     ["Human"]={rarity="Common",order=1},["Fishman"]={rarity="Uncommon",order=2},
     ["Skypea"]={rarity="Uncommon",order=2},["Mink"]={rarity="Rare",order=3},
     ["Orc"]={rarity="Rare",order=3},["Vampire"]={rarity="Epic",order=4},
@@ -53,15 +17,18 @@ local RacesData = {
     ["Sunborn"]={rarity="Mythical",order=6},
 }
 
-local RollState = {IsRolling=false, Connection=nil, LastRollTime=0, CurrentRace=nil}
+local rollConnection = nil
+local isRolling = false
+local lastRollTime = 0
+local currentRace = nil
 
-local function ParseRaceText(text)
+local function parseRaceText(text)
     if not text then return nil end
     local race = text:gsub("Race: ",""):gsub("Race:",""):match("^%s*(.-)%s*$")
     return race ~= "" and race or nil
 end
 
-local function GetCurrentRace()
+local function getCurrentRace()
     local ok, raceText = pcall(function()
         local playerGui = Player:WaitForChild("PlayerGui", 5)
         if not playerGui then return nil end
@@ -83,122 +50,149 @@ local function GetCurrentRace()
         if not statName then return nil end
         return statName.Text
     end)
-    if ok and raceText then return ParseRaceText(raceText) end
+    if ok and raceText then return parseRaceText(raceText) end
     return nil
 end
 
-local function GetRaceRarity(raceName)
-    local data = RacesData[raceName]
+local function getRaceRarity(raceName)
+    local data = racesData[raceName]
     return data and data.rarity or "Common"
 end
 
-local function IsTargetRace(raceName)
+local function isTargetRace(raceName)
     if not raceName then return false end
-    if _G.SlowHub.StopOnMythical and GetRaceRarity(raceName) == "Mythical" then return true end
-    if _G.SlowHub.StopOnLegendary and GetRaceRarity(raceName) == "Legendary" then return true end
-    for _, target in ipairs(_G.SlowHub.TargetRaces) do
-        if target == raceName then return true end
+    if _G.SlowHub.StopOnMythical and getRaceRarity(raceName) == "Mythical" then return true end
+    if _G.SlowHub.StopOnLegendary and getRaceRarity(raceName) == "Legendary" then return true end
+    if _G.SlowHub.TargetRaces then
+        for _, target in ipairs(_G.SlowHub.TargetRaces) do
+            if target == raceName then return true end
+        end
     end
     return false
 end
 
-local function FireRoll()
+local function fireRoll()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer("Use","Race Reroll",1)
     end)
 end
 
-local function StopRolling()
-    RollState.IsRolling = false
-    if RollState.Connection then RollState.Connection:Disconnect(); RollState.Connection = nil end
+local function stopRolling()
+    isRolling = false
+    if rollConnection then
+        rollConnection:Disconnect()
+        rollConnection = nil
+    end
     if _G.SlowHub.AutoRoll then
         _G.SlowHub.AutoRoll = false
-        saveConfig("AutoRoll", false)
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end
 end
 
-local function StartRolling()
-    if RollState.IsRolling then return end
-    RollState.IsRolling = true
-    RollState.CurrentRace = GetCurrentRace()
-    RollState.LastRollTime = 0
-    RollState.Connection = RunService.Heartbeat:Connect(function()
-        if not RollState.IsRolling then return end
+local function startRolling()
+    if isRolling then return end
+    isRolling = true
+    currentRace = getCurrentRace()
+    lastRollTime = 0
+    rollConnection = RunService.Heartbeat:Connect(function()
+        if not isRolling then return end
         local currentTime = tick()
-        if currentTime - RollState.LastRollTime < _G.SlowHub.RollDelay then return end
-        local currentRace = GetCurrentRace()
-        if currentRace and currentRace ~= RollState.CurrentRace then
-            RollState.CurrentRace = currentRace
-            if IsTargetRace(currentRace) then StopRolling(); return end
+        if currentTime - lastRollTime < (_G.SlowHub.RollDelay or 0.35) then return end
+        local currentRaceNow = getCurrentRace()
+        if currentRaceNow and currentRaceNow ~= currentRace then
+            currentRace = currentRaceNow
+            if isTargetRace(currentRace) then stopRolling(); return end
         end
-        FireRoll()
-        RollState.LastRollTime = currentTime
+        fireRoll()
+        lastRollTime = currentTime
     end)
 end
 
-local AllRaces = {}
-for raceName, data in pairs(RacesData) do
-    table.insert(AllRaces, {name=raceName, rarity=data.rarity, order=data.order})
+local allRaces = {}
+for raceName, data in pairs(racesData) do
+    table.insert(allRaces, {name=raceName, rarity=data.rarity, order=data.order})
 end
-table.sort(AllRaces, function(a,b)
+table.sort(allRaces, function(a,b)
     if a.order ~= b.order then return a.order > b.order end
     return a.name < b.name
 end)
 
 local raceOptions = {}
-for _, info in ipairs(AllRaces) do table.insert(raceOptions, info.name) end
+for _, info in ipairs(allRaces) do table.insert(raceOptions, info.name) end
 
-local RollsTab = _G.RollsTab
+Tab:Section({Title = "Auto Race Roll"})
 
-RollsTab:CreateSection({ Title = "Auto Race Roll" })
-
-RollsTab:CreateDropdown({
-    Name = "Target Races", Flag = "TargetRaces",
-    Options = raceOptions, CurrentOption = _G.SlowHub.TargetRaces, MultipleOptions = true,
+Tab:Dropdown({
+    Title = "Target Races",
+    Flag = "TargetRaces",
+    Values = raceOptions,
+    Multi = true,
+    Default = _G.SlowHub.TargetRaces or {},
     Callback = function(selectedOptions)
         _G.SlowHub.TargetRaces = selectedOptions or {}
-        saveConfig("TargetRaces", _G.SlowHub.TargetRaces)
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Stop on Mythical", Flag = "StopOnMythical",
-    CurrentValue = _G.SlowHub.StopOnMythical,
-    Callback = function(value)
-        _G.SlowHub.StopOnMythical = value
-        saveConfig("StopOnMythical", value)
+Tab:Toggle({
+    Title = "Stop on Mythical",
+    Default = _G.SlowHub.StopOnMythical or true,
+    Callback = function(Value)
+        _G.SlowHub.StopOnMythical = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Stop on Legendary", Flag = "StopOnLegendary",
-    CurrentValue = _G.SlowHub.StopOnLegendary,
-    Callback = function(value)
-        _G.SlowHub.StopOnLegendary = value
-        saveConfig("StopOnLegendary", value)
+Tab:Toggle({
+    Title = "Stop on Legendary",
+    Default = _G.SlowHub.StopOnLegendary or false,
+    Callback = function(Value)
+        _G.SlowHub.StopOnLegendary = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateSlider({
-    Name = "Roll Delay", Flag = "RollDelay",
-    Range = { 0.15, 1.0 }, Increment = 0.05,
-    CurrentValue = _G.SlowHub.RollDelay,
-    Callback = function(value)
-        _G.SlowHub.RollDelay = value
-        saveConfig("RollDelay", value)
+Tab:Slider({
+    Title = "Roll Delay",
+    Flag = "RollDelay",
+    Step = 0.05,
+    Value = {
+        Min = 0.15,
+        Max = 1.0,
+        Default = _G.SlowHub.RollDelay or 0.35,
+    },
+    Callback = function(Value)
+        _G.SlowHub.RollDelay = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-RollsTab:CreateToggle({
-    Name = "Auto Roll", Flag = "AutoRoll",
-    CurrentValue = _G.SlowHub.AutoRoll,
-    Callback = function(value)
-        _G.SlowHub.AutoRoll = value
-        saveConfig("AutoRoll", value)
-        if value then StartRolling() else StopRolling() end
+Tab:Toggle({
+    Title = "Auto Roll",
+    Default = _G.SlowHub.AutoRoll or false,
+    Callback = function(Value)
+        _G.SlowHub.AutoRoll = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if Value then
+            startRolling()
+        else
+            stopRolling()
+        end
     end,
 })
 
 if _G.SlowHub.AutoRoll then
-    task.spawn(function() task.wait(2); StartRolling() end)
+    task.spawn(function() task.wait(2); startRolling() end)
 end
