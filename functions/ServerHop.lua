@@ -1,42 +1,13 @@
+local Tab = _G.MiscTab
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.ServerHopMaxPing = _G.SlowHub.ServerHopMaxPing or 300
-_G.SlowHub.ServerHopMinPlayers = _G.SlowHub.ServerHopMinPlayers or 1
+local isHopping = false
+local lastHopTime = 0
 
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-if saved["ServerHopMaxPing"] ~= nil then _G.SlowHub.ServerHopMaxPing = saved["ServerHopMaxPing"] end
-if saved["ServerHopMinPlayers"] ~= nil then _G.SlowHub.ServerHopMinPlayers = saved["ServerHopMinPlayers"] end
-
-local ServerHopState = {IsHopping=false, LastHopTime=0}
-
-local function GetServers()
+local function getServers()
     local placeId = game.PlaceId
     local cursor = ""
     local servers = {}
@@ -53,8 +24,8 @@ local function GetServers()
         if body.data then
             for _, server in ipairs(body.data) do
                 if server.playing < server.maxPlayers and server.id ~= game.JobId
-                    and server.playing >= _G.SlowHub.ServerHopMinPlayers
-                    and server.ping and server.ping <= _G.SlowHub.ServerHopMaxPing then
+                    and server.playing >= (_G.SlowHub.ServerHopMinPlayers or 1)
+                    and server.ping and server.ping <= (_G.SlowHub.ServerHopMaxPing or 300) then
                     table.insert(servers, server.id)
                 end
             end
@@ -66,51 +37,63 @@ local function GetServers()
     return servers
 end
 
-local function ServerHop()
-    if ServerHopState.IsHopping then return end
+local function serverHop()
+    if isHopping then return end
     local currentTime = tick()
-    if currentTime - ServerHopState.LastHopTime < 5 then return end
-    ServerHopState.IsHopping = true
+    if currentTime - lastHopTime < 5 then return end
+    isHopping = true
     task.spawn(function()
-        local servers = GetServers()
-        if #servers == 0 then ServerHopState.IsHopping = false; return end
+        local servers = getServers()
+        if #servers == 0 then isHopping = false; return end
         local randomServer = servers[math.random(1, #servers)]
         local placeId = game.PlaceId
-        ServerHopState.LastHopTime = tick()
+        lastHopTime = tick()
         local success = pcall(function()
             TeleportService:TeleportToPlaceInstance(placeId, randomServer, Player)
         end)
-        if not success then ServerHopState.IsHopping = false end
+        if not success then isHopping = false end
     end)
 end
 
-local MiscTab = _G.MiscTab
+Tab:Section({Title = "Server"})
 
-MiscTab:CreateSection({ Title = "Server" })
-
-MiscTab:CreateSlider({
-    Name = "Max Ping", Flag = "ServerHopMaxPing",
-    Range = { 100, 500 }, Increment = 50,
-    CurrentValue = _G.SlowHub.ServerHopMaxPing,
-    Callback = function(value)
-        _G.SlowHub.ServerHopMaxPing = value
-        saveConfig("ServerHopMaxPing", value)
+Tab:Slider({
+    Title = "Max Ping",
+    Flag = "ServerHopMaxPing",
+    Step = 50,
+    Value = {
+        Min = 100,
+        Max = 500,
+        Default = _G.SlowHub.ServerHopMaxPing or 300,
+    },
+    Callback = function(Value)
+        _G.SlowHub.ServerHopMaxPing = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-MiscTab:CreateSlider({
-    Name = "Min Players", Flag = "ServerHopMinPlayers",
-    Range = { 1, 10 }, Increment = 1,
-    CurrentValue = _G.SlowHub.ServerHopMinPlayers,
-    Callback = function(value)
-        _G.SlowHub.ServerHopMinPlayers = value
-        saveConfig("ServerHopMinPlayers", value)
+Tab:Slider({
+    Title = "Min Players",
+    Flag = "ServerHopMinPlayers",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.ServerHopMinPlayers or 1,
+    },
+    Callback = function(Value)
+        _G.SlowHub.ServerHopMinPlayers = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-MiscTab:CreateButton({
-    Name = "Server Hop",
+Tab:Button({
+    Title = "Server Hop",
     Callback = function()
-        ServerHop()
+        serverHop()
     end,
 })
