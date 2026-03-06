@@ -11,21 +11,18 @@ local WeaponState = {
 }
 
 local function InitializeWeaponState()
-    WeaponState.Character = Player.Character
-    WeaponState.Humanoid = WeaponState.Character and WeaponState.Character:FindFirstChildOfClass("Humanoid")
-    WeaponState.Backpack = Player:FindFirstChild("Backpack")
+    WeaponState.Character = Player.Character or Player.CharacterAdded:Wait()
+    WeaponState.Humanoid = WeaponState.Character:FindFirstChildOfClass("Humanoid")
+    WeaponState.Backpack = Player:WaitForChild("Backpack")
 end
 
 InitializeWeaponState()
 
 Player.CharacterAdded:Connect(function(char)
     WeaponState.Character = char
-    WeaponState.Humanoid = nil
-    WeaponState.Backpack = nil
-    task.wait(0.1)
-    WeaponState.Humanoid = char:FindFirstChildOfClass("Humanoid")
-    WeaponState.Backpack = Player:FindFirstChild("Backpack")
-    task.wait(0.9)
+    WeaponState.Humanoid = char:WaitForChild("Humanoid")
+    WeaponState.Backpack = Player:WaitForChild("Backpack")
+    task.wait(0.5)
     if _G.SlowHub.EquipLoop and _G.SlowHub.SelectedWeapon then
         EquipSelectedTool()
     end
@@ -58,6 +55,8 @@ local function GetWeapons()
     if #weapons == 0 then
         return {"No weapons found"}
     end
+
+    table.sort(weapons)
     return weapons
 end
 
@@ -112,8 +111,6 @@ end
 
 Tab:Section({Title = "Weapon"})
 
--- ✅ SOLUÇÃO: monta a lista já com o valor salvo dentro
--- assim o WindUI acha o valor pelo Flag e seleciona igual aos outros dropdowns
 local initialWeapons = GetWeapons()
 local savedWeapon = _G.SlowHub.SelectedWeapon
 
@@ -127,7 +124,7 @@ if savedWeapon and savedWeapon ~= "" and savedWeapon ~= "No weapons found" then
     end
     if not found then
         if initialWeapons[1] == "No weapons found" then
-            initialWeapons = { savedWeapon }
+            initialWeapons = {savedWeapon}
         else
             table.insert(initialWeapons, 1, savedWeapon)
         end
@@ -137,7 +134,7 @@ end
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
     Flag = "SelectedWeapon",
-    Values = initialWeapons,  -- ✅ já contém o valor salvo
+    Values = initialWeapons,
     Value = savedWeapon or "",
     Multi = false,
     Callback = function(Value)
@@ -155,7 +152,14 @@ local WeaponDropdown = Tab:Dropdown({
 Tab:Button({
     Title = "Refresh Weapons",
     Callback = function()
-        WeaponDropdown:Refresh(GetWeapons())
+        local weapons = GetWeapons()
+        if _G.SlowHub.SelectedWeapon then
+            table.insert(weapons, 1, _G.SlowHub.SelectedWeapon)
+        end
+        WeaponDropdown:Refresh(weapons)
+        if _G.SlowHub.SelectedWeapon then
+            WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
+        end
     end
 })
 
@@ -188,13 +192,28 @@ Tab:Slider({
     end
 })
 
--- Atualiza com as armas reais após a mochila carregar
 task.spawn(function()
     task.wait(2)
-    WeaponDropdown:Refresh(GetWeapons())
+
+    local weapons = GetWeapons()
     if _G.SlowHub.SelectedWeapon then
+        table.insert(weapons, 1, _G.SlowHub.SelectedWeapon)
+    end
+
+    WeaponDropdown:Refresh(weapons)
+
+    if _G.SlowHub.SelectedWeapon then
+        WeaponDropdown:Set(_G.SlowHub.SelectedWeapon)
         EquipSelectedTool()
     end
+end)
+
+Player.Backpack.ChildAdded:Connect(function()
+    local weapons = GetWeapons()
+    if _G.SlowHub.SelectedWeapon then
+        table.insert(weapons, 1, _G.SlowHub.SelectedWeapon)
+    end
+    WeaponDropdown:Refresh(weapons)
 end)
 
 if _G.SlowHub.EquipLoop then
