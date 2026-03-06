@@ -61,22 +61,6 @@ local function GetWeapons()
     return weapons
 end
 
-local function WeaponExistsInBackpack(weaponName)
-    if not weaponName or weaponName == "" then return false end
-
-    local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
-    if backpack and backpack:FindFirstChild(weaponName) then
-        return true
-    end
-
-    local char = WeaponState.Character or Player.Character
-    if char and char:FindFirstChild(weaponName) then
-        return true
-    end
-
-    return false
-end
-
 function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
     if not weaponName or weaponName == "" or weaponName == "No weapons found" then
@@ -130,7 +114,6 @@ Tab:Section({Title = "Weapon"})
 
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
-    Flag = "SelectedWeapon",
     Values = GetWeapons(),
     Value = "",
     Multi = false,
@@ -142,7 +125,6 @@ local WeaponDropdown = Tab:Dropdown({
         else
             _G.SlowHub.SelectedWeapon = nil
         end
-        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -155,55 +137,25 @@ Tab:Button({
 
 Tab:Toggle({
     Title = "Loop Equip Tool",
-    Flag = "EquipLoop",
-    Value = _G.SlowHub.EquipLoop or false,
+    Value = false,
     Callback = function(state)
         if state then
             StartEquipLoop()
         else
             StopEquipLoop()
         end
-        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
 Tab:Slider({
     Title = "Equip Interval",
-    Flag = "EquipInterval",
     Step = 0.05,
     Value = {
         Min = 0.1,
         Max = 1,
-        Default = _G.SlowHub.EquipInterval or 0.25,
+        Default = 0.25,
     },
     Callback = function(Value)
         _G.SlowHub.EquipInterval = Value
-        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
-
--- ✅ Verifica a backpack pelo nome salvo
--- se existir, atualiza a lista e força a seleção visual
-task.spawn(function()
-    task.wait(2)
-
-    local realWeapons = GetWeapons()
-    WeaponDropdown:Refresh(realWeapons)
-
-    local saved = _G.SlowHub.SelectedWeapon
-    if saved and saved ~= "" and saved ~= "No weapons found" then
-        if WeaponExistsInBackpack(saved) then
-            WeaponDropdown:Set(saved)
-            EquipSelectedTool()
-        else
-            _G.SlowHub.SelectedWeapon = nil
-        end
-    end
-end)
-
-if _G.SlowHub.EquipLoop then
-    task.spawn(function()
-        task.wait(2)
-        StartEquipLoop()
-    end)
-end
