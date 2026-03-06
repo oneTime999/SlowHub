@@ -33,6 +33,7 @@ local NPCSafeZones = {
 local farmConnection = nil
 local questLoop = nil
 local isFarming = false
+local isFarmLoopRunning = false
 local isQuesting = false
 local currentNPCIndex = 1
 local lastTargetName = nil
@@ -67,6 +68,10 @@ workspace.ChildAdded:Connect(function(child)
     if child.Name == "NPCs" then npcsFolder = child end
 end)
 
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "NPCs" then npcsFolder = nil end
+end)
+
 local function getPlayerLevel()
     local ok, result = pcall(function()
         local data = Player:FindFirstChild("Data")
@@ -99,8 +104,8 @@ end
 
 local function isNPCAlive(npc)
     if not npc or not npc.Parent then return false end
-    local humanoid = npc:FindFirstChildOfClass("Humanoid")
-    return humanoid and humanoid.Health > 0
+    local npcHumanoid = npc:FindFirstChildOfClass("Humanoid")
+    return npcHumanoid and npcHumanoid.Health > 0
 end
 
 local function equipWeapon()
@@ -170,6 +175,7 @@ local function resetFarmState()
     wasAttackingBoss = false
     lastAttackTime = 0
     lastNPCSwitch = 0
+    isFarmLoopRunning = false
 end
 
 local function stopQuestLoop()
@@ -184,6 +190,7 @@ local function startQuestLoop()
             acceptQuest()
             task.wait(_G.SlowHub.QuestInterval or 2)
         end
+        isQuesting = false
     end)
 end
 
@@ -204,31 +211,55 @@ local function stopAutoLevel()
 end
 
 local function farmLoop()
-    if not _G.SlowHub.AutoFarmLevel then stopAutoLevel(); return end
-    if not character or not character.Parent then return end
+    if isFarmLoopRunning then return end
+    isFarmLoopRunning = true
+
+    if not _G.SlowHub.AutoFarmLevel then
+        isFarmLoopRunning = false
+        stopAutoLevel()
+        return
+    end
+    if not character or not character.Parent then
+        isFarmLoopRunning = false
+        return
+    end
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoidRootPart then return end
+        if not humanoidRootPart then
+            isFarmLoopRunning = false
+            return
+        end
     end
     if not humanoid then
         humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return end
+        if not humanoid or humanoid.Health <= 0 then
+            isFarmLoopRunning = false
+            return
+        end
     end
-    if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true; return end
+    if _G.SlowHub.IsAttackingBoss then
+        wasAttackingBoss = true
+        isFarmLoopRunning = false
+        return
+    end
     if wasAttackingBoss then
         hasVisitedSafeZone = false
         wasAttackingBoss = false
     end
     local now = tick()
     local config = getCurrentConfig()
-    if not config then return end
+    if not config then
+        isFarmLoopRunning = false
+        return
+    end
     if lastTargetName ~= config.npc then
         lastTargetName = config.npc
         hasVisitedSafeZone = false
+        equipWeapon()
     end
     if not hasVisitedSafeZone then
         if teleportToSafeZone(config.npc) then hasVisitedSafeZone = true end
-        task.wait(0.1)
+        isFarmLoopRunning = false
         return
     end
     local npc = getNPC(config.npc, currentNPCIndex)
@@ -242,12 +273,13 @@ local function farmLoop()
         lastNPCSwitch = now
         local success = teleportToNPC(npc)
         if success then
-            equipWeapon()
             performAttack()
         else
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     end
+
+    isFarmLoopRunning = false
 end
 
 local function startAutoLevel()
