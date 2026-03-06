@@ -1,41 +1,12 @@
+local Tab = _G.MiscTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.AutoCraftSlime = _G.SlowHub.AutoCraftSlime or false
-_G.SlowHub.SlimeCraftInterval = _G.SlowHub.SlimeCraftInterval or 2
+local craftConnection = nil
+local isRunning = false
+local lastCraftTime = 0
 
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-if saved["AutoCraftSlime"] ~= nil then _G.SlowHub.AutoCraftSlime = saved["AutoCraftSlime"] end
-if saved["SlimeCraftInterval"] ~= nil then _G.SlowHub.SlimeCraftInterval = saved["SlimeCraftInterval"] end
-
-local CraftState = {Connection=nil, IsRunning=false, LastCraftTime=0}
-
-local function CraftSlimeKey()
+local function craftSlimeKey()
     pcall(function()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if not remotes then return end
@@ -45,54 +16,65 @@ local function CraftSlimeKey()
     end)
 end
 
-function StopAutoCraftSlime()
-    CraftState.IsRunning = false
-    CraftState.LastCraftTime = 0
-    if CraftState.Connection then
-        CraftState.Connection:Disconnect()
-        CraftState.Connection = nil
+local function stopAutoCraft()
+    isRunning = false
+    lastCraftTime = 0
+    if craftConnection then
+        craftConnection:Disconnect()
+        craftConnection = nil
     end
     _G.SlowHub.AutoCraftSlime = false
 end
 
-function StartAutoCraftSlime()
-    if CraftState.IsRunning then StopAutoCraftSlime(); task.wait(0.2) end
-    CraftState.IsRunning = true
+local function startAutoCraft()
+    if isRunning then stopAutoCraft(); task.wait(0.2) end
+    isRunning = true
     _G.SlowHub.AutoCraftSlime = true
-    CraftState.LastCraftTime = 0
-    CraftState.Connection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoCraftSlime then StopAutoCraftSlime(); return end
+    lastCraftTime = 0
+    craftConnection = RunService.Heartbeat:Connect(function()
+        if not _G.SlowHub.AutoCraftSlime then stopAutoCraft(); return end
         local currentTime = tick()
-        if currentTime - CraftState.LastCraftTime < _G.SlowHub.SlimeCraftInterval then return end
-        CraftState.LastCraftTime = currentTime
-        CraftSlimeKey()
+        if currentTime - lastCraftTime < (_G.SlowHub.SlimeCraftInterval or 2) then return end
+        lastCraftTime = currentTime
+        craftSlimeKey()
     end)
 end
 
-local MiscTab = _G.MiscTab
+Tab:Section({Title = "Crafting"})
 
-MiscTab:CreateSection({ Title = "Crafting" })
-
-MiscTab:CreateSlider({
-    Name = "Craft Interval", Flag = "SlimeCraftInterval",
-    Range = { 1, 10 }, Increment = 0.5,
-    CurrentValue = _G.SlowHub.SlimeCraftInterval,
-    Callback = function(value)
-        _G.SlowHub.SlimeCraftInterval = value
-        saveConfig("SlimeCraftInterval", value)
+Tab:Slider({
+    Title = "Craft Interval",
+    Flag = "SlimeCraftInterval",
+    Step = 0.5,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.SlimeCraftInterval or 2,
+    },
+    Callback = function(Value)
+        _G.SlowHub.SlimeCraftInterval = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-MiscTab:CreateToggle({
-    Name = "Auto Craft Slime Key", Flag = "AutoCraftSlimeKey",
-    CurrentValue = _G.SlowHub.AutoCraftSlime,
-    Callback = function(value)
-        _G.SlowHub.AutoCraftSlime = value
-        saveConfig("AutoCraftSlime", value)
-        if value then StartAutoCraftSlime() else StopAutoCraftSlime() end
+Tab:Toggle({
+    Title = "Auto Craft Slime Key",
+    Default = _G.SlowHub.AutoCraftSlime or false,
+    Callback = function(Value)
+        _G.SlowHub.AutoCraftSlime = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if Value then
+            startAutoCraft()
+        else
+            stopAutoCraft()
+        end
     end,
 })
 
 if _G.SlowHub.AutoCraftSlime then
-    task.spawn(function() task.wait(2); StartAutoCraftSlime() end)
+    task.spawn(function() task.wait(2); startAutoCraft() end)
 end
