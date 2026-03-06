@@ -211,7 +211,7 @@ Tab:Section({Title = "Dungeon Farm"})
 
 Tab:Toggle({
     Title = "Auto Farm Dungeon or Boss Rush",
-    Default = _G.SlowHub.AutoFarmDungeon or false,
+    Value = _G.SlowHub.AutoFarmDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
         if _G.SaveConfig then
@@ -283,7 +283,7 @@ Tab:Dropdown({
     Flag = "DungeonVoteDifficulty",
     Values = {"Easy", "Medium", "Hard", "Extreme"},
     Multi = false,
-    Default = _G.SlowHub.DungeonVoteDifficulty or "Easy",
+    Value = _G.SlowHub.DungeonVoteDifficulty or "Easy",
     Callback = function(option)
         _G.SlowHub.DungeonVoteDifficulty = type(option) == "table" and option[1] or option
         if _G.SaveConfig then
@@ -311,7 +311,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Vote Difficulty",
-    Default = _G.SlowHub.AutoVoteDungeon or false,
+    Value = _G.SlowHub.AutoVoteDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoVoteDungeon = Value
         if _G.SaveConfig then
@@ -346,7 +346,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Replay Dungeon or Boss Rush",
-    Default = _G.SlowHub.AutoReplayDungeon or false,
+    Value = _G.SlowHub.AutoReplayDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoReplayDungeon = Value
         if _G.SaveConfig then
