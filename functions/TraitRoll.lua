@@ -131,7 +131,7 @@ Tab:Dropdown({
     Flag = "TargetTraits",
     Values = traitOptions,
     Multi = true,
-    Default = _G.SlowHub.TargetTraits or {},
+    Value = _G.SlowHub.TargetTraits or {},
     Callback = function(selectedOptions)
         _G.SlowHub.TargetTraits = selectedOptions or {}
         if _G.SaveConfig then
@@ -142,7 +142,7 @@ Tab:Dropdown({
 
 Tab:Toggle({
     Title = "Stop on Secret",
-    Default = _G.SlowHub.StopOnSecret or true,
+    Value = _G.SlowHub.StopOnSecret or true,
     Callback = function(Value)
         _G.SlowHub.StopOnSecret = Value
         if _G.SaveConfig then
@@ -153,7 +153,7 @@ Tab:Toggle({
 
 Tab:Toggle({
     Title = "Stop on Mythical",
-    Default = _G.SlowHub.StopOnMythicalTrait or true,
+    Value = _G.SlowHub.StopOnMythicalTrait or true,
     Callback = function(Value)
         _G.SlowHub.StopOnMythicalTrait = Value
         if _G.SaveConfig then
@@ -164,7 +164,7 @@ Tab:Toggle({
 
 Tab:Toggle({
     Title = "Stop on Legendary",
-    Default = _G.SlowHub.StopOnLegendaryTrait or false,
+    Value = _G.SlowHub.StopOnLegendaryTrait or false,
     Callback = function(Value)
         _G.SlowHub.StopOnLegendaryTrait = Value
         if _G.SaveConfig then
@@ -175,7 +175,7 @@ Tab:Toggle({
 
 Tab:Toggle({
     Title = "Stop on Epic",
-    Default = _G.SlowHub.StopOnEpicTrait or false,
+    Value = _G.SlowHub.StopOnEpicTrait or false,
     Callback = function(Value)
         _G.SlowHub.StopOnEpicTrait = Value
         if _G.SaveConfig then
@@ -203,7 +203,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Trait Roll",
-    Default = _G.SlowHub.AutoTraitRoll or false,
+    Value = _G.SlowHub.AutoTraitRoll or false,
     Callback = function(Value)
         _G.SlowHub.AutoTraitRoll = Value
         if _G.SaveConfig then
