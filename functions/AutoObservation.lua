@@ -77,7 +77,7 @@ Tab:Section({Title = "Observation Haki"})
 
 Tab:Toggle({
     Title = "Auto Observation Haki",
-    Default = _G.SlowHub.AutoObservation or false,
+    Value = _G.SlowHub.AutoObservation or false,
     Callback = function(Value)
         _G.SlowHub.AutoObservation = Value
         if _G.SaveConfig then
