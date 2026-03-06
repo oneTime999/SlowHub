@@ -312,7 +312,7 @@ Tab:Dropdown({
     Flag = "SelectedBosses",
     Values = bossList,
     Multi = true,
-    Default = (function()
+    Value = (function()
         local selected = {}
         if _G.SlowHub.SelectedBosses then
             for name, isSelected in pairs(_G.SlowHub.SelectedBosses) do
@@ -344,7 +344,7 @@ Tab:Dropdown({
     Flag = "PityTargetBoss",
     Values = bossList,
     Multi = false,
-    Default = _G.SlowHub.PityTargetBoss or bossList[1],
+    Value = _G.SlowHub.PityTargetBoss or bossList[1],
     Callback = function(option)
         _G.SlowHub.PityTargetBoss = type(option) == "table" and option[1] or option
         if _G.SaveConfig then
@@ -358,7 +358,7 @@ Tab:Dropdown({
 
 Tab:Toggle({
     Title = "Enable Pity System",
-    Default = _G.SlowHub.PriorityPityEnabled or false,
+    Value = _G.SlowHub.PriorityPityEnabled or false,
     Callback = function(Value)
         _G.SlowHub.PriorityPityEnabled = Value
         if _G.SaveConfig then
@@ -374,7 +374,7 @@ Tab:Section({Title = "Farm Control"})
 
 Tab:Toggle({
     Title = "Auto Farm Selected Bosses",
-    Default = _G.SlowHub.AutoFarmBosses or false,
+    Value = _G.SlowHub.AutoFarmBosses or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmBosses = Value
         if _G.SaveConfig then
