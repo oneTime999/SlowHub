@@ -169,9 +169,7 @@ end
 local function performAttack()
     local currentTime = tick()
     local cooldown = _G.SlowHub.FarmCooldown or 0.15
-    if currentTime - lastAttackTime < cooldown then
-        return
-    end
+    if currentTime - lastAttackTime < cooldown then return end
     lastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
@@ -179,9 +177,7 @@ local function performAttack()
         local remotes = combatSystem:FindFirstChild("Remotes")
         if not remotes then return end
         local requestHit = remotes:FindFirstChild("RequestHit")
-        if requestHit then
-            requestHit:FireServer()
-        end
+        if requestHit then requestHit:FireServer() end
     end)
 end
 
@@ -227,10 +223,11 @@ local function startQuestLoop()
     if isQuesting then return end
     isQuesting = true
     questLoop = task.spawn(function()
-        while isQuesting and _G.SlowHub.AutoFarmSelectedMob do
+        while isQuesting and _G.SlowHub.AutoQuestSelectedMob do  -- ✅ CORRIGIDO
             acceptQuest()
             task.wait(_G.SlowHub.AutoQuestInterval or 2)
         end
+        isQuesting = false
     end)
 end
 
@@ -255,9 +252,7 @@ local function farmLoop()
         stopAutoFarm()
         return
     end
-    if not character or not character.Parent then
-        return
-    end
+    if not character or not character.Parent then return end
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
         if not humanoidRootPart then return end
@@ -294,9 +289,7 @@ local function farmLoop()
     end
     if not hasVisitedSafeZone then
         local success = teleportToSafeZone(currentMobName)
-        if success then
-            hasVisitedSafeZone = true
-        end
+        if success then hasVisitedSafeZone = true end
         task.wait(0.1)
         return
     end
@@ -331,7 +324,9 @@ local function startAutoFarm()
     if not npcsFolder then return false end
     isFarming = true
     resetFarmState()
-    startQuestLoop()
+    if _G.SlowHub.AutoQuestSelectedMob then
+        startQuestLoop()
+    end
     farmConnection = RunService.Heartbeat:Connect(farmLoop)
     return true
 end
@@ -364,9 +359,7 @@ Tab:Dropdown({
     Callback = function(Option)
         updateSelectedMobs(Option)
         _G.SlowHub.SelectedMobs = selectedMobs
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -402,9 +395,7 @@ Tab:Toggle({
             stopAutoFarm()
         end
         _G.SlowHub.AutoFarmSelectedMob = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -413,8 +404,12 @@ Tab:Toggle({
     Value = _G.SlowHub.AutoQuestSelectedMob or false,
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
+        if _G.SaveConfig then _G.SaveConfig() end
+        -- ✅ CORRIGIDO: agora inicia/para o loop ao ligar/desligar
+        if Value then
+            startQuestLoop()
+        else
+            stopQuestLoop()
         end
     end
 })
@@ -430,9 +425,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -447,9 +440,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -464,9 +455,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.FarmCooldown = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -481,9 +470,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.AutoQuestInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -494,5 +481,8 @@ task.spawn(function()
     end
     if _G.SlowHub.AutoFarmSelectedMob then
         startAutoFarm()
+    end
+    if _G.SlowHub.AutoQuestSelectedMob then
+        startQuestLoop()
     end
 end)
