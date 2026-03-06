@@ -52,7 +52,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Ascend",
-    Default = _G.SlowHub.AutoAscend or false,
+    Value = _G.SlowHub.AutoAscend or false,
     Callback = function(Value)
         if Value then
             startAutoAscend()
