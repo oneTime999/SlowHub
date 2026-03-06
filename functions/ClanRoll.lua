@@ -1,214 +1,204 @@
-local Tab = _G.BossesTab
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local Player = Players.LocalPlayer
 
-local bossConfigs = {
-    ["Anos"] = {Method="AnosSpecific", InternalName="Anos"},
-    ["RimuruBoss"] = {Method="RimuruSpecific", InternalName="Rimuru"},
-    ["GilgameshBoss"] = {Method="Gilgamesh", InternalName="GilgameshBoss"},
-    ["StrongestofTodayBoss"] = {Method="New", InternalName="StrongestToday"},
-    ["StrongestinHistoryBoss"] = {Method="New", InternalName="StrongestHistory"},
-    ["IchigoBoss"] = {Method="Old", InternalName="IchigoBoss"},
-    ["QinShiBoss"] = {Method="Old", InternalName="QinShiBoss"},
-    ["SaberBoss"] = {Method="Old", InternalName="SaberBoss"},
+_G.SlowHub = _G.SlowHub or {}
+_G.SlowHub.AutoClanRoll = _G.SlowHub.AutoClanRoll or false
+_G.SlowHub.TargetClans = _G.SlowHub.TargetClans or {}
+_G.SlowHub.ClanRollDelay = _G.SlowHub.ClanRollDelay or 0.25
+_G.SlowHub.StopOnLegendaryClan = _G.SlowHub.StopOnLegendaryClan or true
+_G.SlowHub.StopOnEpicClan = _G.SlowHub.StopOnEpicClan or false
+
+local CONFIG_FOLDER = "SlowHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local function ensureFolder()
+    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
+end
+
+local function loadConfig()
+    ensureFolder()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
+        if ok and type(data) == "table" then return data end
+    end
+    return {}
+end
+
+local function saveConfig(key, value)
+    ensureFolder()
+    local current = loadConfig()
+    current[key] = value
+    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
+end
+
+local saved = loadConfig()
+local clanFlags = {"AutoClanRoll","TargetClans","ClanRollDelay","StopOnLegendaryClan","StopOnEpicClan"}
+for _, flag in ipairs(clanFlags) do
+    if saved[flag] ~= nil then _G.SlowHub[flag] = saved[flag] end
+end
+
+local ClansData = {
+    ["Voldigoat"]={rarity="Legendary",order=5},["Monarch"]={rarity="Legendary",order=5},
+    ["Pride"]={rarity="Legendary",order=5},["Mugetsu"]={rarity="Epic",order=4},
+    ["Yamato"]={rarity="Epic",order=4},["Zoldyck"]={rarity="Rare",order=3},
+    ["Raikage"]={rarity="Uncommon",order=2},["Sasaki"]={rarity="Common",order=1},
+    ["None"]={rarity="Common",order=1},
 }
 
-local bossList = {}
-for name in pairs(bossConfigs) do table.insert(bossList, name) end
-table.sort(bossList)
+local ClanRollState = {IsRolling=false, Connection=nil, LastRollTime=0, CurrentClan=nil}
 
-local difficultyList = {"Normal","Medium","Hard","Extreme"}
+local function ParseClanText(text)
+    if not text then return nil end
+    local clan = text:gsub("Clan: ",""):gsub("Clan:",""):match("^%s*(.-)%s*$")
+    return clan ~= "" and clan or nil
+end
 
-local summonConnection = nil
-local isSummoning = false
-local selectedBosses = {}
-local selectedDifficulty = "Normal"
-
-local function isBossAlive(bossName)
-    local found = false
-    pcall(function()
-        if not workspace:FindFirstChild("NPCs") then return end
-        local boss = workspace.NPCs:FindFirstChild(bossName)
-        if not boss then return end
-        local humanoid = boss:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.Health > 0 then found = true end
+local function GetCurrentClan()
+    local ok, clanText = pcall(function()
+        local playerGui = Player:WaitForChild("PlayerGui", 5)
+        if not playerGui then return nil end
+        local statsPanel = playerGui:FindFirstChild("StatsPanelUI")
+        if not statsPanel then return nil end
+        local mainFrame = statsPanel:FindFirstChild("MainFrame")
+        if not mainFrame then return nil end
+        local frame = mainFrame:FindFirstChild("Frame")
+        if not frame then return nil end
+        local content = frame:FindFirstChild("Content")
+        if not content then return nil end
+        local sideFrame = content:FindFirstChild("SideFrame")
+        if not sideFrame then return nil end
+        local userStats = sideFrame:FindFirstChild("UserStats")
+        if not userStats then return nil end
+        local clanEquipped = userStats:FindFirstChild("ClanEquipped")
+        if not clanEquipped then return nil end
+        local statName = clanEquipped:FindFirstChild("StatName")
+        if not statName then return nil end
+        return statName.Text
     end)
-    return found
+    if ok and clanText then return ParseClanText(clanText) end
+    return nil
 end
 
-local function isPitySystemEnabled()
-    return _G.SlowHub and _G.SlowHub.PriorityPityEnabled == true
+local function GetClanRarity(clanName)
+    local data = ClansData[clanName]
+    return data and data.rarity or "Common"
 end
 
-local function getPityTargetBoss()
-    return _G.SlowHub and _G.SlowHub.PityTargetBoss or ""
-end
-
-local function isPityTargetTime()
-    if _G.SlowHub and _G.SlowHub.IsPityTargetTime then
-        return _G.SlowHub.IsPityTargetTime()
+local function IsTargetClan(clanName)
+    if not clanName then return false end
+    if _G.SlowHub.StopOnLegendaryClan and GetClanRarity(clanName) == "Legendary" then return true end
+    if _G.SlowHub.StopOnEpicClan and GetClanRarity(clanName) == "Epic" then return true end
+    for _, target in ipairs(_G.SlowHub.TargetClans) do
+        if target == clanName then return true end
     end
     return false
 end
 
-local function getFilteredBossesToSummon()
-    local bossesToSummon = {}
-    local pityEnabled = isPitySystemEnabled()
-    local pityTargetTime = isPityTargetTime()
-    local pityTarget = getPityTargetBoss()
-    for _, selectedBoss in ipairs(selectedBosses) do
-        if not bossConfigs[selectedBoss] then continue end
-        if pityEnabled then
-            if selectedBoss == pityTarget then
-                if pityTargetTime then table.insert(bossesToSummon, selectedBoss) end
-            else
-                if not pityTargetTime then table.insert(bossesToSummon, selectedBoss) end
-            end
-        else
-            table.insert(bossesToSummon, selectedBoss)
-        end
-    end
-    return bossesToSummon
-end
-
-local function summonBoss(currentBossName, config)
+local function FireClanRoll()
     pcall(function()
-        if config.Method == "RimuruSpecific" then
-            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnRimuru") then
-                remoteEvents.RequestSpawnRimuru:FireServer(selectedDifficulty)
-            elseif remotes and remotes:FindFirstChild("RequestSpawnRimuru") then
-                remotes.RequestSpawnRimuru:FireServer(selectedDifficulty)
-            end
-        elseif config.Method == "Gilgamesh" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
-                remotes.RequestSummonBoss:FireServer(config.InternalName, selectedDifficulty)
-            end
-        elseif config.Method == "New" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes and remotes:FindFirstChild("RequestSpawnStrongestBoss") then
-                remotes.RequestSpawnStrongestBoss:FireServer(config.InternalName, selectedDifficulty)
-            end
-        elseif config.Method == "AnosSpecific" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes and remotes:FindFirstChild("RequestSpawnAnosBoss") then
-                remotes.RequestSpawnAnosBoss:FireServer(config.InternalName, selectedDifficulty)
-            end
-        else
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
-                remotes.RequestSummonBoss:FireServer(currentBossName)
-            end
-        end
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UseItem"):FireServer("Use","Clan Reroll",1)
     end)
 end
 
-local function processBossSummon(currentBossName)
-    local config = bossConfigs[currentBossName]
-    if not config then return end
-    local namesToCheck = {}
-    if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" or config.Method == "AnosSpecific" then
-        table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
-        table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
-    else
-        table.insert(namesToCheck, currentBossName)
-        table.insert(namesToCheck, config.InternalName)
+local function StopClanRolling()
+    ClanRollState.IsRolling = false
+    if ClanRollState.Connection then
+        ClanRollState.Connection:Disconnect()
+        ClanRollState.Connection = nil
     end
-    for _, name in ipairs(namesToCheck) do
-        if isBossAlive(name) then return end
+    if _G.SlowHub.AutoClanRoll then
+        _G.SlowHub.AutoClanRoll = false
+        saveConfig("AutoClanRoll", false)
     end
-    summonBoss(currentBossName, config)
 end
 
-local function stopAutoSummon()
-    isSummoning = false
-    if summonConnection then
-        summonConnection:Disconnect()
-        summonConnection = nil
-    end
-    _G.SlowHub.AutoSummonBoss = false
-end
-
-local function startAutoSummon()
-    if isSummoning then stopAutoSummon(); task.wait(0.2) end
-    isSummoning = true
-    _G.SlowHub.AutoSummonBoss = true
-    summonConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoSummonBoss then stopAutoSummon(); return end
-        local bossesToSummon = getFilteredBossesToSummon()
-        for _, bossName in ipairs(bossesToSummon) do
-            processBossSummon(bossName)
+local function StartClanRolling()
+    if ClanRollState.IsRolling then return end
+    ClanRollState.IsRolling = true
+    ClanRollState.CurrentClan = GetCurrentClan()
+    ClanRollState.LastRollTime = 0
+    ClanRollState.Connection = RunService.Heartbeat:Connect(function()
+        if not ClanRollState.IsRolling then return end
+        local currentTime = tick()
+        if currentTime - ClanRollState.LastRollTime < _G.SlowHub.ClanRollDelay then return end
+        local currentClan = GetCurrentClan()
+        if currentClan and currentClan ~= ClanRollState.CurrentClan then
+            ClanRollState.CurrentClan = currentClan
+            if IsTargetClan(currentClan) then StopClanRolling(); return end
         end
-        task.wait(_G.SlowHub.SummonInterval or 0.5)
+        FireClanRoll()
+        ClanRollState.LastRollTime = currentTime
     end)
 end
 
-Tab:Section({Title = "Summon Settings"})
+local AllClans = {}
+for clanName, data in pairs(ClansData) do
+    if clanName ~= "None" then
+        table.insert(AllClans, {name=clanName, rarity=data.rarity, order=data.order})
+    end
+end
+table.sort(AllClans, function(a,b)
+    if a.order ~= b.order then return a.order > b.order end
+    return a.name < b.name
+end)
 
-Tab:Dropdown({
-    Title = "Select Bosses to Summon",
-    Flag = "SelectBossSummon",
-    Values = bossList,
-    Multi = true,
-    Value = _G.SlowHub.SelectBossSummon or {},
+local clanOptions = {}
+for _, info in ipairs(AllClans) do table.insert(clanOptions, info.name) end
+
+local RollsTab = _G.RollsTab
+
+RollsTab:CreateSection({ Title = "Auto Clan Roll" })
+
+RollsTab:CreateDropdown({
+    Name = "Target Clans", Flag = "TargetClans",
+    Options = clanOptions, CurrentOption = _G.SlowHub.TargetClans, MultipleOptions = true,
+    Callback = function(selectedOptions)
+        _G.SlowHub.TargetClans = selectedOptions or {}
+        saveConfig("TargetClans", _G.SlowHub.TargetClans)
+    end,
+})
+
+RollsTab:CreateToggle({
+    Name = "Stop on Legendary", Flag = "StopOnLegendaryClan",
+    CurrentValue = _G.SlowHub.StopOnLegendaryClan,
     Callback = function(value)
-        selectedBosses = {}
-        if type(value) == "table" then
-            for _, boss in ipairs(value) do table.insert(selectedBosses, boss) end
-        end
-        _G.SlowHub.SelectBossSummon = selectedBosses
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        _G.SlowHub.StopOnLegendaryClan = value
+        saveConfig("StopOnLegendaryClan", value)
     end,
 })
 
-Tab:Dropdown({
-    Title = "Select Difficulty",
-    Flag = "SelectBossDifficulty",
-    Values = difficultyList,
-    Multi = false,
-    Value = _G.SlowHub.SelectBossDifficulty or "Normal",
+RollsTab:CreateToggle({
+    Name = "Stop on Epic", Flag = "StopOnEpicClan",
+    CurrentValue = _G.SlowHub.StopOnEpicClan,
     Callback = function(value)
-        selectedDifficulty = type(value) == "table" and value[1] or value
-        _G.SlowHub.SelectBossDifficulty = selectedDifficulty
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        _G.SlowHub.StopOnEpicClan = value
+        saveConfig("StopOnEpicClan", value)
     end,
 })
 
-Tab:Slider({
-    Title = "Summon Interval",
-    Flag = "SummonInterval",
-    Step = 0.1,
-    Value = {
-        Min = 0.1,
-        Max = 2,
-        Default = _G.SlowHub.SummonInterval or 0.5,
-    },
-    Callback = function(Value)
-        _G.SlowHub.SummonInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+RollsTab:CreateSlider({
+    Name = "Clan Roll Delay", Flag = "ClanRollDelay",
+    Range = { 0.15, 1.0 }, Increment = 0.05,
+    CurrentValue = _G.SlowHub.ClanRollDelay,
+    Callback = function(value)
+        _G.SlowHub.ClanRollDelay = value
+        saveConfig("ClanRollDelay", value)
     end,
 })
 
-Tab:Toggle({
-    Title = "Auto Summon Boss",
-    Value = _G.SlowHub.AutoSummonBoss or false,
-    Callback = function(Value)
-        _G.SlowHub.AutoSummonBoss = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-        if Value then
-            startAutoSummon()
-        else
-            stopAutoSummon()
-        end
+RollsTab:CreateToggle({
+    Name = "Auto Clan Roll", Flag = "AutoClanRoll",
+    CurrentValue = _G.SlowHub.AutoClanRoll,
+    Callback = function(value)
+        _G.SlowHub.AutoClanRoll = value
+        saveConfig("AutoClanRoll", value)
+        if value then StartClanRolling() else StopClanRolling() end
     end,
 })
+
+if _G.SlowHub.AutoClanRoll then
+    task.spawn(function() task.wait(2); StartClanRolling() end)
+end
