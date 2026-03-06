@@ -1,30 +1,7 @@
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
 
 local Tab = _G.MainTab
-
--- ✅ Sistema próprio de save/load para o dropdown de weapons
-local WEAPON_SAVE_PATH = "SlowHub_SelectedWeapon.json"
-
-local function SaveWeapon(name)
-    pcall(function()
-        writefile(WEAPON_SAVE_PATH, HttpService:JSONEncode({ weapon = name }))
-    end)
-end
-
-local function LoadWeapon()
-    local ok, result = pcall(function()
-        if isfile(WEAPON_SAVE_PATH) then
-            local data = HttpService:JSONDecode(readfile(WEAPON_SAVE_PATH))
-            return data.weapon
-        end
-    end)
-    if ok and result then
-        return result
-    end
-    return nil
-end
 
 local WeaponState = {
     Character = nil,
@@ -135,20 +112,41 @@ end
 
 Tab:Section({Title = "Weapon"})
 
+-- ✅ SOLUÇÃO: monta a lista já com o valor salvo dentro
+-- assim o WindUI acha o valor pelo Flag e seleciona igual aos outros dropdowns
+local initialWeapons = GetWeapons()
+local savedWeapon = _G.SlowHub.SelectedWeapon
+
+if savedWeapon and savedWeapon ~= "" and savedWeapon ~= "No weapons found" then
+    local found = false
+    for _, v in ipairs(initialWeapons) do
+        if v == savedWeapon then
+            found = true
+            break
+        end
+    end
+    if not found then
+        if initialWeapons[1] == "No weapons found" then
+            initialWeapons = { savedWeapon }
+        else
+            table.insert(initialWeapons, 1, savedWeapon)
+        end
+    end
+end
+
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
-    Values = GetWeapons(),
-    Value = "",
+    Flag = "SelectedWeapon",
+    Values = initialWeapons,  -- ✅ já contém o valor salvo
+    Value = savedWeapon or "",
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
-            SaveWeapon(weapon) -- ✅ salva no arquivo direto
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
-            SaveWeapon("")
         end
         if _G.SaveConfig then _G.SaveConfig() end
     end
@@ -190,16 +188,11 @@ Tab:Slider({
     end
 })
 
--- ✅ Lê o arquivo, atualiza a lista e força o visual do dropdown
+-- Atualiza com as armas reais após a mochila carregar
 task.spawn(function()
     task.wait(2)
-    local realWeapons = GetWeapons()
-    WeaponDropdown:Refresh(realWeapons)
-
-    local saved = LoadWeapon()
-    if saved and saved ~= "" and saved ~= "No weapons found" then
-        _G.SlowHub.SelectedWeapon = saved
-        WeaponDropdown:Set(saved)
+    WeaponDropdown:Refresh(GetWeapons())
+    if _G.SlowHub.SelectedWeapon then
         EquipSelectedTool()
     end
 end)
