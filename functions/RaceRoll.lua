@@ -129,7 +129,7 @@ Tab:Dropdown({
     Flag = "TargetRaces",
     Values = raceOptions,
     Multi = true,
-    Default = _G.SlowHub.TargetRaces or {},
+    Value = _G.SlowHub.TargetRaces or {},
     Callback = function(selectedOptions)
         _G.SlowHub.TargetRaces = selectedOptions or {}
         if _G.SaveConfig then
@@ -140,7 +140,7 @@ Tab:Dropdown({
 
 Tab:Toggle({
     Title = "Stop on Mythical",
-    Default = _G.SlowHub.StopOnMythical or true,
+    Value = _G.SlowHub.StopOnMythical or true,
     Callback = function(Value)
         _G.SlowHub.StopOnMythical = Value
         if _G.SaveConfig then
@@ -151,7 +151,7 @@ Tab:Toggle({
 
 Tab:Toggle({
     Title = "Stop on Legendary",
-    Default = _G.SlowHub.StopOnLegendary or false,
+    Value = _G.SlowHub.StopOnLegendary or false,
     Callback = function(Value)
         _G.SlowHub.StopOnLegendary = Value
         if _G.SaveConfig then
@@ -179,7 +179,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Roll",
-    Default = _G.SlowHub.AutoRoll or false,
+    Value = _G.SlowHub.AutoRoll or false,
     Callback = function(Value)
         _G.SlowHub.AutoRoll = Value
         if _G.SaveConfig then
