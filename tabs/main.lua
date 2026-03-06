@@ -1,4 +1,3 @@
--- Main Tab
 local Tab = _G.MainTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
