@@ -114,9 +114,9 @@ Tab:Section({Title = "Weapon"})
 
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
-    Flag = "SelectedWeapon",              -- ✅ ADICIONADO
+    Flag = "SelectedWeapon",      -- ✅ único campo adicionado
     Values = GetWeapons(),
-    Default = _G.SlowHub.SelectedWeapon or "",  -- ✅ Value → Default
+    Value = _G.SlowHub.SelectedWeapon or "",
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
@@ -140,8 +140,8 @@ Tab:Button({
 
 Tab:Toggle({
     Title = "Loop Equip Tool",
-    Flag = "EquipLoop",                   -- ✅ ADICIONADO
-    Default = _G.SlowHub.EquipLoop or false,  -- ✅ Value → Default
+    Flag = "EquipLoop",           -- ✅ único campo adicionado
+    Value = _G.SlowHub.EquipLoop or false,
     Callback = function(state)
         if state then
             StartEquipLoop()
@@ -154,18 +154,19 @@ Tab:Toggle({
 
 Tab:Slider({
     Title = "Equip Interval",
-    Flag = "EquipInterval",               -- ✅ ADICIONADO
-    Min = 0.1,                            -- ✅ tirado do Value = {}
-    Max = 1,
-    Default = _G.SlowHub.EquipInterval or 0.25,
+    Flag = "EquipInterval",       -- ✅ único campo adicionado
     Step = 0.05,
+    Value = {
+        Min = 0.1,
+        Max = 1,
+        Default = _G.SlowHub.EquipInterval or 0.25,
+    },
     Callback = function(Value)
         _G.SlowHub.EquipInterval = Value
         if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
--- Restaura estado salvo ao carregar
 if _G.SlowHub.SelectedWeapon then
     task.spawn(function()
         task.wait(1)
