@@ -34,7 +34,7 @@ end
 
 Tab:Toggle({
     Title = "Anti AFK",
-    Default = _G.SlowHub.AntiAFK or false,
+    Value = _G.SlowHub.AntiAFK or false,
     Callback = function(Value)
         if Value then
             startAntiAfk()
