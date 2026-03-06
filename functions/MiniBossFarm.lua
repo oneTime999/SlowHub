@@ -1,53 +1,17 @@
+local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.MiniBossFarmDistance = _G.SlowHub.MiniBossFarmDistance or 6
-_G.SlowHub.MiniBossFarmHeight = _G.SlowHub.MiniBossFarmHeight or 4
-_G.SlowHub.MiniBossFarmCooldown = _G.SlowHub.MiniBossFarmCooldown or 0.15
-_G.SlowHub.QuestInterval = _G.SlowHub.QuestInterval or 2
-_G.SlowHub.AutoFarmMiniBosses = _G.SlowHub.AutoFarmMiniBosses or false
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-local mbFlags = {"MiniBossFarmDistance","MiniBossFarmHeight","MiniBossFarmCooldown","QuestInterval","AutoFarmMiniBosses"}
-for _, flag in ipairs(mbFlags) do
-    if saved[flag] ~= nil then _G.SlowHub[flag] = saved[flag] end
-end
-
-local MiniBossConfig = {
+local miniBossConfig = {
     ["ThiefBoss"]={quest="QuestNPC2"},["MonkeyBoss"]={quest="QuestNPC4"},
     ["DesertBoss"]={quest="QuestNPC6"},["SnowBoss"]={quest="QuestNPC8"},
     ["PandaMiniBoss"]={quest="QuestNPC10"},
 }
 local miniBossList = {"ThiefBoss","MonkeyBoss","DesertBoss","SnowBoss","PandaMiniBoss"}
 
-local MiniBossSafeZones = {
+local miniBossSafeZones = {
     ["ThiefBoss"]=CFrame.new(-66.633,-2.584,-162.471),
     ["MonkeyBoss"]=CFrame.new(-494.757,49.211,496.788),
     ["DesertBoss"]=CFrame.new(-972.217,2.346,-475.585),
@@ -55,68 +19,77 @@ local MiniBossSafeZones = {
     ["PandaMiniBoss"]=CFrame.new(1697.134,9.572,518.390),
 }
 
-local State = {
-    FarmConnection=nil, QuestConnection=nil, IsFarming=false, IsQuesting=false,
-    SelectedMiniBoss=nil, LastTargetName=nil, HasVisitedSafeZone=false,
-    WasAttackingBoss=false, LastAttackTime=0,
-    Character=nil, HumanoidRootPart=nil, Humanoid=nil, NPCsFolder=nil,
-}
+local farmConnection = nil
+local questConnection = nil
+local isFarming = false
+local isQuesting = false
+local selectedMiniBoss = nil
+local lastTargetName = nil
+local hasVisitedSafeZone = false
+local wasAttackingBoss = false
+local lastAttackTime = 0
+local character = nil
+local humanoidRootPart = nil
+local humanoid = nil
+local npcsFolder = nil
 
-local function InitializeState()
-    State.Character = Player.Character
-    State.Humanoid = State.Character and State.Character:FindFirstChildOfClass("Humanoid")
-    State.HumanoidRootPart = State.Character and State.Character:FindFirstChild("HumanoidRootPart")
-    State.NPCsFolder = workspace:FindFirstChild("NPCs")
+local function initialize()
+    character = Player.Character
+    humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    npcsFolder = workspace:FindFirstChild("NPCs")
 end
 
-InitializeState()
+initialize()
 
 Player.CharacterAdded:Connect(function(char)
-    State.Character = char; State.Humanoid = nil; State.HumanoidRootPart = nil
+    character = char
+    humanoid = nil
+    humanoidRootPart = nil
     task.wait(0.1)
-    State.Humanoid = char:FindFirstChildOfClass("Humanoid")
-    State.HumanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+    humanoid = char:FindFirstChildOfClass("Humanoid")
+    humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "NPCs" then State.NPCsFolder = child end
+    if child.Name == "NPCs" then npcsFolder = child end
 end)
 
-local function EquipWeapon()
+local function equipWeapon()
     if not _G.SlowHub.SelectedWeapon then return false end
     return pcall(function()
-        if not State.Character or not State.Humanoid then return end
-        if State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
+        if not character or not humanoid then return end
+        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
         local backpack = Player:FindFirstChild("Backpack")
         if not backpack then return end
         local tool = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if tool then State.Humanoid:EquipTool(tool) end
+        if tool then humanoid:EquipTool(tool) end
     end)
 end
 
-local function TeleportToSafeZone(miniBossName)
-    if not State.HumanoidRootPart then return false end
-    local safeCFrame = MiniBossSafeZones[miniBossName]
-    if not safeCFrame then State.HasVisitedSafeZone = true; return true end
-    State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    State.HumanoidRootPart.CFrame = safeCFrame
+local function teleportToSafeZone(miniBossName)
+    if not humanoidRootPart then return false end
+    local safeCFrame = miniBossSafeZones[miniBossName]
+    if not safeCFrame then hasVisitedSafeZone = true; return true end
+    humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+    humanoidRootPart.CFrame = safeCFrame
     return true
 end
 
-local function TeleportToMiniBoss(miniBoss)
-    if not State.HumanoidRootPart then return false end
+local function teleportToMiniBoss(miniBoss)
+    if not humanoidRootPart then return false end
     local bossRoot = miniBoss:FindFirstChild("HumanoidRootPart")
     if not bossRoot then return false end
-    State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    local offset = CFrame.new(0, _G.SlowHub.MiniBossFarmHeight, _G.SlowHub.MiniBossFarmDistance)
-    State.HumanoidRootPart.CFrame = bossRoot.CFrame * offset
+    humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+    local offset = CFrame.new(0, _G.SlowHub.MiniBossFarmHeight or 4, _G.SlowHub.MiniBossFarmDistance or 6)
+    humanoidRootPart.CFrame = bossRoot.CFrame * offset
     return true
 end
 
-local function PerformAttack()
+local function performAttack()
     local currentTime = tick()
-    if currentTime - State.LastAttackTime < _G.SlowHub.MiniBossFarmCooldown then return end
-    State.LastAttackTime = currentTime
+    if currentTime - lastAttackTime < (_G.SlowHub.MiniBossFarmCooldown or 0.15) then return end
+    lastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
@@ -127,141 +100,181 @@ local function PerformAttack()
     end)
 end
 
-local function AcceptQuest()
-    if not State.SelectedMiniBoss then return end
-    if not MiniBossConfig[State.SelectedMiniBoss] then return end
+local function acceptQuest()
+    if not selectedMiniBoss then return end
+    if not miniBossConfig[selectedMiniBoss] then return end
     if _G.SlowHub.IsAttackingBoss then return end
     pcall(function()
         local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
         if not remoteEvents then return end
         local questAccept = remoteEvents:FindFirstChild("QuestAccept")
-        if questAccept then questAccept:FireServer(MiniBossConfig[State.SelectedMiniBoss].quest) end
+        if questAccept then questAccept:FireServer(miniBossConfig[selectedMiniBoss].quest) end
     end)
 end
 
-local function ResetFarmState()
-    State.LastTargetName = nil; State.HasVisitedSafeZone = false
-    State.WasAttackingBoss = false; State.LastAttackTime = 0
+local function resetFarmState()
+    lastTargetName = nil
+    hasVisitedSafeZone = false
+    wasAttackingBoss = false
+    lastAttackTime = 0
 end
 
-local function StopQuestLoop()
-    State.IsQuesting = false
-    if State.QuestConnection then State.QuestConnection:Disconnect(); State.QuestConnection = nil end
+local function stopQuestLoop()
+    isQuesting = false
 end
 
-local function StartQuestLoop()
-    if State.IsQuesting then return end
-    State.IsQuesting = true
-    State.QuestConnection = task.spawn(function()
-        while State.IsQuesting and _G.SlowHub.AutoFarmMiniBosses do
-            AcceptQuest(); task.wait(_G.SlowHub.QuestInterval)
+local function startQuestLoop()
+    if isQuesting then return end
+    isQuesting = true
+    questConnection = task.spawn(function()
+        while isQuesting and _G.SlowHub.AutoFarmMiniBosses do
+            acceptQuest()
+            task.wait(_G.SlowHub.QuestInterval or 2)
         end
     end)
 end
 
-function StopAutoFarmMiniBoss()
-    if not State.IsFarming then return end
-    State.IsFarming = false
-    if State.FarmConnection then State.FarmConnection:Disconnect(); State.FarmConnection = nil end
-    StopQuestLoop(); ResetFarmState()
+local function stopAutoFarmMiniBoss()
+    if not isFarming then return end
+    isFarming = false
+    if farmConnection then
+        farmConnection:Disconnect()
+        farmConnection = nil
+    end
+    stopQuestLoop()
+    resetFarmState()
     _G.SlowHub.AutoFarmMiniBosses = false
 end
 
-local function FarmLoop()
-    if not _G.SlowHub.AutoFarmMiniBosses then StopAutoFarmMiniBoss(); return end
-    if not State.Character or not State.Character.Parent then return end
-    if not State.HumanoidRootPart then
-        State.HumanoidRootPart = State.Character:FindFirstChild("HumanoidRootPart")
-        if not State.HumanoidRootPart then return end
+local function farmLoop()
+    if not _G.SlowHub.AutoFarmMiniBosses then stopAutoFarmMiniBoss(); return end
+    if not character or not character.Parent then return end
+    if not humanoidRootPart then
+        humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then return end
     end
-    if not State.Humanoid then
-        State.Humanoid = State.Character:FindFirstChildOfClass("Humanoid")
-        if not State.Humanoid or State.Humanoid.Health <= 0 then return end
+    if not humanoid then
+        humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then return end
     end
-    if _G.SlowHub.IsAttackingBoss then State.WasAttackingBoss = true; return end
-    if State.WasAttackingBoss then State.HasVisitedSafeZone = false; State.WasAttackingBoss = false end
-    if not State.SelectedMiniBoss then return end
-    if State.SelectedMiniBoss ~= State.LastTargetName then
-        State.LastTargetName = State.SelectedMiniBoss; State.HasVisitedSafeZone = false
+    if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true; return end
+    if wasAttackingBoss then hasVisitedSafeZone = false; wasAttackingBoss = false end
+    if not selectedMiniBoss then return end
+    if selectedMiniBoss ~= lastTargetName then
+        lastTargetName = selectedMiniBoss
+        hasVisitedSafeZone = false
     end
-    if not State.HasVisitedSafeZone then
-        if TeleportToSafeZone(State.SelectedMiniBoss) then State.HasVisitedSafeZone = true end
-        task.wait(0.1); return
+    if not hasVisitedSafeZone then
+        if teleportToSafeZone(selectedMiniBoss) then hasVisitedSafeZone = true end
+        task.wait(0.1)
+        return
     end
-    if not State.NPCsFolder then return end
-    local miniBoss = State.NPCsFolder:FindFirstChild(State.SelectedMiniBoss)
+    if not npcsFolder then return end
+    local miniBoss = npcsFolder:FindFirstChild(selectedMiniBoss)
     if not miniBoss then return end
-    local humanoid = miniBoss:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.Health <= 0 then return end
-    local success = TeleportToMiniBoss(miniBoss)
-    if success then EquipWeapon(); PerformAttack() end
+    local bossHumanoid = miniBoss:FindFirstChildOfClass("Humanoid")
+    if not bossHumanoid or bossHumanoid.Health <= 0 then return end
+    local success = teleportToMiniBoss(miniBoss)
+    if success then equipWeapon(); performAttack() end
 end
 
-function StartAutoFarmMiniBoss()
-    if State.IsFarming then StopAutoFarmMiniBoss(); task.wait(0.3) end
-    if not State.SelectedMiniBoss then return false end
-    if not MiniBossConfig[State.SelectedMiniBoss] then return false end
-    InitializeState()
-    if not State.NPCsFolder then return false end
-    State.IsFarming = true; _G.SlowHub.AutoFarmMiniBosses = true
-    ResetFarmState(); StartQuestLoop()
-    State.FarmConnection = RunService.Heartbeat:Connect(FarmLoop)
+local function startAutoFarmMiniBoss()
+    if isFarming then stopAutoFarmMiniBoss(); task.wait(0.3) end
+    if not selectedMiniBoss then return false end
+    if not miniBossConfig[selectedMiniBoss] then return false end
+    initialize()
+    if not npcsFolder then return false end
+    isFarming = true
+    _G.SlowHub.AutoFarmMiniBosses = true
+    resetFarmState()
+    startQuestLoop()
+    farmConnection = RunService.Heartbeat:Connect(farmLoop)
     return true
 end
 
-local BossesTab = _G.BossesTab
+Tab:Section({Title = "Mini Bosses"})
 
-BossesTab:CreateSection({ Title = "Mini Bosses" })
-
-BossesTab:CreateDropdown({
-    Name = "Select Mini Boss", Flag = "SelectMiniBoss",
-    Options = miniBossList, CurrentOption = miniBossList[1],
-    MultipleOptions = false,
+Tab:Dropdown({
+    Title = "Select Mini Boss",
+    Flag = "SelectMiniBoss",
+    Values = miniBossList,
+    Multi = false,
+    Default = _G.SlowHub.SelectMiniBoss or miniBossList[1],
     Callback = function(value)
-        local wasRunning = State.IsFarming
-        if wasRunning then StopAutoFarmMiniBoss() end
-        State.SelectedMiniBoss = type(value) == "table" and value[1] or value
-        saveConfig("SelectMiniBoss", State.SelectedMiniBoss)
-        if wasRunning then task.wait(0.3); StartAutoFarmMiniBoss() end
+        local wasRunning = isFarming
+        if wasRunning then stopAutoFarmMiniBoss() end
+        selectedMiniBoss = type(value) == "table" and value[1] or value
+        _G.SlowHub.SelectMiniBoss = selectedMiniBoss
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if wasRunning then task.wait(0.3); startAutoFarmMiniBoss() end
     end,
 })
 
-BossesTab:CreateToggle({
-    Name = "Auto Farm Mini Boss", Flag = "AutoFarmMiniBoss",
-    CurrentValue = _G.SlowHub.AutoFarmMiniBosses,
-    Callback = function(value)
-        _G.SlowHub.AutoFarmMiniBosses = value
-        saveConfig("AutoFarmMiniBosses", value)
-        if value then StartAutoFarmMiniBoss() else StopAutoFarmMiniBoss() end
+Tab:Toggle({
+    Title = "Auto Farm Mini Boss",
+    Default = _G.SlowHub.AutoFarmMiniBosses or false,
+    Callback = function(Value)
+        _G.SlowHub.AutoFarmMiniBosses = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if Value then
+            startAutoFarmMiniBoss()
+        else
+            stopAutoFarmMiniBoss()
+        end
     end,
 })
 
-BossesTab:CreateSlider({
-    Name = "Mini Boss Distance", Flag = "MiniBossDistance",
-    Range = { 1, 10 }, Increment = 1,
-    CurrentValue = _G.SlowHub.MiniBossFarmDistance,
-    Callback = function(value)
-        _G.SlowHub.MiniBossFarmDistance = value
-        saveConfig("MiniBossFarmDistance", value)
+Tab:Slider({
+    Title = "Mini Boss Distance",
+    Flag = "MiniBossDistance",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.MiniBossFarmDistance or 6,
+    },
+    Callback = function(Value)
+        _G.SlowHub.MiniBossFarmDistance = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-BossesTab:CreateSlider({
-    Name = "Mini Boss Height", Flag = "MiniBossHeight",
-    Range = { 1, 10 }, Increment = 1,
-    CurrentValue = _G.SlowHub.MiniBossFarmHeight,
-    Callback = function(value)
-        _G.SlowHub.MiniBossFarmHeight = value
-        saveConfig("MiniBossFarmHeight", value)
+Tab:Slider({
+    Title = "Mini Boss Height",
+    Flag = "MiniBossHeight",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.MiniBossFarmHeight or 4,
+    },
+    Callback = function(Value)
+        _G.SlowHub.MiniBossFarmHeight = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-BossesTab:CreateSlider({
-    Name = "Attack Cooldown", Flag = "MiniBossCooldown",
-    Range = { 0.05, 0.5 }, Increment = 0.05,
-    CurrentValue = _G.SlowHub.MiniBossFarmCooldown,
-    Callback = function(value)
-        _G.SlowHub.MiniBossFarmCooldown = value
-        saveConfig("MiniBossFarmCooldown", value)
+Tab:Slider({
+    Title = "Attack Cooldown",
+    Flag = "MiniBossCooldown",
+    Step = 0.05,
+    Value = {
+        Min = 0.05,
+        Max = 0.5,
+        Default = _G.SlowHub.MiniBossFarmCooldown or 0.15,
+    },
+    Callback = function(Value)
+        _G.SlowHub.MiniBossFarmCooldown = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
