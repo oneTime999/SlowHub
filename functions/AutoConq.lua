@@ -48,7 +48,7 @@ Tab:Section({Title = "Conqueror Haki"})
 
 Tab:Toggle({
     Title = "Auto Conqueror Haki",
-    Default = _G.SlowHub.AutoConquerorHaki or false,
+    Value = _G.SlowHub.AutoConquerorHaki or false,
     Callback = function(Value)
         _G.SlowHub.AutoConquerorHaki = Value
         if _G.SaveConfig then
