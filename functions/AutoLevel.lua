@@ -265,7 +265,7 @@ Tab:Section({Title = "Auto Level"})
 
 Tab:Toggle({
     Title = "Auto Farm Level",
-    Default = _G.SlowHub.AutoFarmLevel or false,
+    Value = _G.SlowHub.AutoFarmLevel or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmLevel = Value
         if _G.SaveConfig then
