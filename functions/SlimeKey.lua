@@ -61,7 +61,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Craft Slime Key",
-    Default = _G.SlowHub.AutoCraftSlime or false,
+    Value = _G.SlowHub.AutoCraftSlime or false,
     Callback = function(Value)
         _G.SlowHub.AutoCraftSlime = Value
         if _G.SaveConfig then
