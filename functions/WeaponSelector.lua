@@ -34,7 +34,7 @@ end)
 local function GetWeapons()
     local weapons = {}
     local added = {}
-    pcall(function()
+    local success = pcall(function()
         if not WeaponState.Backpack then
             WeaponState.Backpack = Player:WaitForChild("Backpack")
         end
@@ -53,21 +53,31 @@ local function GetWeapons()
             end
         end
     end)
-    if #weapons == 0 then return {"No weapons found"} end
+    if not success or #weapons == 0 then
+        return {"No weapons found"}
+    end
     return weapons
 end
 
 function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
-    if not weaponName or weaponName == "" or weaponName == "No weapons found" then return false end
-    return pcall(function()
-        if not WeaponState.Character or not WeaponState.Humanoid then return end
-        if WeaponState.Humanoid.Health <= 0 then return end
-        if WeaponState.Character:FindFirstChild(weaponName) then return end
-        if not WeaponState.Backpack then return end
+    if not weaponName or weaponName == "" or weaponName == "No weapons found" then
+        return false
+    end
+    local success = pcall(function()
+        if not WeaponState.Character then return false end
+        if not WeaponState.Humanoid then return false end
+        if WeaponState.Humanoid.Health <= 0 then return false end
+        if WeaponState.Character:FindFirstChild(weaponName) then return true end
+        if not WeaponState.Backpack then return false end
         local tool = WeaponState.Backpack:FindFirstChild(weaponName)
-        if tool and tool:IsA("Tool") then WeaponState.Humanoid:EquipTool(tool) end
+        if tool and tool:IsA("Tool") then
+            WeaponState.Humanoid:EquipTool(tool)
+            return true
+        end
+        return false
     end)
+    return success
 end
 
 local function StartEquipLoop()
@@ -83,7 +93,9 @@ end
 
 local function StopEquipLoop()
     _G.SlowHub.EquipLoop = false
-    WeaponState.EquipLoopConnection = nil
+    if WeaponState.EquipLoopConnection then
+        WeaponState.EquipLoopConnection = nil
+    end
 end
 
 Tab:Section({Title = "Weapon"})
@@ -101,7 +113,6 @@ local WeaponDropdown = Tab:Dropdown({
         else
             _G.SlowHub.SelectedWeapon = nil
         end
-        -- Salva imediatamente
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -120,12 +131,11 @@ Tab:Toggle({
     Title = "Loop Equip Tool",
     Default = _G.SlowHub.EquipLoop or false,
     Callback = function(state)
-        if state then 
-            StartEquipLoop() 
-        else 
-            StopEquipLoop() 
+        if state then
+            StartEquipLoop()
+        else
+            StopEquipLoop()
         end
-        -- Salva imediatamente
         if _G.SaveConfig then
             _G.SaveConfig()
         end
@@ -142,14 +152,12 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.EquipInterval = Value
-        -- Salva imediatamente
         if _G.SaveConfig then
             _G.SaveConfig()
         end
     end
 })
 
--- Inicialização automática
 if _G.SlowHub.SelectedWeapon then
     task.spawn(function()
         task.wait(1)
