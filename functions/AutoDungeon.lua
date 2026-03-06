@@ -134,7 +134,7 @@ local function startVoteLoop()
     voteLoop = task.spawn(function()
         while isVoting and _G.SlowHub.AutoVoteDungeon do
             voteDifficulty()
-            task.wait(_G.SlowHub.VoteInterval or 2)
+            task.wait(2)
         end
     end)
 end
@@ -149,7 +149,7 @@ local function startReplayLoop()
     replayLoop = task.spawn(function()
         while isReplaying and _G.SlowHub.AutoReplayDungeon do
             voteReplay()
-            task.wait(_G.SlowHub.ReplayInterval or 5)
+            task.wait(5)
         end
     end)
 end
@@ -211,7 +211,7 @@ Tab:Section({Title = "Dungeon Farm"})
 
 Tab:Toggle({
     Title = "Auto Farm Dungeon or Boss Rush",
-    Flag = "AutoFarmDungeon",    -- ✅ Flag adicionada
+    Flag = "AutoFarmDungeon",
     Value = _G.SlowHub.AutoFarmDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
@@ -283,24 +283,9 @@ Tab:Dropdown({
     end,
 })
 
-Tab:Slider({
-    Title = "Vote Interval",
-    Flag = "VoteInterval",
-    Step = 0.5,
-    Value = {
-        Min = 1,
-        Max = 5,
-        Default = _G.SlowHub.VoteInterval or 2,
-    },
-    Callback = function(Value)
-        _G.SlowHub.VoteInterval = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end,
-})
-
 Tab:Toggle({
     Title = "Auto Vote Difficulty",
-    Flag = "AutoVoteDungeon",    -- ✅ Flag adicionada
+    Flag = "AutoVoteDungeon",
     Value = _G.SlowHub.AutoVoteDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoVoteDungeon = Value
@@ -315,24 +300,9 @@ Tab:Toggle({
 
 Tab:Section({Title = "Replay"})
 
-Tab:Slider({
-    Title = "Replay Interval",
-    Flag = "ReplayInterval",
-    Step = 0.5,
-    Value = {
-        Min = 3,
-        Max = 10,
-        Default = _G.SlowHub.ReplayInterval or 5,
-    },
-    Callback = function(Value)
-        _G.SlowHub.ReplayInterval = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end,
-})
-
 Tab:Toggle({
     Title = "Auto Replay Dungeon or Boss Rush",
-    Flag = "AutoReplayDungeon",  -- ✅ Flag adicionada
+    Flag = "AutoReplayDungeon",
     Value = _G.SlowHub.AutoReplayDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoReplayDungeon = Value
