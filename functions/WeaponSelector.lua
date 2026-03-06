@@ -61,7 +61,6 @@ local function GetWeapons()
     return weapons
 end
 
--- CORRIGIDO: sem pcall engolindo os returns internos
 function EquipSelectedTool()
     local weaponName = _G.SlowHub.SelectedWeapon
     if not weaponName or weaponName == "" or weaponName == "No weapons found" then
@@ -74,7 +73,6 @@ function EquipSelectedTool()
     local humanoid = WeaponState.Humanoid or char:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 then return false end
 
-    -- Já está equipada
     if char:FindFirstChild(weaponName) then return true end
 
     local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
@@ -92,10 +90,9 @@ function EquipSelectedTool()
 end
 
 local function StartEquipLoop()
-    if WeaponState.EquipLoopThread then return end -- já está rodando
+    if WeaponState.EquipLoopThread then return end
     _G.SlowHub.EquipLoop = true
 
-    -- CORRIGIDO: guarda a thread para poder cancelar
     WeaponState.EquipLoopThread = task.spawn(function()
         while _G.SlowHub.EquipLoop do
             EquipSelectedTool()
@@ -107,7 +104,6 @@ end
 
 local function StopEquipLoop()
     _G.SlowHub.EquipLoop = false
-    -- CORRIGIDO: cancela a thread de verdade
     if WeaponState.EquipLoopThread then
         task.cancel(WeaponState.EquipLoopThread)
         WeaponState.EquipLoopThread = nil
@@ -118,8 +114,9 @@ Tab:Section({Title = "Weapon"})
 
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
+    Flag = "SelectedWeapon",              -- ✅ ADICIONADO
     Values = GetWeapons(),
-    Value = _G.SlowHub.SelectedWeapon or "",
+    Default = _G.SlowHub.SelectedWeapon or "",  -- ✅ Value → Default
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
@@ -143,7 +140,8 @@ Tab:Button({
 
 Tab:Toggle({
     Title = "Loop Equip Tool",
-    Value = _G.SlowHub.EquipLoop or false,
+    Flag = "EquipLoop",                   -- ✅ ADICIONADO
+    Default = _G.SlowHub.EquipLoop or false,  -- ✅ Value → Default
     Callback = function(state)
         if state then
             StartEquipLoop()
@@ -156,12 +154,11 @@ Tab:Toggle({
 
 Tab:Slider({
     Title = "Equip Interval",
+    Flag = "EquipInterval",               -- ✅ ADICIONADO
+    Min = 0.1,                            -- ✅ tirado do Value = {}
+    Max = 1,
+    Default = _G.SlowHub.EquipInterval or 0.25,
     Step = 0.05,
-    Value = {
-        Min = 0.1,
-        Max = 1,
-        Default = _G.SlowHub.EquipInterval or 0.25,
-    },
     Callback = function(Value)
         _G.SlowHub.EquipInterval = Value
         if _G.SaveConfig then _G.SaveConfig() end
