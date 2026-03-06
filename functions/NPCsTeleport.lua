@@ -94,7 +94,7 @@ Tab:Dropdown({
     Flag = "SelectNPCTeleport",
     Values = npcList,
     Multi = false,
-    Default = _G.SlowHub.SelectedNPC or npcList[1],
+    Value = _G.SlowHub.SelectedNPC or npcList[1],
     Callback = function(value)
         local selected = type(value) == "table" and value[1] or value
         _G.SlowHub.SelectedNPC = selected
