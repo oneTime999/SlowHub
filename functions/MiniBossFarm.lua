@@ -199,7 +199,7 @@ Tab:Dropdown({
     Flag = "SelectMiniBoss",
     Values = miniBossList,
     Multi = false,
-    Default = _G.SlowHub.SelectMiniBoss or miniBossList[1],
+    Value = _G.SlowHub.SelectMiniBoss or miniBossList[1],
     Callback = function(value)
         local wasRunning = isFarming
         if wasRunning then stopAutoFarmMiniBoss() end
@@ -214,7 +214,7 @@ Tab:Dropdown({
 
 Tab:Toggle({
     Title = "Auto Farm Mini Boss",
-    Default = _G.SlowHub.AutoFarmMiniBosses or false,
+    Value = _G.SlowHub.AutoFarmMiniBosses or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmMiniBosses = Value
         if _G.SaveConfig then
