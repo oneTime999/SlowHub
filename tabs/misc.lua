@@ -1,4 +1,3 @@
--- Misc Tab
 local Tab = _G.MiscTab
 local githubBase = "https://raw.githubusercontent.com/oneTime999/SlowHub/main/functions/"
 
