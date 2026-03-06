@@ -1,58 +1,8 @@
+local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
-
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.SelectedBosses = _G.SlowHub.SelectedBosses or {}
-_G.SlowHub.PityTargetBoss = _G.SlowHub.PityTargetBoss or ""
-_G.SlowHub.PriorityPityEnabled = _G.SlowHub.PriorityPityEnabled or false
-_G.SlowHub.AutoFarmBosses = _G.SlowHub.AutoFarmBosses or false
-_G.SlowHub.BossFarmDistance = _G.SlowHub.BossFarmDistance or 8
-_G.SlowHub.BossFarmHeight = _G.SlowHub.BossFarmHeight or 5
-_G.SlowHub.BossFarmCooldown = _G.SlowHub.BossFarmCooldown or 0.15
-_G.SlowHub.IsAttackingBoss = false
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then
-        makefolder(CONFIG_FOLDER)
-    end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function()
-            return HttpService:JSONDecode(readfile(CONFIG_FILE))
-        end)
-        if ok and type(data) == "table" then
-            return data
-        end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function()
-        writefile(CONFIG_FILE, HttpService:JSONEncode(current))
-    end)
-end
-
-local saved = loadConfig()
-if saved["SelectedBosses"] ~= nil then _G.SlowHub.SelectedBosses = saved["SelectedBosses"] end
-if saved["PityTargetBoss"] ~= nil then _G.SlowHub.PityTargetBoss = saved["PityTargetBoss"] end
-if saved["PriorityPityEnabled"] ~= nil then _G.SlowHub.PriorityPityEnabled = saved["PriorityPityEnabled"] end
-if saved["AutoFarmBosses"] ~= nil then _G.SlowHub.AutoFarmBosses = saved["AutoFarmBosses"] end
-if saved["BossFarmDistance"] ~= nil then _G.SlowHub.BossFarmDistance = saved["BossFarmDistance"] end
-if saved["BossFarmHeight"] ~= nil then _G.SlowHub.BossFarmHeight = saved["BossFarmHeight"] end
-if saved["BossFarmCooldown"] ~= nil then _G.SlowHub.BossFarmCooldown = saved["BossFarmCooldown"] end
 
 local bossList = {
     "AnosBoss", "GilgameshBoss", "RimuruBoss", "StrongestofTodayBoss", "StrongestinHistoryBoss",
@@ -87,51 +37,49 @@ for _, bossBaseName in ipairs(bossList) do
     end
 end
 
-local State = {
-    Connection = nil,
-    IsRunning = false,
-    CurrentBoss = nil,
-    LastTarget = nil,
-    HasVisitedSafeZone = false,
-    LastHitTime = 0,
-    Character = nil,
-    HumanoidRootPart = nil,
-    NPCsFolder = nil,
-}
+local farmConnection = nil
+local isRunning = false
+local currentBoss = nil
+local lastTarget = nil
+local hasVisitedSafeZone = false
+local lastHitTime = 0
+local character = nil
+local humanoidRootPart = nil
+local npcsFolder = nil
 
-local function InitializeState()
-    State.Character = Player.Character
-    State.HumanoidRootPart = State.Character and State.Character:FindFirstChild("HumanoidRootPart")
-    State.NPCsFolder = workspace:FindFirstChild("NPCs")
+local function initialize()
+    character = Player.Character
+    humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    npcsFolder = workspace:FindFirstChild("NPCs")
 end
 
-InitializeState()
+initialize()
 
 Player.CharacterAdded:Connect(function(char)
-    State.Character = char
-    State.HumanoidRootPart = nil
+    character = char
+    humanoidRootPart = nil
     task.wait(0.1)
-    State.HumanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+    humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "NPCs" then
-        State.NPCsFolder = child
+        npcsFolder = child
     end
 end)
 
-local function GetHumanoid(model)
+local function getHumanoid(model)
     if not model or not model.Parent then return nil end
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid.Health > 0 then return humanoid end
     return nil
 end
 
-local function IsAlive(model)
-    return GetHumanoid(model) ~= nil
+local function isAlive(model)
+    return getHumanoid(model) ~= nil
 end
 
-local function GetBossBaseName(bossName)
+local function getBossBaseName(bossName)
     for _, baseName in ipairs(bossList) do
         if bossName == baseName then return baseName end
         if string.sub(bossName, 1, #baseName) == baseName then return baseName end
@@ -139,21 +87,21 @@ local function GetBossBaseName(bossName)
     return nil
 end
 
-local function IsBossSelected(bossName)
-    local baseName = GetBossBaseName(bossName)
+local function isBossSelected(bossName)
+    local baseName = getBossBaseName(bossName)
     if not baseName then return false end
-    return _G.SlowHub.SelectedBosses[baseName] == true
+    return _G.SlowHub.SelectedBosses and _G.SlowHub.SelectedBosses[baseName] == true
 end
 
-local function GetSafeZone(bossName)
+local function getSafeZone(bossName)
     local direct = BossSafeZones[bossName]
     if direct then return direct end
-    local baseName = GetBossBaseName(bossName)
+    local baseName = getBossBaseName(bossName)
     if baseName then return BossSafeZones[baseName] end
     return nil
 end
 
-local function GetPityCount()
+local function getPityCount()
     local success, result = pcall(function()
         local playerGui = Player:FindFirstChild("PlayerGui")
         if not playerGui then return nil end
@@ -174,22 +122,22 @@ local function GetPityCount()
     return 0
 end
 
-local function IsPityTargetTime()
+local function isPityTargetTime()
     if not _G.SlowHub.PriorityPityEnabled then return false end
-    if _G.SlowHub.PityTargetBoss == "" then return false end
-    return GetPityCount() >= 24
+    if not _G.SlowHub.PityTargetBoss or _G.SlowHub.PityTargetBoss == "" then return false end
+    return getPityCount() >= 24
 end
 
-local function ShouldSwitchBoss(currentBoss)
-    if not currentBoss or not currentBoss.Parent then return true end
-    if not IsAlive(currentBoss) then return true end
-    local bossBaseName = GetBossBaseName(currentBoss.Name)
+local function shouldSwitchBoss(boss)
+    if not boss or not boss.Parent then return true end
+    if not isAlive(boss) then return true end
+    local bossBaseName = getBossBaseName(boss.Name)
     if not bossBaseName then return true end
-    if not IsBossSelected(bossBaseName) then return true end
-    if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss ~= "" then
-        local isPityTime = IsPityTargetTime()
+    if not isBossSelected(bossBaseName) then return true end
+    if _G.SlowHub.PriorityPityEnabled and _G.SlowHub.PityTargetBoss and _G.SlowHub.PityTargetBoss ~= "" then
+        local pityTime = isPityTargetTime()
         local pityTarget = _G.SlowHub.PityTargetBoss
-        if isPityTime then
+        if pityTime then
             if bossBaseName ~= pityTarget then return true end
         else
             if bossBaseName == pityTarget then return true end
@@ -198,51 +146,53 @@ local function ShouldSwitchBoss(currentBoss)
     return false
 end
 
-local function FindBossByName(bossName)
-    if not State.NPCsFolder then return nil end
-    local exactMatch = State.NPCsFolder:FindFirstChild(bossName)
-    if exactMatch and IsAlive(exactMatch) then return exactMatch end
+local function findBossByName(bossName)
+    if not npcsFolder then return nil end
+    local exactMatch = npcsFolder:FindFirstChild(bossName)
+    if exactMatch and isAlive(exactMatch) then return exactMatch end
     for _, diff in ipairs(difficulties) do
-        local variant = State.NPCsFolder:FindFirstChild(bossName .. diff)
-        if variant and IsAlive(variant) then return variant end
+        local variant = npcsFolder:FindFirstChild(bossName .. diff)
+        if variant and isAlive(variant) then return variant end
     end
     return nil
 end
 
-local function FindValidBoss()
-    if not State.NPCsFolder then return nil end
+local function findValidBoss()
+    if not npcsFolder then return nil end
     local pityEnabled = _G.SlowHub.PriorityPityEnabled
     local pityTarget = _G.SlowHub.PityTargetBoss
-    if pityEnabled and pityTarget ~= "" then
-        if IsPityTargetTime() then
-            if IsBossSelected(pityTarget) then return FindBossByName(pityTarget) end
+    if pityEnabled and pityTarget and pityTarget ~= "" then
+        if isPityTargetTime() then
+            if isBossSelected(pityTarget) then return findBossByName(pityTarget) end
             return nil
         else
             for _, bossName in ipairs(bossList) do
-                if bossName ~= pityTarget and IsBossSelected(bossName) then
-                    local found = FindBossByName(bossName)
+                if bossName ~= pityTarget and isBossSelected(bossName) then
+                    local found = findBossByName(bossName)
                     if found then return found end
                 end
             end
             return nil
         end
     end
-    for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
-        if isSelected then
-            local found = FindBossByName(bossName)
-            if found then return found end
+    if _G.SlowHub.SelectedBosses then
+        for bossName, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+            if isSelected then
+                local found = findBossByName(bossName)
+                if found then return found end
+            end
         end
     end
     return nil
 end
 
-local function EquipWeapon()
+local function equipWeapon()
     if not _G.SlowHub.SelectedWeapon then return end
     pcall(function()
-        if not State.Character then return end
-        local humanoid = State.Character:FindFirstChildOfClass("Humanoid")
+        if not character then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid then return end
-        if State.Character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
+        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
         local backpack = Player:FindFirstChild("Backpack")
         if not backpack then return end
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
@@ -250,29 +200,29 @@ local function EquipWeapon()
     end)
 end
 
-local function TeleportToSafeZone(boss)
-    if not State.HumanoidRootPart then return false end
-    local safeCFrame = GetSafeZone(boss.Name)
+local function teleportToSafeZone(boss)
+    if not humanoidRootPart then return false end
+    local safeCFrame = getSafeZone(boss.Name)
     if not safeCFrame then return true end
-    State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    State.HumanoidRootPart.CFrame = safeCFrame
+    humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+    humanoidRootPart.CFrame = safeCFrame
     return true
 end
 
-local function TeleportToBoss(boss)
-    if not State.HumanoidRootPart then return false end
+local function teleportToBoss(boss)
+    if not humanoidRootPart then return false end
     local bossRoot = boss:FindFirstChild("HumanoidRootPart")
     if not bossRoot then return false end
-    State.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    local offset = CFrame.new(0, _G.SlowHub.BossFarmHeight, _G.SlowHub.BossFarmDistance)
-    State.HumanoidRootPart.CFrame = bossRoot.CFrame * offset
+    humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+    local offset = CFrame.new(0, _G.SlowHub.BossFarmHeight or 5, _G.SlowHub.BossFarmDistance or 8)
+    humanoidRootPart.CFrame = bossRoot.CFrame * offset
     return true
 end
 
-local function PerformAttack()
+local function performAttack()
     local currentTime = tick()
-    if currentTime - State.LastHitTime < _G.SlowHub.BossFarmCooldown then return end
-    State.LastHitTime = currentTime
+    if currentTime - lastHitTime < (_G.SlowHub.BossFarmCooldown or 0.15) then return end
+    lastHitTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
@@ -283,192 +233,213 @@ local function PerformAttack()
     end)
 end
 
-local function ResetState()
-    State.CurrentBoss = nil
-    State.LastTarget = nil
-    State.HasVisitedSafeZone = false
+local function resetState()
+    currentBoss = nil
+    lastTarget = nil
+    hasVisitedSafeZone = false
     _G.SlowHub.IsAttackingBoss = false
 end
 
-function StopAutoFarm()
-    if not State.IsRunning then return end
-    State.IsRunning = false
-    if State.Connection then
-        State.Connection:Disconnect()
-        State.Connection = nil
+local function stopAutoFarm()
+    if not isRunning then return end
+    isRunning = false
+    if farmConnection then
+        farmConnection:Disconnect()
+        farmConnection = nil
     end
-    ResetState()
+    resetState()
 end
 
-local function FarmLoop()
-    if not _G.SlowHub.AutoFarmBosses or not State.IsRunning then
-        StopAutoFarm()
+local function farmLoop()
+    if not _G.SlowHub.AutoFarmBosses or not isRunning then
+        stopAutoFarm()
         return
     end
-    if not State.Character or not State.Character.Parent then return end
-    if not State.HumanoidRootPart then
-        State.HumanoidRootPart = State.Character:FindFirstChild("HumanoidRootPart")
-        if not State.HumanoidRootPart then return end
+    if not character or not character.Parent then return end
+    if not humanoidRootPart then
+        humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then return end
     end
-    if State.CurrentBoss and ShouldSwitchBoss(State.CurrentBoss) then
-        ResetState()
+    if currentBoss and shouldSwitchBoss(currentBoss) then
+        resetState()
         task.wait(0.1)
         return
     end
-    if not State.CurrentBoss then
-        State.CurrentBoss = FindValidBoss()
-        if not State.CurrentBoss then
+    if not currentBoss then
+        currentBoss = findValidBoss()
+        if not currentBoss then
             _G.SlowHub.IsAttackingBoss = false
             return
         end
-        State.HasVisitedSafeZone = false
-        State.LastTarget = State.CurrentBoss
+        hasVisitedSafeZone = false
+        lastTarget = currentBoss
     end
-    local boss = State.CurrentBoss
+    local boss = currentBoss
     _G.SlowHub.IsAttackingBoss = true
-    if boss ~= State.LastTarget then
-        State.LastTarget = boss
-        State.HasVisitedSafeZone = false
+    if boss ~= lastTarget then
+        lastTarget = boss
+        hasVisitedSafeZone = false
     end
-    if not State.HasVisitedSafeZone then
-        local success = TeleportToSafeZone(boss)
-        if success then State.HasVisitedSafeZone = true end
+    if not hasVisitedSafeZone then
+        local success = teleportToSafeZone(boss)
+        if success then hasVisitedSafeZone = true end
         task.wait(0.1)
         return
     end
-    local success = TeleportToBoss(boss)
+    local success = teleportToBoss(boss)
     if success then
-        EquipWeapon()
-        PerformAttack()
+        equipWeapon()
+        performAttack()
     end
 end
 
-function StartAutoFarm()
-    if State.IsRunning then
-        StopAutoFarm()
+local function startAutoFarm()
+    if isRunning then
+        stopAutoFarm()
         task.wait(0.2)
     end
-    InitializeState()
-    if not State.NPCsFolder then return false end
-    State.IsRunning = true
-    State.Connection = RunService.Heartbeat:Connect(FarmLoop)
+    initialize()
+    if not npcsFolder then return false end
+    isRunning = true
+    farmConnection = RunService.Heartbeat:Connect(farmLoop)
     return true
 end
 
-local BossesTab = _G.BossesTab
+Tab:Section({Title = "Boss Selection"})
 
-BossesTab:CreateSection({ Title = "Boss Selection" })
-
-BossesTab:CreateDropdown({
-    Name = "Select Bosses to Farm",
+Tab:Dropdown({
+    Title = "Select Bosses to Farm",
     Flag = "SelectedBosses",
-    Options = bossList,
-    CurrentOption = (function()
+    Values = bossList,
+    Multi = true,
+    Default = (function()
         local selected = {}
-        for _, name in ipairs(bossList) do
-            if _G.SlowHub.SelectedBosses[name] then
-                table.insert(selected, name)
+        if _G.SlowHub.SelectedBosses then
+            for name, isSelected in pairs(_G.SlowHub.SelectedBosses) do
+                if isSelected then
+                    table.insert(selected, name)
+                end
             end
         end
         return selected
     end)(),
-    MultipleOptions = true,
     Callback = function(options)
         local map = {}
-        for _, v in ipairs(options) do
-            map[v] = true
+        if type(options) == "table" then
+            for _, v in ipairs(options) do
+                map[v] = true
+            end
         end
         _G.SlowHub.SelectedBosses = map
-        saveConfig("SelectedBosses", map)
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-BossesTab:CreateSection({ Title = "Pity System (Optional)" })
+Tab:Section({Title = "Pity System (Optional)"})
 
-BossesTab:CreateDropdown({
-    Name = "Pity Target Boss",
+Tab:Dropdown({
+    Title = "Pity Target Boss",
     Flag = "PityTargetBoss",
-    Options = bossList,
-    CurrentOption = _G.SlowHub.PityTargetBoss ~= "" and _G.SlowHub.PityTargetBoss or bossList[1],
-    MultipleOptions = false,
+    Values = bossList,
+    Multi = false,
+    Default = _G.SlowHub.PityTargetBoss or bossList[1],
     Callback = function(option)
-        _G.SlowHub.PityTargetBoss = option
-        saveConfig("PityTargetBoss", option)
-        if _G.SlowHub.AutoFarmBosses and State.IsRunning then
-            ResetState()
+        _G.SlowHub.PityTargetBoss = type(option) == "table" and option[1] or option
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if _G.SlowHub.AutoFarmBosses and isRunning then
+            resetState()
         end
     end,
 })
 
-BossesTab:CreateToggle({
-    Name = "Enable Pity System",
-    Flag = "PriorityPityEnabled",
-    CurrentValue = _G.SlowHub.PriorityPityEnabled,
-    Callback = function(value)
-        _G.SlowHub.PriorityPityEnabled = value
-        saveConfig("PriorityPityEnabled", value)
-        if _G.SlowHub.AutoFarmBosses and State.IsRunning then
-            ResetState()
+Tab:Toggle({
+    Title = "Enable Pity System",
+    Default = _G.SlowHub.PriorityPityEnabled or false,
+    Callback = function(Value)
+        _G.SlowHub.PriorityPityEnabled = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if _G.SlowHub.AutoFarmBosses and isRunning then
+            resetState()
         end
     end,
 })
 
-BossesTab:CreateSection({ Title = "Farm Control" })
+Tab:Section({Title = "Farm Control"})
 
-BossesTab:CreateToggle({
-    Name = "Auto Farm Selected Bosses",
-    Flag = "AutoFarmBosses",
-    CurrentValue = _G.SlowHub.AutoFarmBosses,
-    Callback = function(value)
-        _G.SlowHub.AutoFarmBosses = value
-        saveConfig("AutoFarmBosses", value)
-        if value then
-            StartAutoFarm()
+Tab:Toggle({
+    Title = "Auto Farm Selected Bosses",
+    Default = _G.SlowHub.AutoFarmBosses or false,
+    Callback = function(Value)
+        _G.SlowHub.AutoFarmBosses = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
+        if Value then
+            startAutoFarm()
         else
-            StopAutoFarm()
+            stopAutoFarm()
         end
     end,
 })
 
-BossesTab:CreateSlider({
-    Name = "Boss Farm Distance",
+Tab:Slider({
+    Title = "Boss Farm Distance",
     Flag = "BossFarmDistance",
-    Range = { 1, 10 },
-    Increment = 1,
-    CurrentValue = _G.SlowHub.BossFarmDistance,
-    Callback = function(value)
-        _G.SlowHub.BossFarmDistance = value
-        saveConfig("BossFarmDistance", value)
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.BossFarmDistance or 8,
+    },
+    Callback = function(Value)
+        _G.SlowHub.BossFarmDistance = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-BossesTab:CreateSlider({
-    Name = "Boss Farm Height",
+Tab:Slider({
+    Title = "Boss Farm Height",
     Flag = "BossFarmHeight",
-    Range = { 1, 10 },
-    Increment = 1,
-    CurrentValue = _G.SlowHub.BossFarmHeight,
-    Callback = function(value)
-        _G.SlowHub.BossFarmHeight = value
-        saveConfig("BossFarmHeight", value)
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 10,
+        Default = _G.SlowHub.BossFarmHeight or 5,
+    },
+    Callback = function(Value)
+        _G.SlowHub.BossFarmHeight = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-BossesTab:CreateSlider({
-    Name = "Attack Cooldown",
+Tab:Slider({
+    Title = "Attack Cooldown",
     Flag = "BossFarmCooldown",
-    Range = { 0.05, 0.5 },
-    Increment = 0.05,
-    CurrentValue = _G.SlowHub.BossFarmCooldown,
-    Callback = function(value)
-        _G.SlowHub.BossFarmCooldown = value
-        saveConfig("BossFarmCooldown", value)
+    Step = 0.05,
+    Value = {
+        Min = 0.05,
+        Max = 0.5,
+        Default = _G.SlowHub.BossFarmCooldown or 0.15,
+    },
+    Callback = function(Value)
+        _G.SlowHub.BossFarmCooldown = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-task.spawn(function()
+if _G.SlowHub.AutoFarmBosses then
     task.wait(2)
-    if _G.SlowHub.AutoFarmBosses then
-        StartAutoFarm()
-    end
-end)
+    startAutoFarm()
+end
