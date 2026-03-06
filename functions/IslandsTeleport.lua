@@ -53,7 +53,7 @@ Tab:Dropdown({
     Flag = "SelectIsland",
     Values = locationList,
     Multi = false,
-    Default = _G.SlowHub.SelectedIsland or locationList[1],
+    Value = _G.SlowHub.SelectedIsland or locationList[1],
     Callback = function(value)
         local selected = type(value) == "table" and value[1] or value
         _G.SlowHub.SelectedIsland = selected
