@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
 local Tab = _G.MainTab
-local Window = _G.Window
 
 local WeaponState = {
     Character = nil,
@@ -12,19 +11,22 @@ local WeaponState = {
 }
 
 local function InitializeWeaponState()
-    WeaponState.Character = Player.Character or Player.CharacterAdded:Wait()
-    WeaponState.Humanoid = WeaponState.Character:FindFirstChildOfClass("Humanoid")
-    WeaponState.Backpack = Player:WaitForChild("Backpack")
+    WeaponState.Character = Player.Character
+    WeaponState.Humanoid = WeaponState.Character and WeaponState.Character:FindFirstChildOfClass("Humanoid")
+    WeaponState.Backpack = Player:FindFirstChild("Backpack")
 end
 
 InitializeWeaponState()
 
 Player.CharacterAdded:Connect(function(char)
     WeaponState.Character = char
-    WeaponState.Humanoid = char:WaitForChild("Humanoid")
-    WeaponState.Backpack = Player:WaitForChild("Backpack")
-    task.wait(0.5)
-    if Window.Flags.EquipLoop and Window.Flags.SelectedWeapon then
+    WeaponState.Humanoid = nil
+    WeaponState.Backpack = nil
+    task.wait(0.1)
+    WeaponState.Humanoid = char:FindFirstChildOfClass("Humanoid")
+    WeaponState.Backpack = Player:FindFirstChild("Backpack")
+    task.wait(0.9)
+    if _G.SlowHub.EquipLoop and _G.SlowHub.SelectedWeapon then
         EquipSelectedTool()
     end
 end)
@@ -33,7 +35,7 @@ local function GetWeapons()
     local weapons = {}
     local added = {}
 
-    local backpack = WeaponState.Backpack
+    local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do
             if item:IsA("Tool") and not added[item.Name] then
@@ -43,7 +45,7 @@ local function GetWeapons()
         end
     end
 
-    local char = WeaponState.Character
+    local char = WeaponState.Character or Player.Character
     if char then
         for _, item in ipairs(char:GetChildren()) do
             if item:IsA("Tool") and not added[item.Name] then
@@ -56,46 +58,68 @@ local function GetWeapons()
     if #weapons == 0 then
         return {"No weapons found"}
     end
-
-    table.sort(weapons)
     return weapons
 end
 
-function EquipSelectedTool()
-    local weaponName = Window.Flags.SelectedWeapon
-    if not weaponName or weaponName == "" or weaponName == "No weapons found" then
-        return
+local function WeaponExistsInBackpack(weaponName)
+    if not weaponName or weaponName == "" then return false end
+
+    local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
+    if backpack and backpack:FindFirstChild(weaponName) then
+        return true
     end
 
-    local char = WeaponState.Character
-    if not char then return end
+    local char = WeaponState.Character or Player.Character
+    if char and char:FindFirstChild(weaponName) then
+        return true
+    end
 
-    local humanoid = WeaponState.Humanoid
-    if not humanoid or humanoid.Health <= 0 then return end
+    return false
+end
 
-    if char:FindFirstChild(weaponName) then return end
+function EquipSelectedTool()
+    local weaponName = _G.SlowHub.SelectedWeapon
+    if not weaponName or weaponName == "" or weaponName == "No weapons found" then
+        return false
+    end
 
-    local tool = WeaponState.Backpack:FindFirstChild(weaponName)
-    if tool then
-        pcall(function()
+    local char = WeaponState.Character or Player.Character
+    if not char then return false end
+
+    local humanoid = WeaponState.Humanoid or char:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+
+    if char:FindFirstChild(weaponName) then return true end
+
+    local backpack = WeaponState.Backpack or Player:FindFirstChild("Backpack")
+    if not backpack then return false end
+
+    local tool = backpack:FindFirstChild(weaponName)
+    if tool and tool:IsA("Tool") then
+        local ok = pcall(function()
             humanoid:EquipTool(tool)
         end)
+        return ok
     end
+
+    return false
 end
 
 local function StartEquipLoop()
     if WeaponState.EquipLoopThread then return end
+    _G.SlowHub.EquipLoop = true
 
     WeaponState.EquipLoopThread = task.spawn(function()
-        while Window.Flags.EquipLoop do
+        while _G.SlowHub.EquipLoop do
             EquipSelectedTool()
-            task.wait(Window.Flags.EquipInterval or 0.25)
+            task.wait(_G.SlowHub.EquipInterval or 0.25)
         end
         WeaponState.EquipLoopThread = nil
     end)
 end
 
 local function StopEquipLoop()
+    _G.SlowHub.EquipLoop = false
     if WeaponState.EquipLoopThread then
         task.cancel(WeaponState.EquipLoopThread)
         WeaponState.EquipLoopThread = nil
@@ -108,12 +132,17 @@ local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
     Flag = "SelectedWeapon",
     Values = GetWeapons(),
+    Value = "",
     Multi = false,
     Callback = function(Value)
         local weapon = type(Value) == "table" and Value[1] or Value
-        if weapon and weapon ~= "No weapons found" then
+        if weapon and weapon ~= "" and weapon ~= "No weapons found" then
+            _G.SlowHub.SelectedWeapon = weapon
             EquipSelectedTool()
+        else
+            _G.SlowHub.SelectedWeapon = nil
         end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -127,13 +156,14 @@ Tab:Button({
 Tab:Toggle({
     Title = "Loop Equip Tool",
     Flag = "EquipLoop",
-    Value = false,
+    Value = _G.SlowHub.EquipLoop or false,
     Callback = function(state)
         if state then
             StartEquipLoop()
         else
             StopEquipLoop()
         end
+        if _G.SaveConfig then _G.SaveConfig() end
     end
 })
 
@@ -144,26 +174,34 @@ Tab:Slider({
     Value = {
         Min = 0.1,
         Max = 1,
-        Default = 0.25,
-    }
+        Default = _G.SlowHub.EquipInterval or 0.25,
+    },
+    Callback = function(Value)
+        _G.SlowHub.EquipInterval = Value
+        if _G.SaveConfig then _G.SaveConfig() end
+    end
 })
 
+-- ✅ Verifica a backpack pelo nome salvo
+-- se existir, atualiza a lista e força a seleção visual
 task.spawn(function()
     task.wait(2)
 
-    WeaponDropdown:Refresh(GetWeapons())
+    local realWeapons = GetWeapons()
+    WeaponDropdown:Refresh(realWeapons)
 
-    if Window.Flags.SelectedWeapon then
-        WeaponDropdown:Set(Window.Flags.SelectedWeapon)
-        EquipSelectedTool()
+    local saved = _G.SlowHub.SelectedWeapon
+    if saved and saved ~= "" and saved ~= "No weapons found" then
+        if WeaponExistsInBackpack(saved) then
+            WeaponDropdown:Set(saved)
+            EquipSelectedTool()
+        else
+            _G.SlowHub.SelectedWeapon = nil
+        end
     end
 end)
 
-Player.Backpack.ChildAdded:Connect(function()
-    WeaponDropdown:Refresh(GetWeapons())
-end)
-
-if Window.Flags.EquipLoop then
+if _G.SlowHub.EquipLoop then
     task.spawn(function()
         task.wait(2)
         StartEquipLoop()
