@@ -1,43 +1,14 @@
+local Tab = _G.MiscTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.CodeRedeemDelay = _G.SlowHub.CodeRedeemDelay or 0.5
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-if saved["CodeRedeemDelay"] ~= nil then _G.SlowHub.CodeRedeemDelay = saved["CodeRedeemDelay"] end
-
-local Codes = {
+local codes = {
     "SORRYFORBUGS","BADISSUESSORRY","BOSSRUSH","VERYBIGUPDATESOON","SINOFPRIDE",
     "15KFOLLOWTY","ROGUEALLIES","RUSHKEYCODE","SORRYSUDDENRESTART",
 }
 
-local RedeemState = {IsRedeeming = false}
+local isRedeeming = false
 
-local function RedeemCode(code)
+local function redeemCode(code)
     return pcall(function()
         local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
         if not remoteEvents then return end
@@ -47,38 +18,41 @@ local function RedeemCode(code)
     end)
 end
 
-local function RedeemAllCodes()
-    if RedeemState.IsRedeeming then return end
-    RedeemState.IsRedeeming = true
+local function redeemAllCodes()
+    if isRedeeming then return end
+    isRedeeming = true
     task.spawn(function()
-        for _, code in ipairs(Codes) do
-            if not RedeemState.IsRedeeming then break end
-            RedeemCode(code)
-            task.wait(_G.SlowHub.CodeRedeemDelay)
+        for _, code in ipairs(codes) do
+            if not isRedeeming then break end
+            redeemCode(code)
+            task.wait(_G.SlowHub.CodeRedeemDelay or 0.5)
         end
-        RedeemState.IsRedeeming = false
+        isRedeeming = false
     end)
 end
 
-local MiscTab = _G.MiscTab
+Tab:Section({Title = "Codes"})
 
-MiscTab:CreateSection({ Title = "Codes" })
-
-MiscTab:CreateSlider({
-    Name = "Redeem Delay",
+Tab:Slider({
+    Title = "Redeem Delay",
     Flag = "CodeRedeemDelay",
-    Range = { 0.1, 2 },
-    Increment = 0.1,
-    CurrentValue = _G.SlowHub.CodeRedeemDelay,
-    Callback = function(value)
-        _G.SlowHub.CodeRedeemDelay = value
-        saveConfig("CodeRedeemDelay", value)
+    Step = 0.1,
+    Value = {
+        Min = 0.1,
+        Max = 2,
+        Default = _G.SlowHub.CodeRedeemDelay or 0.5,
+    },
+    Callback = function(Value)
+        _G.SlowHub.CodeRedeemDelay = Value
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-MiscTab:CreateButton({
-    Name = "Redeem All Codes",
+Tab:Button({
+    Title = "Redeem All Codes",
     Callback = function()
-        RedeemAllCodes()
+        redeemAllCodes()
     end,
 })
