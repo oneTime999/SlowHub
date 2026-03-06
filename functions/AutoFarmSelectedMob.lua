@@ -5,13 +5,13 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local MobList = {
-    "Thief", 
-    "Monkey", 
-    "DesertBandit", 
-    "FrostRogue", 
-    "Sorcerer", 
-    "Hollow", 
-    "StrongSorcerer", 
+    "Thief",
+    "Monkey",
+    "DesertBandit",
+    "FrostRogue",
+    "Sorcerer",
+    "Hollow",
+    "StrongSorcerer",
     "Curse",
     "Slime",
     "AcademyTeacher"
@@ -19,7 +19,7 @@ local MobList = {
 
 local QuestConfig = {
     ["Thief"] = "QuestNPC1",
-    ["Monkey"] = "QuestNPC3", 
+    ["Monkey"] = "QuestNPC3",
     ["DesertBandit"] = "QuestNPC5",
     ["FrostRogue"] = "QuestNPC7",
     ["Sorcerer"] = "QuestNPC9",
@@ -46,6 +46,7 @@ local MobSafeZones = {
 local farmConnection = nil
 local questLoop = nil
 local isFarming = false
+local isFarmLoopRunning = false
 local isQuesting = false
 local selectedMobs = {}
 local currentMobIndex = 1
@@ -85,6 +86,12 @@ workspace.ChildAdded:Connect(function(child)
     end
 end)
 
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "NPCs" then
+        npcsFolder = nil
+    end
+end)
+
 local function getNPC(npcName, index)
     if not npcsFolder then return nil end
     return npcsFolder:FindFirstChild(npcName .. index)
@@ -97,8 +104,8 @@ end
 
 local function isNPCAlive(npc)
     if not npc or not npc.Parent then return false end
-    local humanoid = npc:FindFirstChildOfClass("Humanoid")
-    return humanoid and humanoid.Health > 0
+    local npcHumanoid = npc:FindFirstChildOfClass("Humanoid")
+    return npcHumanoid and npcHumanoid.Health > 0
 end
 
 local function getNextIndex(current, maxCount)
@@ -213,6 +220,7 @@ local function resetFarmState()
     hasVisitedSafeZone = false
     lastValidQuest = nil
     lastAttackTime = 0
+    isFarmLoopRunning = false
 end
 
 local function stopQuestLoop()
@@ -223,7 +231,7 @@ local function startQuestLoop()
     if isQuesting then return end
     isQuesting = true
     questLoop = task.spawn(function()
-        while isQuesting and _G.SlowHub.AutoQuestSelectedMob do  -- ✅ CORRIGIDO
+        while isQuesting and _G.SlowHub.AutoQuestSelectedMob do
             acceptQuest()
             task.wait(_G.SlowHub.AutoQuestInterval or 2)
         end
@@ -248,21 +256,35 @@ local function stopAutoFarm()
 end
 
 local function farmLoop()
+    if isFarmLoopRunning then return end
+    isFarmLoopRunning = true
+
     if not _G.SlowHub.AutoFarmSelectedMob then
+        isFarmLoopRunning = false
         stopAutoFarm()
         return
     end
-    if not character or not character.Parent then return end
+    if not character or not character.Parent then
+        isFarmLoopRunning = false
+        return
+    end
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoidRootPart then return end
+        if not humanoidRootPart then
+            isFarmLoopRunning = false
+            return
+        end
     end
     if not humanoid then
         humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return end
+        if not humanoid or humanoid.Health <= 0 then
+            isFarmLoopRunning = false
+            return
+        end
     end
     if _G.SlowHub.IsAttackingBoss then
         wasAttackingBoss = true
+        isFarmLoopRunning = false
         return
     end
     if wasAttackingBoss then
@@ -270,6 +292,7 @@ local function farmLoop()
         wasAttackingBoss = false
     end
     if #selectedMobs == 0 then
+        isFarmLoopRunning = false
         stopAutoFarm()
         return
     end
@@ -278,6 +301,7 @@ local function farmLoop()
         currentMobIndex = 1
         currentMobName = selectedMobs[1]
         if not currentMobName then
+            isFarmLoopRunning = false
             stopAutoFarm()
             return
         end
@@ -286,32 +310,33 @@ local function farmLoop()
     if currentMobName ~= lastTargetName then
         lastTargetName = currentMobName
         hasVisitedSafeZone = false
+        equipWeapon()
     end
     if not hasVisitedSafeZone then
         local success = teleportToSafeZone(currentMobName)
         if success then hasVisitedSafeZone = true end
-        task.wait(0.1)
+        isFarmLoopRunning = false
         return
     end
     local npc = getNPC(config.npc, currentNPCIndex)
-    local isAlive = isNPCAlive(npc)
-    if not isAlive then
+    local alive = isNPCAlive(npc)
+    if not alive then
         killCount = killCount + 1
         if killCount >= 5 then
             switchToNextMob()
-            return
         else
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     else
         local success = teleportToNPC(npc)
         if success then
-            equipWeapon()
             performAttack()
         else
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     end
+
+    isFarmLoopRunning = false
 end
 
 local function startAutoFarm()
@@ -405,7 +430,6 @@ Tab:Toggle({
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         if _G.SaveConfig then _G.SaveConfig() end
-        -- ✅ CORRIGIDO: agora inicia/para o loop ao ligar/desligar
         if Value then
             startQuestLoop()
         else
