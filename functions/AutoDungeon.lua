@@ -211,12 +211,11 @@ Tab:Section({Title = "Dungeon Farm"})
 
 Tab:Toggle({
     Title = "Auto Farm Dungeon or Boss Rush",
+    Flag = "AutoFarmDungeon",    -- ✅ Flag adicionada
     Value = _G.SlowHub.AutoFarmDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmDungeon = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
         if Value then
             startDungeonFarm()
         else
@@ -236,9 +235,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.DungeonFarmDistance = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -253,9 +250,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.DungeonFarmHeight = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -270,9 +265,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.DungeonFarmCooldown = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -286,9 +279,7 @@ Tab:Dropdown({
     Value = _G.SlowHub.DungeonVoteDifficulty or "Easy",
     Callback = function(option)
         _G.SlowHub.DungeonVoteDifficulty = type(option) == "table" and option[1] or option
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -303,20 +294,17 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.VoteInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
 Tab:Toggle({
     Title = "Auto Vote Difficulty",
+    Flag = "AutoVoteDungeon",    -- ✅ Flag adicionada
     Value = _G.SlowHub.AutoVoteDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoVoteDungeon = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
         if Value then
             startVoteLoop()
         else
@@ -338,20 +326,17 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.ReplayInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
 Tab:Toggle({
     Title = "Auto Replay Dungeon or Boss Rush",
+    Flag = "AutoReplayDungeon",  -- ✅ Flag adicionada
     Value = _G.SlowHub.AutoReplayDungeon or false,
     Callback = function(Value)
         _G.SlowHub.AutoReplayDungeon = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
         if Value then
             startReplayLoop()
         else
@@ -359,10 +344,3 @@ Tab:Toggle({
         end
     end,
 })
-
-task.spawn(function()
-    task.wait(2)
-    if _G.SlowHub.AutoFarmDungeon then startDungeonFarm() end
-    if _G.SlowHub.AutoVoteDungeon then startVoteLoop() end
-    if _G.SlowHub.AutoReplayDungeon then startReplayLoop() end
-end)
