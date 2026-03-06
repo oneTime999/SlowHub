@@ -360,7 +360,7 @@ Tab:Dropdown({
     Flag = "SelectedMobs",
     Values = MobList,
     Multi = true,
-    Default = _G.SlowHub.SelectedMobs or {},
+    Value = _G.SlowHub.SelectedMobs or {},
     Callback = function(Option)
         updateSelectedMobs(Option)
         _G.SlowHub.SelectedMobs = selectedMobs
@@ -374,7 +374,7 @@ Tab:Section({Title = "Farm Control"})
 
 Tab:Toggle({
     Title = "Auto Farm Selected Mobs",
-    Default = _G.SlowHub.AutoFarmSelectedMob or false,
+    Value = _G.SlowHub.AutoFarmSelectedMob or false,
     Callback = function(Value)
         if Value then
             if not _G.SlowHub.SelectedWeapon then
@@ -410,7 +410,7 @@ Tab:Toggle({
 
 Tab:Toggle({
     Title = "Auto Quest",
-    Default = _G.SlowHub.AutoQuestSelectedMob or false,
+    Value = _G.SlowHub.AutoQuestSelectedMob or false,
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         if _G.SaveConfig then
