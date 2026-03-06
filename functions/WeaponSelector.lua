@@ -1,7 +1,30 @@
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
 local Tab = _G.MainTab
+
+-- ✅ Sistema próprio de save/load para o dropdown de weapons
+local WEAPON_SAVE_PATH = "SlowHub_SelectedWeapon.json"
+
+local function SaveWeapon(name)
+    pcall(function()
+        writefile(WEAPON_SAVE_PATH, HttpService:JSONEncode({ weapon = name }))
+    end)
+end
+
+local function LoadWeapon()
+    local ok, result = pcall(function()
+        if isfile(WEAPON_SAVE_PATH) then
+            local data = HttpService:JSONDecode(readfile(WEAPON_SAVE_PATH))
+            return data.weapon
+        end
+    end)
+    if ok and result then
+        return result
+    end
+    return nil
+end
 
 local WeaponState = {
     Character = nil,
@@ -121,9 +144,11 @@ local WeaponDropdown = Tab:Dropdown({
         local weapon = type(Value) == "table" and Value[1] or Value
         if weapon and weapon ~= "" and weapon ~= "No weapons found" then
             _G.SlowHub.SelectedWeapon = weapon
+            SaveWeapon(weapon) -- ✅ salva no arquivo direto
             EquipSelectedTool()
         else
             _G.SlowHub.SelectedWeapon = nil
+            SaveWeapon("")
         end
         if _G.SaveConfig then _G.SaveConfig() end
     end
@@ -132,8 +157,7 @@ local WeaponDropdown = Tab:Dropdown({
 Tab:Button({
     Title = "Refresh Weapons",
     Callback = function()
-        local newWeapons = GetWeapons()
-        WeaponDropdown:Refresh(newWeapons)
+        WeaponDropdown:Refresh(GetWeapons())
     end
 })
 
@@ -166,13 +190,15 @@ Tab:Slider({
     end
 })
 
+-- ✅ Lê o arquivo, atualiza a lista e força o visual do dropdown
 task.spawn(function()
     task.wait(2)
     local realWeapons = GetWeapons()
     WeaponDropdown:Refresh(realWeapons)
 
-    local saved = _G.SlowHub.SelectedWeapon
+    local saved = LoadWeapon()
     if saved and saved ~= "" and saved ~= "No weapons found" then
+        _G.SlowHub.SelectedWeapon = saved
         WeaponDropdown:Set(saved)
         EquipSelectedTool()
     end
