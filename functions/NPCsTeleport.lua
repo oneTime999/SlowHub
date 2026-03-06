@@ -1,37 +1,8 @@
+local Tab = _G.TeleportsTab
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local Player = Players.LocalPlayer
 
-_G.SlowHub = _G.SlowHub or {}
-_G.SlowHub.SelectedNPC = _G.SlowHub.SelectedNPC or nil
-
-local CONFIG_FOLDER = "SlowHub"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
-local function ensureFolder()
-    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end
-
-local function loadConfig()
-    ensureFolder()
-    if isfile(CONFIG_FILE) then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE)) end)
-        if ok and type(data) == "table" then return data end
-    end
-    return {}
-end
-
-local function saveConfig(key, value)
-    ensureFolder()
-    local current = loadConfig()
-    current[key] = value
-    pcall(function() writefile(CONFIG_FILE, HttpService:JSONEncode(current)) end)
-end
-
-local saved = loadConfig()
-if saved["SelectedNPC"] ~= nil then _G.SlowHub.SelectedNPC = saved["SelectedNPC"] end
-
-local NPCs = {
+local npcs = {
     ["SummonBossNPC"]=Vector3.new(651.8101806640625,-3.6741936206817627,-1021.1312255859375),
     ["ExchangeNPC"]=Vector3.new(732.7742309570312,-4.511749267578125,-921.0400390625),
     ["HakiQuestNPC"]=Vector3.new(-497.9392395019531,23.657915115356445,-1252.6405029296875),
@@ -87,57 +58,59 @@ local NPCs = {
     ["SkillTreeNPC"]=Vector3.new(-1141.411376953125,6.342375755310059,212.076324462890620),
 }
 
-local NPCList = {}
-for name in pairs(NPCs) do table.insert(NPCList, name) end
-table.sort(NPCList)
+local npcList = {}
+for name in pairs(npcs) do table.insert(npcList, name) end
+table.sort(npcList)
 
-local TeleportState = {Character=nil, HumanoidRootPart=nil}
+local character = nil
+local humanoidRootPart = nil
 
-local function InitializeTeleportState()
-    TeleportState.Character = Player.Character
-    TeleportState.HumanoidRootPart = TeleportState.Character and TeleportState.Character:FindFirstChild("HumanoidRootPart")
+local function initialize()
+    character = Player.Character
+    humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
 end
 
-InitializeTeleportState()
+initialize()
 
 Player.CharacterAdded:Connect(function(char)
-    TeleportState.Character = char
+    character = char
     task.wait(0.1)
-    TeleportState.HumanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+    humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
 
-local function TeleportToPosition(position)
-    if not TeleportState.HumanoidRootPart then
-        TeleportState.HumanoidRootPart = TeleportState.Character and TeleportState.Character:FindFirstChild("HumanoidRootPart")
-        if not TeleportState.HumanoidRootPart then return false end
+local function teleportToPosition(position)
+    if not humanoidRootPart then
+        humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then return false end
     end
-    TeleportState.HumanoidRootPart.CFrame = CFrame.new(position)
+    humanoidRootPart.CFrame = CFrame.new(position)
     return true
 end
 
-local TeleportsTab = _G.TeleportsTab
+Tab:Section({Title = "NPC Teleport"})
 
-TeleportsTab:CreateSection({ Title = "NPC Teleport" })
-
-TeleportsTab:CreateDropdown({
-    Name = "Select NPC", Flag = "SelectNPCTeleport",
-    Options = NPCList,
-    CurrentOption = _G.SlowHub.SelectedNPC or NPCList[1],
-    MultipleOptions = false,
+Tab:Dropdown({
+    Title = "Select NPC",
+    Flag = "SelectNPCTeleport",
+    Values = npcList,
+    Multi = false,
+    Default = _G.SlowHub.SelectedNPC or npcList[1],
     Callback = function(value)
         local selected = type(value) == "table" and value[1] or value
         _G.SlowHub.SelectedNPC = selected
-        saveConfig("SelectedNPC", selected)
+        if _G.SaveConfig then
+            _G.SaveConfig()
+        end
     end,
 })
 
-TeleportsTab:CreateButton({
-    Name = "Teleport to NPC",
+Tab:Button({
+    Title = "Teleport to NPC",
     Callback = function()
         local targetNPC = _G.SlowHub.SelectedNPC
         if not targetNPC or targetNPC == "" then return end
-        local targetPosition = NPCs[targetNPC]
+        local targetPosition = npcs[targetNPC]
         if not targetPosition then return end
-        pcall(function() TeleportToPosition(targetPosition) end)
+        pcall(function() teleportToPosition(targetPosition) end)
     end,
 })
