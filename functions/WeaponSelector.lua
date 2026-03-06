@@ -114,7 +114,6 @@ Tab:Section({Title = "Weapon"})
 
 local WeaponDropdown = Tab:Dropdown({
     Title = "Select Weapon",
-    -- ✅ SEM Flag: dropdown dinâmico não funciona com o sistema de config do WindUI
     Values = GetWeapons(),
     Value = "",
     Multi = false,
@@ -167,10 +166,8 @@ Tab:Slider({
     end
 })
 
--- ✅ Espera mochila carregar, atualiza a lista e restaura
--- a arma salva em _G.SlowHub.SelectedWeapon manualmente
 task.spawn(function()
-    task.wait(1.5)
+    task.wait(2)
     local realWeapons = GetWeapons()
     WeaponDropdown:Refresh(realWeapons)
 
@@ -183,7 +180,7 @@ end)
 
 if _G.SlowHub.EquipLoop then
     task.spawn(function()
-        task.wait(1.5)
+        task.wait(2)
         StartEquipLoop()
     end)
 end
