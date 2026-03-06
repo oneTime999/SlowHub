@@ -55,7 +55,7 @@ Tab:Dropdown({
     Flag = "SelectMerchantItems",
     Values = merchantItemsList,
     Multi = true,
-    Default = _G.SlowHub.SelectedMerchantItems or {},
+    Value = _G.SlowHub.SelectedMerchantItems or {},
     Callback = function(value)
         _G.SlowHub.SelectedMerchantItems = {}
         if type(value) == "table" then
@@ -103,7 +103,7 @@ Tab:Slider({
 
 Tab:Toggle({
     Title = "Auto Buy Selected Items",
-    Default = _G.SlowHub.AutoBuyMerchant or false,
+    Value = _G.SlowHub.AutoBuyMerchant or false,
     Callback = function(Value)
         _G.SlowHub.AutoBuyMerchant = Value
         if _G.SaveConfig then
