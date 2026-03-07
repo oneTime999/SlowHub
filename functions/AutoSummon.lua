@@ -21,8 +21,15 @@ local difficultyList = {"Normal","Medium","Hard","Extreme"}
 
 local summonConnection = nil
 local isSummoning = false
+local isSummonLoopRunning = false
 local selectedBosses = {}
-local selectedDifficulty = "Normal"
+local selectedDifficulty = _G.SlowHub.SelectBossDifficulty or "Normal"
+
+if type(_G.SlowHub.SelectBossSummon) == "table" then
+    for _, v in ipairs(_G.SlowHub.SelectBossSummon) do
+        table.insert(selectedBosses, v)
+    end
+end
 
 local function isBossAlive(bossName)
     local found = false
@@ -37,7 +44,7 @@ local function isBossAlive(bossName)
 end
 
 local function isPitySystemEnabled()
-    return _G.SlowHub and _G.SlowHub.PriorityPityEnabled ==.PriorityPityEnabled == true
+    return _G.SlowHub and _G.SlowHub.PriorityPityEnabled == true
 end
 
 local function getPityTargetBoss()
@@ -124,6 +131,7 @@ end
 
 local function stopAutoSummon()
     isSummoning = false
+    isSummonLoopRunning = false
     if summonConnection then
         summonConnection:Disconnect()
         summonConnection = nil
@@ -134,14 +142,24 @@ end
 local function startAutoSummon()
     if isSummoning then stopAutoSummon(); task.wait(0.2) end
     isSummoning = true
+    isSummonLoopRunning = false
     _G.SlowHub.AutoSummonBoss = true
+    local lastSummonTime = 0
     summonConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoSummonBoss then stopAutoSummon(); return end
+        if not _G.SlowHub.AutoSummonBoss then
+            stopAutoSummon()
+            return
+        end
+        if isSummonLoopRunning then return end
+        local now = tick()
+        if now - lastSummonTime < (_G.SlowHub.SummonInterval or 0.5) then return end
+        lastSummonTime = now
+        isSummonLoopRunning = true
         local bossesToSummon = getFilteredBossesToSummon()
         for _, bossName in ipairs(bossesToSummon) do
             processBossSummon(bossName)
         end
-        task.wait(_G.SlowHub.SummonInterval or 0.5)
+        isSummonLoopRunning = false
     end)
 end
 
@@ -159,9 +177,7 @@ Tab:Dropdown({
             for _, boss in ipairs(value) do table.insert(selectedBosses, boss) end
         end
         _G.SlowHub.SelectBossSummon = selectedBosses
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -174,9 +190,7 @@ Tab:Dropdown({
     Callback = function(value)
         selectedDifficulty = type(value) == "table" and value[1] or value
         _G.SlowHub.SelectBossDifficulty = selectedDifficulty
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -191,9 +205,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.SummonInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -202,9 +214,7 @@ Tab:Toggle({
     Default = _G.SlowHub.AutoSummonBoss or false,
     Callback = function(Value)
         _G.SlowHub.AutoSummonBoss = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
         if Value then
             startAutoSummon()
         else
