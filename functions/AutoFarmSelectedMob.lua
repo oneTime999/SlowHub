@@ -1,4 +1,4 @@
-Local Tab = _G.MainTab
+local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
