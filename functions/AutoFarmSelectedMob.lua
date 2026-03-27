@@ -171,8 +171,8 @@ local function moveToTarget(targetCFrame)
     end
 
     lastTweenTarget = targetCFrame
-    local speed = _G.SlowHub.TweenSpeed or 40
-    if speed <= 0 then speed = 40 end
+    local speed = _G.SlowHub.TweenSpeed or 500
+    if speed <= 0 then speed = 500 end
     local timeToReach = distance / speed
     local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
 
@@ -185,7 +185,7 @@ end
 
 local function performAttack()
     local currentTime = tick()
-    local cooldown = _G.SlowHub.FarmCooldown or 0.15
+    local cooldown = _G.SlowHub.FarmCooldown or 0
     if currentTime - lastAttackTime < cooldown then return end
     lastAttackTime = currentTime
     pcall(function()
@@ -248,7 +248,7 @@ local function startQuestLoop()
     task.spawn(function()
         while isQuesting do 
             acceptQuest()
-            task.wait(_G.SlowHub.AutoQuestInterval or 2)
+            task.wait(_G.SlowHub.AutoQuestInterval or 1)
         end
     end)
 end
@@ -271,6 +271,7 @@ local function stopAutoFarm()
 
     pcall(function()
         if humanoidRootPart then
+            humanoidRootPart.Anchored = false
             humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
         end
     end)
@@ -323,7 +324,7 @@ local function doFarmLogic()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(1)
+            task.wait(0.2)
         end
         hasUsedPortal = true
         return
@@ -375,15 +376,15 @@ local function startAutoFarm()
     if not noclipConnection then
         noclipConnection = RunService.Stepped:Connect(function()
             if not isFarming then return end
+            if humanoidRootPart then
+                humanoidRootPart.Anchored = true
+            end
             if character then
                 for _, part in pairs(character:GetDescendants()) do
                     if part:IsA("BasePart") and part.CanCollide then
                         part.CanCollide = false
                     end
                 end
-            end
-            if humanoidRootPart then
-                humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             end
         end)
     end
@@ -472,11 +473,11 @@ Tab:Toggle({
 Tab:Slider({
     Title = "Tween Speed",
     Flag = "TweenSpeed",
-    Step = 1,
+    Step = 10,
     Value = {
         Min = 16,
-        Max = 500,
-        Default = _G.SlowHub.TweenSpeed or 40,
+        Max = 1000,
+        Default = _G.SlowHub.TweenSpeed or 500,
     },
     Callback = function(Value)
         _G.SlowHub.TweenSpeed = Value
@@ -517,11 +518,11 @@ Tab:Slider({
 Tab:Slider({
     Title = "Attack Cooldown",
     Flag = "FarmCooldown",
-    Step = 0.05,
+    Step = 0.01,
     Value = {
-        Min = 0.05,
+        Min = 0,
         Max = 0.5,
-        Default = _G.SlowHub.FarmCooldown or 0.15,
+        Default = _G.SlowHub.FarmCooldown or 0,
     },
     Callback = function(Value)
         _G.SlowHub.FarmCooldown = Value
@@ -534,9 +535,9 @@ Tab:Slider({
     Flag = "AutoQuestInterval",
     Step = 0.5,
     Value = {
-        Min = 1,
+        Min = 0.5,
         Max = 5,
-        Default = _G.SlowHub.AutoQuestInterval or 2,
+        Default = _G.SlowHub.AutoQuestInterval or 1,
     },
     Callback = function(Value)
         _G.SlowHub.AutoQuestInterval = Value
