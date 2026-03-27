@@ -1,18 +1,23 @@
 local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService") -- NOVO
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local miniBossConfig = {
-    ["ThiefBoss"]={quest="QuestNPC2"},["MonkeyBoss"]={quest="QuestNPC4"},
-    ["DesertBoss"]={quest="QuestNPC6"},["SnowBoss"]={quest="QuestNPC8"},
+    ["ThiefBoss"]={quest="QuestNPC2"},
+    ["MonkeyBoss"]={quest="QuestNPC4"},
+    ["DesertBoss"]={quest="QuestNPC6"},
+    ["SnowBoss"]={quest="QuestNPC8"},
     ["PandaMiniBoss"]={quest="QuestNPC10"},
 }
-local miniBossList = {"ThiefBoss","MonkeyBoss","DesertBoss","SnowBoss","PandaMiniBoss"}
 
--- NOVO: Portais para cada Mini Boss (ajuste conforme seu jogo)
+-- ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z)
+local miniBossList = {}
+for name in pairs(miniBossConfig) do table.insert(miniBossList, name) end
+table.sort(miniBossList) -- DesertBoss, MonkeyBoss, PandaMiniBoss, SnowBoss, ThiefBoss
+
 local MiniBossPortals = {
     ["ThiefBoss"] = "Starter",
     ["MonkeyBoss"] = "Jungle",
@@ -21,13 +26,12 @@ local MiniBossPortals = {
     ["PandaMiniBoss"] = "Shibuya",
 }
 
--- NOVO: Variáveis de controle de estado (igual aos códigos anteriores)
 local currentTween = nil
 local lastTweenTarget = nil
 local lastPortaledMiniBoss = nil
 local waitingForSpawn = false
 local spawnWaitStart = 0
-local MAX_SPAWN_WAIT = 12 -- Mini bosses demoram um pouco para spawnar
+local MAX_SPAWN_WAIT = 12
 
 local farmConnection = nil
 local questConnection = nil
@@ -36,7 +40,7 @@ local isQuesting = false
 local selectedMiniBoss = nil
 local lastTargetName = nil
 local wasAttackingBoss = false
-local lastAttackTime = 0
+-- REMOVIDO: lastAttackTime - não precisa mais
 local character = nil
 local humanoidRootPart = nil
 local humanoid = nil
@@ -76,7 +80,6 @@ local function equipWeapon()
     end)
 end
 
--- NOVO: Sistema de Cancelar Tween (igual aos códigos anteriores)
 local function cancelTween()
     if currentTween then
         currentTween:Cancel()
@@ -84,7 +87,6 @@ local function cancelTween()
     end
 end
 
--- NOVO: Sistema de Movimentação com Tween (igual aos códigos anteriores)
 local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
@@ -93,20 +95,18 @@ local function moveToTarget(targetCFrame)
 
     local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
 
-    -- Se já está perto, teleporta direto
     if distance <= currentFarmDist + 2 then
         cancelTween()
         humanoidRootPart.CFrame = targetCFrame
         return true
     end
 
-    -- Se o alvo mudou, cancela tween anterior
     if lastTweenTarget then
         local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
         if posDiff > 1 then
             cancelTween()
         elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
-            return false -- Já está em movimento para o mesmo alvo
+            return false
         end
     end
 
@@ -122,10 +122,8 @@ local function moveToTarget(targetCFrame)
     return false
 end
 
+-- REMOVIDO: Verificação de cooldown - ataque na velocidade máxima
 local function performAttack()
-    local currentTime = tick()
-    if currentTime - lastAttackTime < (_G.SlowHub.MiniBossFarmCooldown or 0.15) then return end
-    lastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
@@ -148,14 +146,13 @@ local function acceptQuest()
     end)
 end
 
--- NOVO: Reset completo do estado (igual aos códigos anteriores)
 local function resetFarmState()
     lastTargetName = nil
     lastPortaledMiniBoss = nil
     waitingForSpawn = false
     spawnWaitStart = 0
     wasAttackingBoss = false
-    lastAttackTime = 0
+    -- REMOVIDO: lastAttackTime = 0
     cancelTween()
 end
 
@@ -177,7 +174,7 @@ end
 local function stopAutoFarmMiniBoss()
     if not isFarming then return end
     isFarming = false
-    cancelTween() -- NOVO
+    cancelTween()
     if farmConnection then
         farmConnection:Disconnect()
         farmConnection = nil
@@ -187,7 +184,6 @@ local function stopAutoFarmMiniBoss()
     _G.SlowHub.AutoFarmMiniBosses = false
 end
 
--- NOVO: Função principal de farm adaptada
 local function farmLoop()
     if not _G.SlowHub.AutoFarmMiniBosses then stopAutoFarmMiniBoss(); return end
     if not character or not character.Parent then return end
@@ -200,7 +196,6 @@ local function farmLoop()
         if not humanoid or humanoid.Health <= 0 then return end
     end
     
-    -- Verificação de Boss global (pausa se estiver atacando boss normal)
     if _G.SlowHub.IsAttackingBoss then 
         wasAttackingBoss = true
         cancelTween()
@@ -208,21 +203,19 @@ local function farmLoop()
     end
     
     if wasAttackingBoss then
-        lastPortaledMiniBoss = nil -- Força re-teleporte após boss
+        lastPortaledMiniBoss = nil
         wasAttackingBoss = false
     end
     
     if not selectedMiniBoss then return end
     
-    -- Sincronização: Se mudou de mini boss, força novo teleporte
     if selectedMiniBoss ~= lastTargetName then
         lastTargetName = selectedMiniBoss
-        lastPortaledMiniBoss = nil -- Força teleporte para nova área
+        lastPortaledMiniBoss = nil
         waitingForSpawn = false
         cancelTween()
     end
     
-    -- CORREÇÃO: Só pode farmar se já usou o portal deste mini boss específico
     if lastPortaledMiniBoss ~= selectedMiniBoss then
         local portalName = MiniBossPortals[selectedMiniBoss]
         if portalName then
@@ -230,15 +223,14 @@ local function farmLoop()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.5) -- Garante o teleporte
+            task.wait(0.5)
         end
-        lastPortaledMiniBoss = selectedMiniBoss -- Marca que tentou usar portal deste mini boss
+        lastPortaledMiniBoss = selectedMiniBoss
         waitingForSpawn = true
         spawnWaitStart = tick()
-        return -- Sai e espera spawn na próxima iteração
+        return
     end
     
-    -- Se está esperando spawn, verifica se mini boss apareceu
     if waitingForSpawn then
         local elapsed = tick() - spawnWaitStart
         
@@ -252,28 +244,23 @@ local function farmLoop()
                        miniBoss:FindFirstChildOfClass("Humanoid").Health > 0
         
         if isAlive then
-            -- Mini Boss spawnou! Pode começar a farmar
             waitingForSpawn = false
         elseif elapsed > MAX_SPAWN_WAIT then
-            -- Timeout: força re-teleporte
-            lastPortaledMiniBoss = nil -- Isso vai forçar teleporte novamente na próxima iteração
+            lastPortaledMiniBoss = nil
             waitingForSpawn = false
             task.wait(0.5)
         else
-            -- Ainda esperando, fica parado
             cancelTween()
         end
-        return -- Sai da função até confirmar spawn ou timeout
+        return
     end
     
-    -- Só chega aqui se: já usou o portal deste mini boss E ele já spawnou
     if not npcsFolder then return end
     local miniBoss = npcsFolder:FindFirstChild(selectedMiniBoss)
     if not miniBoss then return end
     
     local bossHumanoid = miniBoss:FindFirstChildOfClass("Humanoid")
     if not bossHumanoid or bossHumanoid.Health <= 0 then 
-        -- Mini Boss morreu, aguarda respawn
         waitingForSpawn = true
         spawnWaitStart = tick()
         return 
@@ -292,7 +279,7 @@ local function farmLoop()
     
     if hasArrived then
         equipWeapon()
-        performAttack()
+        performAttack() -- Ataca imediatamente sem delay
     end
 end
 
@@ -312,10 +299,11 @@ end
 
 Tab:Section({Title = "Mini Bosses"})
 
+-- ORDEM ALFABÉTICA: DesertBoss -> MonkeyBoss -> PandaMiniBoss -> SnowBoss -> ThiefBoss
 Tab:Dropdown({
     Title = "Select Mini Boss",
     Flag = "SelectMiniBoss",
-    Values = miniBossList,
+    Values = miniBossList, -- Já ordenado alfabeticamente
     Multi = false,
     Value = _G.SlowHub.SelectMiniBoss or miniBossList[1],
     Callback = function(value)
@@ -346,7 +334,6 @@ Tab:Toggle({
     end,
 })
 
--- NOVO: Slider de Tween Speed (igual aos outros códigos)
 Tab:Slider({
     Title = "Tween Speed",
     Flag = "MiniBossTweenSpeed",
@@ -401,19 +388,4 @@ Tab:Slider({
     end,
 })
 
-Tab:Slider({
-    Title = "Attack Cooldown",
-    Flag = "MiniBossCooldown",
-    Step = 0.05,
-    Value = {
-        Min = 0.05,
-        Max = 0.5,
-        Default = _G.SlowHub.MiniBossFarmCooldown or 0.15,
-    },
-    Callback = function(Value)
-        _G.SlowHub.MiniBossFarmCooldown = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end,
-})
+-- REMOVIDO: Slider de Attack Cooldown
