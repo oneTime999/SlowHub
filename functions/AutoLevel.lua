@@ -20,7 +20,7 @@ local LevelConfig = {
     {minLevel = 10000, maxLevel = 10749, quest = "QuestNPC16", npc = "Swordsman", count = 5},
     {minLevel = 10750, maxLevel = 11499, quest = "QuestNPC17", npc = "Quincy", count = 5},
     {minLevel = 11500, maxLevel = 11999, quest = "QuestNPC18", npc = "Ninja", count = 5},
-    {minLevel = 12000, maxLevel = 99999, quest = "QuestNPC19", npc = "Arena Fighter", count = 5},
+    {minLevel = 12000, maxLevel = 99999, quest = "QuestNPC19", npc = "ArenaFighter", count = 5},
 }
 
 -- NOVO: Portais para cada área (mesmo do primeiro código)
@@ -38,7 +38,7 @@ local MobPortals = {
     ["Swordsman"] = "Judgement",
     ["Quincy"] = "SoulDominion",
     ["Ninja"] = "Ninja",
-    ["Arena Fighter"] = "Lawless"
+    ["ArenaFighter"] = "Lawless"
 }
 -- NOVO: Variáveis de controle de estado (igual ao primeiro código)
 local currentTween = nil
