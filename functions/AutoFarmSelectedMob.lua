@@ -5,199 +5,86 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- ============================================================
--- CONFIGURAÇÃO
--- ============================================================
-
 local MobList = {
-    "Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer",
+    "Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", 
     "Hollow", "StrongSorcerer", "Curse", "Slime", "AcademyTeacher"
 }
 
 local QuestConfig = {
-    ["Thief"]          = "QuestNPC1",
-    ["Monkey"]         = "QuestNPC3",
-    ["DesertBandit"]   = "QuestNPC5",
-    ["FrostRogue"]     = "QuestNPC7",
-    ["Sorcerer"]       = "QuestNPC9",
-    ["Hollow"]         = "QuestNPC11",
+    ["Thief"] = "QuestNPC1",
+    ["Monkey"] = "QuestNPC3", 
+    ["DesertBandit"] = "QuestNPC5",
+    ["FrostRogue"] = "QuestNPC7",
+    ["Sorcerer"] = "QuestNPC9",
+    ["Hollow"] = "QuestNPC11",
     ["StrongSorcerer"] = "QuestNPC12",
-    ["Curse"]          = "QuestNPC13",
-    ["Slime"]          = "QuestNPC14",
+    ["Curse"] = "QuestNPC13",
+    ["Slime"] = "SlimeNPC14",
     ["AcademyTeacher"] = "QuestNPC15"
 }
 
 local MobPortals = {
-    ["Thief"]          = "Starter",
-    ["Monkey"]         = "Jungle",
-    ["DesertBandit"]   = "Desert",
-    ["FrostRogue"]     = "Snow",
-    ["Sorcerer"]       = "Magic",
-    ["Hollow"]         = "Hueco",
+    ["Thief"] = "Starter",
+    ["Monkey"] = "Jungle", 
+    ["DesertBandit"] = "Desert",
+    ["FrostRogue"] = "Snow",
+    ["Sorcerer"] = "Magic",
+    ["Hollow"] = "Hueco",
     ["StrongSorcerer"] = "Magic2",
-    ["Curse"]          = "Cursed",
-    ["Slime"]          = "SlimeForest",
+    ["Curse"] = "Cursed",
+    ["Slime"] = "SlimeForest",
     ["AcademyTeacher"] = "Academy"
 }
 
--- Constantes de tempo
-local PORTAL_WAIT_DURATION = 1.5   -- segundos aguardando área carregar após portal
-local NPC_SPAWN_TIMEOUT    = 12    -- segundos antes de desistir e trocar de mob
-local ATTACK_COOLDOWN      = 0.12  -- segundos entre ataques (evita spam de remotes)
+local questLoop = nil
+local farmLoop = nil
+local noclipConnection = nil
+local isFarming = false
+local isQuesting = false
+local selectedMobs = {}
+local currentMobIndex = 1
+local currentNPCIndex = 1
+local killCount = 0
+local lastTargetName = nil
+local hasUsedPortal = false
+local wasAttackingBoss = false
+local lastValidQuest = nil
+local character = nil
+local humanoidRootPart = nil
+local humanoid = nil
+local npcsFolder = nil
 
--- ============================================================
--- ESTADO
--- ============================================================
+local currentTween = nil
+local lastTweenTarget = nil
 
-local farmLoop            = nil
-local noclipConnection    = nil
-local characterDiedConn   = nil   -- FIX 10: rastrear conexão para desconectar
-
-local isFarming           = false
-local isQuesting          = false
-local selectedMobs        = {}
-local currentMobIndex     = 1
-local currentNPCIndex     = 1
-local killCount           = 0
-local lastTargetName      = nil
-local hasUsedPortal       = false
-local wasAttackingBoss    = false
-local lastValidQuest      = nil
-
--- Referências de personagem
-local character           = nil
-local humanoidRootPart    = nil
-local humanoid            = nil
-local npcsFolder          = nil
-
--- Estado do tween
-local currentTween        = nil
-local lastTweenTarget     = nil
-local lastTweenNPCPos     = nil   -- FIX 4: detectar movimento do NPC
-
--- Temporização (sem task.wait dentro do Heartbeat — FIX 1)
-local lastAttackTime      = 0
-local portalTriggeredAt   = 0     -- tick() de quando o portal foi usado
-local isPortalWaiting     = false  -- aguardando área carregar
-local npcWaitStartTime    = 0      -- FIX 6: timeout de spawn
-
--- ============================================================
--- FUNÇÕES AUXILIARES
--- ============================================================
-
-local function cancelTween()
-    if currentTween then
-        currentTween:Cancel()
-        currentTween = nil
-    end
-    lastTweenTarget = nil
-    lastTweenNPCPos = nil
-end
-
--- FIX 8: limpar BodyVelocity sem acumular instâncias
-local function cleanupBodyVelocity()
-    pcall(function()
-        if humanoidRootPart then
-            local bv = humanoidRootPart:FindFirstChild("SlowHubVelocity")
-            if bv then bv:Destroy() end
-        end
-        -- Também verificar no personagem inteiro por segurança
-        if character then
-            for _, bv in ipairs(character:GetDescendants()) do
-                if bv:IsA("BodyVelocity") and bv.Name == "SlowHubVelocity" then
-                    bv:Destroy()
-                end
-            end
-        end
-    end)
-end
-
-local function createBodyVelocity()
-    if not humanoidRootPart then return end
-    cleanupBodyVelocity()  -- garantir que não há duplicata
-    local bv = Instance.new("BodyVelocity")
-    bv.Name     = "SlowHubVelocity"
-    bv.Velocity  = Vector3.zero
-    bv.MaxForce  = Vector3.new(math.huge, math.huge, math.huge)
-    bv.Parent    = humanoidRootPart
-end
-
--- FIX 2: Configurar personagem com tratamento de morte
-local function setupCharacter(char)
-    character         = char
-    humanoid          = nil
-    humanoidRootPart  = nil
-
-    -- FIX 10: desconectar conexão anterior antes de criar nova
-    if characterDiedConn then
-        characterDiedConn:Disconnect()
-        characterDiedConn = nil
-    end
-
-    task.wait(0.1)
-    humanoid         = char:FindFirstChildOfClass("Humanoid")
-    humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
-
-    if humanoid then
-        characterDiedConn = humanoid.Died:Connect(function()
-            -- Ao morrer: limpar tween e BV, resetar flags de portal
-            cancelTween()
-            cleanupBodyVelocity()
-            hasUsedPortal    = false
-            isPortalWaiting  = false
-            npcWaitStartTime = 0
-        end)
-    end
-
-    -- Se estava farmando, recriar BV após respawn
-    if isFarming then
-        task.wait(1.5)
-        -- Reatualizar referências pós-respawn
-        humanoid         = char:FindFirstChildOfClass("Humanoid")
-        humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
-        if humanoidRootPart then
-            createBodyVelocity()
-        end
-        -- Forçar retelporte na área correta
-        hasUsedPortal    = false
-        isPortalWaiting  = false
-        npcWaitStartTime = 0
-    end
-end
+-- NOVO: Flag para controlar espera de spawn
+local waitingForSpawn = false
+local spawnWaitStart = 0
+local MAX_SPAWN_WAIT = 10 -- máximo 10 segundos esperando spawn
 
 local function initialize()
-    character         = Player.Character
-    humanoid          = character and character:FindFirstChildOfClass("Humanoid")
-    humanoidRootPart  = character and character:FindFirstChild("HumanoidRootPart")
-    npcsFolder        = workspace:FindFirstChild("NPCs")
+    character = Player.Character
+    humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    npcsFolder = workspace:FindFirstChild("NPCs")
 end
 
 initialize()
 
--- ============================================================
--- EVENTOS GLOBAIS
--- ============================================================
-
 Player.CharacterAdded:Connect(function(char)
-    setupCharacter(char)
+    character = char
+    humanoid = nil
+    humanoidRootPart = nil
+    task.wait(0.1)
+    humanoid = char:FindFirstChildOfClass("Humanoid")
+    humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
 end)
 
--- FIX 7: monitorar criação E remoção da pasta NPCs
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "NPCs" then
         npcsFolder = child
     end
 end)
-
-workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "NPCs" then
-        npcsFolder = nil
-    end
-end)
-
--- ============================================================
--- HELPERS DE NPC / CONFIG
--- ============================================================
 
 local function getNPC(npcName, index)
     if not npcsFolder then return nil end
@@ -215,119 +102,131 @@ local function isNPCAlive(npc)
     return hum and hum.Health > 0
 end
 
+-- NOVO: Verifica se algum NPC do mob atual está vivo
+local function isAnyNPCAlive(mobName, count)
+    if not npcsFolder then return false end
+    for i = 1, count do
+        local npc = npcsFolder:FindFirstChild(mobName .. i)
+        if isNPCAlive(npc) then
+            return true
+        end
+    end
+    return false
+end
+
 local function getNextIndex(current, maxCount)
-    local next = current + 1
-    return next > maxCount and 1 or next
+    local nextIndex = current + 1
+    if nextIndex > maxCount then return 1 end
+    return nextIndex
 end
 
 local function getNextMobIndex()
-    local next = currentMobIndex + 1
-    return next > #selectedMobs and 1 or next
+    local nextIndex = currentMobIndex + 1
+    if nextIndex > #selectedMobs then return 1 end
+    return nextIndex
 end
 
 local function getQuestForMob(mobName)
     local quest = QuestConfig[mobName]
-    if quest then lastValidQuest = quest end
-    return quest or nil
+    if quest then
+        lastValidQuest = quest
+        return quest
+    end
+    return nil
 end
 
 local function getMobConfig(mobName)
     return {
-        npc   = mobName,
+        npc = mobName,
         quest = getQuestForMob(mobName),
         count = 5
     }
 end
 
--- ============================================================
--- EQUIPAR ARMA
--- ============================================================
-
 local function equipWeapon()
-    if not _G.SlowHub.SelectedWeapon then return end
-    pcall(function()
-        if not character or not humanoid then return end
-        if character:FindFirstChild(_G.SlowHub.SelectedWeapon) then return end
+    if not _G.SlowHub.SelectedWeapon then return false end
+    local success = pcall(function()
+        if not character or not humanoid then return false end
+        local hasEquipped = character:FindFirstChild(_G.SlowHub.SelectedWeapon)
+        if hasEquipped then return true end
         local backpack = Player:FindFirstChild("Backpack")
-        if not backpack then return end
+        if not backpack then return false end
         local weapon = backpack:FindFirstChild(_G.SlowHub.SelectedWeapon)
-        if weapon then humanoid:EquipTool(weapon) end
+        if weapon then
+            humanoid:EquipTool(weapon)
+            return true
+        end
+        return false
     end)
+    return success
 end
 
--- ============================================================
--- MOVIMENTO (FIX 4 + FIX 5)
--- ============================================================
+local function cancelTween()
+    if currentTween then
+        currentTween:Cancel()
+        currentTween = nil
+    end
+end
 
-local function moveToTarget(targetCFrame, npcRoot)
+-- CORREÇÃO 2: Sempre ler configurações atualizadas em tempo real
+local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
-    local dist     = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
-    local farmDist = _G.SlowHub.FarmDistance or 8
+    -- LER VALORES FRESH A CADA CHAMADA
+    local currentFarmDist = _G.SlowHub.FarmDistance or 8
+    local currentSpeed = _G.SlowHub.TweenSpeed or 500
 
-    -- Já chegou
-    if dist <= farmDist + 2 then
+    local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
+
+    if distance <= currentFarmDist + 2 then
         cancelTween()
         humanoidRootPart.CFrame = targetCFrame
         return true
     end
 
-    -- FIX 4: NPC se moveu muito → tween antigo é inválido
-    if npcRoot and lastTweenNPCPos then
-        if (npcRoot.Position - lastTweenNPCPos).Magnitude > 8 then
+    -- Cancela tween se target mudou significativamente (incluindo height/distance)
+    if lastTweenTarget then
+        local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
+        -- Se mudou mais de 1 unidade (inclui mudança de height/distance), cancela
+        if posDiff > 1 then
             cancelTween()
+        elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
+            return false
         end
     end
 
-    -- Tween ainda válido e tocando
-    if lastTweenTarget and currentTween
-        and currentTween.PlaybackState == Enum.PlaybackState.Playing
-        and (lastTweenTarget.Position - targetCFrame.Position).Magnitude < 5 then
-        return false
-    end
-
-    -- FIX 5: criar tween limpo sem duplo-cancelamento
-    cancelTween()
-
-    local speed       = math.max(_G.SlowHub.TweenSpeed or 500, 1)
-    local timeToReach = dist / speed
-    local tweenInfo   = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
-
     lastTweenTarget = targetCFrame
-    if npcRoot then lastTweenNPCPos = npcRoot.Position end
+    if currentSpeed <= 0 then currentSpeed = 500 end
+    local timeToReach = distance / currentSpeed
+    local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
 
+    cancelTween()
     currentTween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetCFrame})
     currentTween:Play()
 
     return false
 end
 
--- ============================================================
--- ATAQUE (FIX 3: cooldown)
--- ============================================================
-
 local function performAttack()
-    local now = tick()
-    if now - lastAttackTime < ATTACK_COOLDOWN then return end
-    lastAttackTime = now
-
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if combatSystem then
-            local remotes    = combatSystem:FindFirstChild("Remotes")
-            local requestHit = remotes and remotes:FindFirstChild("RequestHit")
-            if requestHit then requestHit:FireServer() end
+            local remotes = combatSystem:FindFirstChild("Remotes")
+            if remotes then
+                local requestHit = remotes:FindFirstChild("RequestHit")
+                if requestHit then 
+                    requestHit:FireServer() 
+                end
+            end
         end
         if character then
             local tool = character:FindFirstChildOfClass("Tool")
-            if tool then tool:Activate() end
+            if tool then
+                tool:Activate()
+            end
         end
     end)
 end
-
--- ============================================================
--- QUEST
--- ============================================================
 
 local function acceptQuest()
     if not _G.SlowHub.AutoQuestSelectedMob or _G.SlowHub.IsAttackingBoss then return end
@@ -337,9 +236,33 @@ local function acceptQuest()
         local questToAccept = getQuestForMob(currentMob)
         if not questToAccept then return end
         local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-        local questAccept  = remoteEvents and remoteEvents:FindFirstChild("QuestAccept")
-        if questAccept then questAccept:FireServer(questToAccept) end
+        if not remoteEvents then return end
+        local questAccept = remoteEvents:FindFirstChild("QuestAccept")
+        if questAccept then
+            questAccept:FireServer(questToAccept)
+        end
     end)
+end
+
+local function switchToNextMob()
+    currentMobIndex = getNextMobIndex()
+    currentNPCIndex = 1
+    killCount = 0
+    hasUsedPortal = false
+    waitingForSpawn = false -- Reset do estado de espera
+    cancelTween()
+end
+
+local function resetFarmState()
+    currentMobIndex = 1
+    currentNPCIndex = 1
+    killCount = 0
+    lastTargetName = nil
+    hasUsedPortal = false
+    lastValidQuest = nil
+    waitingForSpawn = false
+    spawnWaitStart = 0
+    cancelTween()
 end
 
 local function stopQuestLoop()
@@ -350,38 +273,11 @@ local function startQuestLoop()
     if isQuesting then return end
     isQuesting = true
     task.spawn(function()
-        while isQuesting do
+        while isQuesting do 
             acceptQuest()
             task.wait(0.2)
         end
     end)
-end
-
--- ============================================================
--- CONTROLE DO FARM
--- ============================================================
-
-local function resetFarmState()
-    currentMobIndex  = 1
-    currentNPCIndex  = 1
-    killCount        = 0
-    lastTargetName   = nil
-    hasUsedPortal    = false
-    isPortalWaiting  = false
-    portalTriggeredAt = 0
-    npcWaitStartTime = 0
-    lastValidQuest   = nil
-    cancelTween()
-end
-
-local function switchToNextMob()
-    currentMobIndex  = getNextMobIndex()
-    currentNPCIndex  = 1
-    killCount        = 0
-    hasUsedPortal    = false
-    isPortalWaiting  = false
-    npcWaitStartTime = 0
-    cancelTween()
 end
 
 local function stopAutoFarm()
@@ -389,12 +285,12 @@ local function stopAutoFarm()
     cancelTween()
     stopQuestLoop()
     resetFarmState()
-
+    
     if noclipConnection then
         noclipConnection:Disconnect()
         noclipConnection = nil
     end
-
+    
     if farmLoop then
         farmLoop:Disconnect()
         farmLoop = nil
@@ -403,50 +299,39 @@ local function stopAutoFarm()
     pcall(function()
         if humanoidRootPart then
             humanoidRootPart.Anchored = false
+            local velocityFix = humanoidRootPart:FindFirstChild("SlowHubVelocity")
+            if velocityFix then velocityFix:Destroy() end
             humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
         end
     end)
-    cleanupBodyVelocity()
 end
-
--- ============================================================
--- LÓGICA PRINCIPAL DO FARM (Heartbeat — sem task.wait! FIX 1)
--- ============================================================
 
 local function doFarmLogic()
     if not isFarming then return end
     if not character or not character.Parent then return end
-
-    -- Reatualizar referências se perdidas
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
         if not humanoidRootPart then return end
     end
     if not humanoid then
         humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
+        if not humanoid or humanoid.Health <= 0 then return end
     end
-
-    -- Aguardar respawn se morto
-    if humanoid.Health <= 0 then return end
-
-    -- Pausa quando atacando boss
+    
     if _G.SlowHub.IsAttackingBoss then
         wasAttackingBoss = true
         cancelTween()
         return
     end
     if wasAttackingBoss then
-        hasUsedPortal    = false
-        isPortalWaiting  = false
+        hasUsedPortal = false
         wasAttackingBoss = false
     end
 
-    -- Validar mob selecionado
     local currentMobName = selectedMobs[currentMobIndex]
     if not currentMobName then
         currentMobIndex = 1
-        currentMobName  = selectedMobs[1]
+        currentMobName = selectedMobs[1]
         if not currentMobName then
             stopAutoFarm()
             _G.SlowHub.AutoFarmSelectedMob = false
@@ -454,77 +339,79 @@ local function doFarmLogic()
         end
     end
 
-    -- Detectar troca de mob → resetar estado da área
+    -- Sincronização de área ao trocar de Mob
     if currentMobName ~= lastTargetName then
-        lastTargetName   = currentMobName
-        hasUsedPortal    = false
-        isPortalWaiting  = false
-        npcWaitStartTime = 0
-        currentNPCIndex  = 1
-        killCount        = 0
+        lastTargetName = currentMobName
+        hasUsedPortal = false
+        waitingForSpawn = false
+        currentNPCIndex = 1
+        killCount = 0
         cancelTween()
     end
 
     local config = getMobConfig(currentMobName)
 
-    -- ── ETAPA 1: Teleportar para o portal ──────────────────────
+    -- CORREÇÃO 1: Sistema de teleporte com verificação de spawn
     if not hasUsedPortal then
         local portalName = MobPortals[currentMobName]
         if portalName then
             pcall(function()
-                ReplicatedStorage.Remotes.TeleportToPortal:FireServer(portalName)
+                local args = { [1] = portalName }
+                ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            portalTriggeredAt = tick()
-            isPortalWaiting   = true
+            task.wait(0.4)
         end
         hasUsedPortal = true
-        return
+        waitingForSpawn = true
+        spawnWaitStart = tick()
+        return -- Sai para esperar o spawn na próxima iteração
     end
 
-    -- ── ETAPA 2: Aguardar área carregar (tick-based, sem yield) ──
-    if isPortalWaiting then
-        if tick() - portalTriggeredAt < PORTAL_WAIT_DURATION then
-            return  -- área ainda carregando
+    -- Se está esperando spawn, verifica se algum NPC apareceu
+    if waitingForSpawn then
+        local elapsed = tick() - spawnWaitStart
+        local anyAlive = isAnyNPCAlive(config.npc, config.count)
+        
+        if anyAlive then
+            -- NPC spawnou! Pode continuar
+            waitingForSpawn = false
+            currentNPCIndex = 1 -- Reset para começar do primeiro
+        elseif elapsed > MAX_SPAWN_WAIT then
+            -- Timeout: tenta teleportar novamente
+            hasUsedPortal = false
+            waitingForSpawn = false
+            return
+        else
+            -- Ainda esperando, fica parado
+            cancelTween()
+            return
         end
-        isPortalWaiting  = false
-        npcWaitStartTime = tick()  -- iniciar contador de spawn timeout
     end
 
-    -- ── ETAPA 3: Aguardar NPC spawnar ─────────────────────────
+    -- CORREÇÃO 2: Recalcula offset com valores atualizados em tempo real
+    local currentHeight = _G.SlowHub.FarmHeight or 4
+    local currentDist = _G.SlowHub.FarmDistance or 8
+    
     local npc = getNPC(config.npc, currentNPCIndex)
-
-    if npc == nil then
-        -- FIX 6: timeout — se NPC não spawna, trocar de mob
-        if npcWaitStartTime == 0 then
-            npcWaitStartTime = tick()
-        elseif tick() - npcWaitStartTime > NPC_SPAWN_TIMEOUT then
-            warn("[SlowHub] NPC '" .. config.npc .. currentNPCIndex .. "' não spawnou em "
-                .. NPC_SPAWN_TIMEOUT .. "s. Trocando de mob.")
-            switchToNextMob()
-        end
-        return  -- aguardar sem fazer nada
-    end
-
-    -- NPC existe: resetar timer de spawn
-    npcWaitStartTime = 0
-
-    -- ── ETAPA 4: Atacar ou avançar ────────────────────────────
     local isAlive = isNPCAlive(npc)
 
     if not isAlive then
         killCount = killCount + 1
         if killCount >= config.count then
             switchToNextMob()
+            return
         else
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     else
         local npcRoot = getNPCRootPart(npc)
         if npcRoot then
-            local offset      = CFrame.new(0, _G.SlowHub.FarmHeight or 4, _G.SlowHub.FarmDistance or 8)
+            -- Recalcula offset com valores atuais (pode ter mudado no slider)
+            local offset = CFrame.new(0, currentHeight, currentDist)
             local targetCFrame = npcRoot.CFrame * offset
-
-            local hasArrived = moveToTarget(targetCFrame, npcRoot)
+            
+            local hasArrived = moveToTarget(targetCFrame)
+            
             if hasArrived then
                 equipWeapon()
                 performAttack()
@@ -533,62 +420,51 @@ local function doFarmLogic()
     end
 end
 
--- ============================================================
--- INICIAR FARM
--- ============================================================
-
 local function startAutoFarm()
     if isFarming then
         stopAutoFarm()
         task.wait(0.1)
     end
-
     initialize()
     if #selectedMobs == 0 then return false end
-
-    -- FIX 7: tentar achar npcsFolder se perdida
-    if not npcsFolder then
-        npcsFolder = workspace:FindFirstChild("NPCs")
-        if not npcsFolder then return false end
-    end
-
+    if not npcsFolder then return false end
+    
     isFarming = true
     resetFarmState()
-
+    
     if _G.SlowHub.AutoQuestSelectedMob then
         startQuestLoop()
     end
-
-    -- FIX 8: criar BV via função centralizada (sem duplicatas)
+    
+    -- Método BodyVelocity para permitir dano enquanto voa
     if humanoidRootPart then
         humanoidRootPart.Anchored = false
-        createBodyVelocity()
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "SlowHubVelocity"
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Parent = humanoidRootPart
     end
 
-    -- Noclip loop
     if not noclipConnection then
         noclipConnection = RunService.Stepped:Connect(function()
             if not isFarming then return end
-            if not character then return end
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
+            if character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
                 end
             end
         end)
     end
 
-    -- Farm loop
     if not farmLoop then
         farmLoop = RunService.Heartbeat:Connect(doFarmLogic)
     end
-
+    
     return true
 end
-
--- ============================================================
--- ATUALIZAR LISTA DE MOBS SELECIONADOS (FIX 9)
--- ============================================================
 
 local function updateSelectedMobs(options)
     selectedMobs = {}
@@ -597,30 +473,25 @@ local function updateSelectedMobs(options)
             table.insert(selectedMobs, tostring(value))
         end
     end
-
-    if _G.SlowHub.AutoFarmSelectedMob then
-        if #selectedMobs > 0 then
-            -- FIX 9: apenas resetar estado, não parar/reiniciar o loop inteiro
-            resetFarmState()
-        else
-            stopAutoFarm()
-            _G.SlowHub.AutoFarmSelectedMob = false
-        end
+    resetFarmState()
+    if _G.SlowHub.AutoFarmSelectedMob and #selectedMobs > 0 then
+        stopAutoFarm()
+        task.wait(0.1)
+        startAutoFarm()
+    elseif #selectedMobs == 0 then
+        stopAutoFarm()
+        _G.SlowHub.AutoFarmSelectedMob = false
     end
 end
-
--- ============================================================
--- INTERFACE
--- ============================================================
 
 Tab:Section({Title = "Mob Selection"})
 
 Tab:Dropdown({
-    Title    = "Select Mobs (Multi Select)",
-    Flag     = "SelectedMobs",
-    Values   = MobList,
-    Multi    = true,
-    Value    = _G.SlowHub.SelectedMobs or {},
+    Title = "Select Mobs (Multi Select)",
+    Flag = "SelectedMobs",
+    Values = MobList,
+    Multi = true,
+    Value = _G.SlowHub.SelectedMobs or {},
     Callback = function(Option)
         updateSelectedMobs(Option)
         _G.SlowHub.SelectedMobs = selectedMobs
@@ -631,8 +502,8 @@ Tab:Dropdown({
 Tab:Section({Title = "Farm Control"})
 
 Tab:Toggle({
-    Title    = "Auto Farm Selected Mobs",
-    Value    = _G.SlowHub.AutoFarmSelectedMob or false,
+    Title = "Auto Farm Selected Mobs",
+    Value = _G.SlowHub.AutoFarmSelectedMob or false,
     Callback = function(Value)
         _G.SlowHub.AutoFarmSelectedMob = Value
         if Value then
@@ -640,7 +511,7 @@ Tab:Toggle({
                 _G.SlowHub.AutoFarmSelectedMob = false
                 if _G.WindUI and _G.WindUI.Notify then
                     _G.WindUI:Notify({
-                        Title   = "Error",
+                        Title = "Error",
                         Content = "Check weapon and mobs!",
                         Duration = 3,
                     })
@@ -656,8 +527,8 @@ Tab:Toggle({
 })
 
 Tab:Toggle({
-    Title    = "Auto Quest",
-    Value    = _G.SlowHub.AutoQuestSelectedMob or false,
+    Title = "Auto Quest",
+    Value = _G.SlowHub.AutoQuestSelectedMob or false,
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         if _G.SaveConfig then _G.SaveConfig() end
@@ -671,55 +542,54 @@ Tab:Toggle({
 
 Tab:Slider({
     Title = "Tween Speed",
-    Flag  = "TweenSpeed",
-    Step  = 10,
+    Flag = "TweenSpeed",
+    Step = 10,
     Value = {
-        Min     = 16,
-        Max     = 1000,
+        Min = 16,
+        Max = 1000,
         Default = _G.SlowHub.TweenSpeed or 500,
     },
     Callback = function(Value)
         _G.SlowHub.TweenSpeed = Value
-        cancelTween()
         if _G.SaveConfig then _G.SaveConfig() end
+        -- CORREÇÃO 2: Cancela tween atual para forçar recálculo com nova velocidade
+        cancelTween()
     end
 })
 
 Tab:Slider({
     Title = "Farm Distance",
-    Flag  = "FarmDistance",
-    Step  = 1,
+    Flag = "FarmDistance",
+    Step = 1,
     Value = {
-        Min     = 1,
-        Max     = 10,
+        Min = 1,
+        Max = 10,
         Default = _G.SlowHub.FarmDistance or 8,
     },
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
-        cancelTween()
         if _G.SaveConfig then _G.SaveConfig() end
+        -- CORREÇÃO 2: Cancela tween para forçar recálculo de posição
+        cancelTween()
     end
 })
 
 Tab:Slider({
     Title = "Farm Height",
-    Flag  = "FarmHeight",
-    Step  = 1,
+    Flag = "FarmHeight",
+    Step = 1,
     Value = {
-        Min     = 1,
-        Max     = 10,
+        Min = 1,
+        Max = 10,
         Default = _G.SlowHub.FarmHeight or 4,
     },
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
-        cancelTween()
         if _G.SaveConfig then _G.SaveConfig() end
+        -- CORREÇÃO 2: Cancela tween para forçar recálculo de posição
+        cancelTween()
     end
 })
-
--- ============================================================
--- RESTAURAR ESTADO SALVO
--- ============================================================
 
 task.spawn(function()
     task.wait(2)
