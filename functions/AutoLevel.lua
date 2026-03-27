@@ -1,7 +1,7 @@
 local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService") -- NOVO
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
@@ -16,14 +16,12 @@ local LevelConfig = {
     {minLevel = 7000, maxLevel = 7999, quest = "QuestNPC13", npc = "Curse", count = 5},
     {minLevel = 8000, maxLevel = 8999, quest = "QuestNPC14", npc = "Slime", count = 5},
     {minLevel = 9000, maxLevel = 9999, quest = "QuestNPC15", npc = "AcademyTeacher", count = 5},
-    -- Novos NPCs adicionados abaixo:
     {minLevel = 10000, maxLevel = 10749, quest = "QuestNPC16", npc = "Swordsman", count = 5},
     {minLevel = 10750, maxLevel = 11499, quest = "QuestNPC17", npc = "Quincy", count = 5},
     {minLevel = 11500, maxLevel = 11999, quest = "QuestNPC18", npc = "Ninja", count = 5},
     {minLevel = 12000, maxLevel = 99999, quest = "QuestNPC19", npc = "ArenaFighter", count = 5},
 }
 
--- NOVO: Portais para cada área (mesmo do primeiro código)
 local MobPortals = {
     ["Thief"] = "Starter",
     ["Monkey"] = "Jungle", 
@@ -40,7 +38,7 @@ local MobPortals = {
     ["Ninja"] = "Ninja",
     ["ArenaFighter"] = "Lawless"
 }
--- NOVO: Variáveis de controle de estado (igual ao primeiro código)
+
 local currentTween = nil
 local lastTweenTarget = nil
 local lastPortaledMob = nil
@@ -53,10 +51,10 @@ local questLoop = nil
 local isFarming = false
 local isQuesting = false
 local currentNPCIndex = 1
-local killCount = 0 -- NOVO
+local killCount = 0
 local lastTargetName = nil
 local wasAttackingBoss = false
-local lastAttackTime = 0
+-- REMOVIDO: lastAttackTime - não precisa mais
 local character = nil
 local humanoidRootPart = nil
 local humanoid = nil
@@ -120,7 +118,6 @@ local function isNPCAlive(npc)
     return humanoid and humanoid.Health > 0
 end
 
--- NOVO: Verifica se algum NPC deste tipo está vivo (para detectar spawn)
 local function isAnyNPCAlive(mobName, count)
     if not npcsFolder then return false end
     for i = 1, count do
@@ -144,7 +141,6 @@ local function equipWeapon()
     end)
 end
 
--- NOVO: Sistema de Cancelar Tween (igual ao primeiro código)
 local function cancelTween()
     if currentTween then
         currentTween:Cancel()
@@ -152,7 +148,6 @@ local function cancelTween()
     end
 end
 
--- NOVO: Sistema de Movimentação com Tween (igual ao primeiro código)
 local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
@@ -161,20 +156,18 @@ local function moveToTarget(targetCFrame)
 
     local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
 
-    -- Se já está perto, teleporta direto
     if distance <= currentFarmDist + 2 then
         cancelTween()
         humanoidRootPart.CFrame = targetCFrame
         return true
     end
 
-    -- Se o alvo mudou, cancela tween anterior
     if lastTweenTarget then
         local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
         if posDiff > 1 then
             cancelTween()
         elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
-            return false -- Já está em movimento para o mesmo alvo
+            return false
         end
     end
 
@@ -190,10 +183,8 @@ local function moveToTarget(targetCFrame)
     return false
 end
 
+-- REMOVIDO: Verificação de cooldown - ataque na velocidade máxima
 local function performAttack()
-    local currentTime = tick()
-    if currentTime - lastAttackTime < (_G.SlowHub.FarmCooldown or 0.15) then return end
-    lastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
@@ -216,7 +207,6 @@ local function acceptQuest()
     end)
 end
 
--- NOVO: Reset completo do estado (igual ao primeiro código)
 local function resetFarmState()
     currentNPCIndex = 1
     killCount = 0
@@ -245,7 +235,7 @@ end
 local function stopAutoLevel()
     if not isFarming then return end
     isFarming = false
-    cancelTween() -- NOVO
+    cancelTween()
     if farmConnection then
         farmConnection:Disconnect()
         farmConnection = nil
@@ -259,7 +249,6 @@ local function stopAutoLevel()
     end)
 end
 
--- NOVO: Função principal de farm adaptada do primeiro código
 local function farmLoop()
     if not _G.SlowHub.AutoFarmLevel then stopAutoLevel(); return end
     if not character or not character.Parent then return end
@@ -272,7 +261,6 @@ local function farmLoop()
         if not humanoid or humanoid.Health <= 0 then return end
     end
     
-    -- Verificação de Boss
     if _G.SlowHub.IsAttackingBoss then 
         wasAttackingBoss = true
         cancelTween()
@@ -280,24 +268,22 @@ local function farmLoop()
     end
     
     if wasAttackingBoss then
-        lastPortaledMob = nil -- Força re-teleporte após boss
+        lastPortaledMob = nil
         wasAttackingBoss = false
     end
     
     local config = getCurrentConfig()
     if not config then return end
     
-    -- Sincronização: Se mudou de mob (level upou), reseta estado
     if config.npc ~= lastTargetName then
         lastTargetName = config.npc
-        lastPortaledMob = nil -- Força teleporte para nova área
+        lastPortaledMob = nil
         waitingForSpawn = false
         currentNPCIndex = 1
         killCount = 0
         cancelTween()
     end
     
-    -- CORREÇÃO: Só pode farmar se já usou o portal deste mob específico
     if lastPortaledMob ~= config.npc then
         local portalName = MobPortals[config.npc]
         if portalName then
@@ -305,38 +291,32 @@ local function farmLoop()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.5) -- Garante o teleporte
+            task.wait(0.5)
         end
-        lastPortaledMob = config.npc -- Marca que tentou usar portal deste mob
+        lastPortaledMob = config.npc
         waitingForSpawn = true
         spawnWaitStart = tick()
-        return -- Sai e espera spawn na próxima iteração
+        return
     end
     
-    -- Se está esperando spawn, verifica se NPCs apareceram
     if waitingForSpawn then
         local elapsed = tick() - spawnWaitStart
         
-        -- Verifica se algum NPC deste mob específico está vivo
         local anyAlive = isAnyNPCAlive(config.npc, config.count)
         
         if anyAlive then
-            -- NPCs spawnaram! Pode começar a farmar
             waitingForSpawn = false
-            currentNPCIndex = 1 -- Começa do primeiro
+            currentNPCIndex = 1
         elseif elapsed > MAX_SPAWN_WAIT then
-            -- Timeout: força re-teleporte
-            lastPortaledMob = nil -- Isso vai forçar teleporte novamente na próxima iteração
+            lastPortaledMob = nil
             waitingForSpawn = false
             task.wait(0.5)
         else
-            -- Ainda esperando, fica parado
             cancelTween()
         end
-        return -- Sai da função até confirmar spawn ou timeout
+        return
     end
     
-    -- Só chega aqui se: já usou o portal deste mob E os NPCs já spawnaram
     local currentHeight = _G.SlowHub.FarmHeight or 4
     local currentDist = _G.SlowHub.FarmDistance or 8
     
@@ -344,27 +324,21 @@ local function farmLoop()
     local alive = isNPCAlive(npc)
     
     if not alive then
-        -- NPC morto, conta kill e tenta próximo
         killCount = killCount + 1
         
         if killCount >= config.count then
-            -- Completou ciclo de kills, verifica se upou de level
             killCount = 0
             currentNPCIndex = 1
             
-            -- Verifica se o level mudou (pegando config novamente)
             local newConfig = getCurrentConfig()
             if newConfig.npc ~= config.npc then
-                -- Level upou! Vai mudar de mob automaticamente na próxima iteração
                 lastPortaledMob = nil
             end
             return
         else
-            -- Próximo NPC do mesmo mob
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     else
-        -- NPC vivo, vai farmar usando Tween
         local npcRoot = npc:FindFirstChild("HumanoidRootPart")
         if npcRoot then
             local offset = CFrame.new(0, currentHeight, currentDist)
@@ -374,10 +348,9 @@ local function farmLoop()
             
             if hasArrived then
                 equipWeapon()
-                performAttack()
+                performAttack() -- Ataca imediatamente sem delay
             end
         else
-            -- Sem HumanoidRootPart, pula para próximo
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     end
@@ -423,7 +396,6 @@ Tab:Toggle({
 
 Tab:Section({Title = "Farm Settings"})
 
--- NOVO: Slider de Tween Speed (igual ao primeiro código)
 Tab:Slider({
     Title = "Tween Speed",
     Flag = "TweenSpeed",
@@ -472,20 +444,7 @@ Tab:Slider({
     end,
 })
 
-Tab:Slider({
-    Title = "Attack Cooldown",
-    Flag = "FarmCooldown",
-    Step = 0.05,
-    Value = {
-        Min = 0.05,
-        Max = 0.5,
-        Default = _G.SlowHub.FarmCooldown or 0.15,
-    },
-    Callback = function(Value)
-        _G.SlowHub.FarmCooldown = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end,
-})
+-- REMOVIDO: Slider de Attack Cooldown
 
 Tab:Slider({
     Title = "Quest Interval",
@@ -502,7 +461,6 @@ Tab:Slider({
     end,
 })
 
--- Auto-start
 if _G.SlowHub.AutoFarmLevel and _G.SlowHub.SelectedWeapon then
     task.wait(1)
     startAutoLevel()
