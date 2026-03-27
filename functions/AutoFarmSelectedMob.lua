@@ -22,7 +22,6 @@ local QuestConfig = {
     ["Curse"] = "QuestNPC13",
     ["Slime"] = "SlimeNPC14",
     ["AcademyTeacher"] = "QuestNPC15",
-    -- Novas Quests
     ["Swordsman"] = "QuestNPC16",
     ["Quincy"] = "QuestNPC17",
     ["Ninja"] = "QuestNPC18",
@@ -40,11 +39,19 @@ local MobPortals = {
     ["Curse"] = "Shinjuku",
     ["Slime"] = "Slime",
     ["AcademyTeacher"] = "Academy",
-    -- Novos Portais
     ["Swordsman"] = "Judgement",
     ["Quincy"] = "SoulDominion",
     ["Ninja"] = "Ninja",
     ["ArenaFighter"] = "Lawless"
+}
+
+-- Contadores de NPCs por mob (ajuste se necessário)
+local MobCounts = {
+    ["Thief"] = 5, ["Monkey"] = 5, ["DesertBandit"] = 5,
+    ["FrostRogue"] = 5, ["Sorcerer"] = 5, ["Hollow"] = 5,
+    ["StrongSorcerer"] = 5, ["Curse"] = 5, ["Slime"] = 5,
+    ["AcademyTeacher"] = 5, ["Swordsman"] = 5, ["Quincy"] = 5,
+    ["Ninja"] = 5, ["ArenaFighter"] = 5
 }
 
 local questLoop = nil
@@ -56,22 +63,28 @@ local selectedMobs = {}
 local currentMobIndex = 1
 local currentNPCIndex = 1
 local killCount = 0
-local lastTargetName = nil
-local wasAttackingBoss = false
-local lastValidQuest = nil
+
+-- NOVO: Sistema de estado claro
+local FarmState = {
+    NEED_PORTAL = "NEED_PORTAL",    -- Precisa teleportar para o portal do mob atual
+    WAITING_SPAWN = "WAITING_SPAWN", -- Teleportou, aguardando NPCs spawnarem
+    FARMING = "FARMING",             -- Farmando NPCs normalmente
+    WAITING_KILL = "WAITING_KILL"    -- Matou NPC, aguardando confirmação de morte
+}
+
+local currentState = FarmState.NEED_PORTAL
+local currentMobInPortal = nil  -- Qual mob estamos atualmente no portal (pode ser diferente do selecionado se ainda não teleportou)
+local spawnWaitStart = 0
+local MAX_SPAWN_WAIT = 8
+local lastPortalUse = 0
+local PORTAL_COOLDOWN = 2  -- Segundos entre usos de portal para evitar spam
+
+local currentTween = nil
+local lastTweenTarget = nil
 local character = nil
 local humanoidRootPart = nil
 local humanoid = nil
 local npcsFolder = nil
-
-local currentTween = nil
-local lastTweenTarget = nil
-
--- NOVO: Sistema de controle de portal por mob específico
-local lastPortaledMob = nil  -- Nome do último mob que usou portal
-local waitingForSpawn = false
-local spawnWaitStart = 0
-local MAX_SPAWN_WAIT = 10
 
 local function initialize()
     character = Player.Character
@@ -89,6 +102,9 @@ Player.CharacterAdded:Connect(function(char)
     task.wait(0.1)
     humanoid = char:FindFirstChildOfClass("Humanoid")
     humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+    -- Resetar estado ao morrer/respawnar
+    currentState = FarmState.NEED_PORTAL
+    currentMobInPortal = nil
 end)
 
 workspace.ChildAdded:Connect(function(child)
@@ -113,15 +129,17 @@ local function isNPCAlive(npc)
     return hum and hum.Health > 0
 end
 
-local function isAnyNPCAlive(mobName, count)
-    if not npcsFolder then return false end
-    for i = 1, count do
+local function countAliveNPCs(mobName)
+    if not npcsFolder then return 0 end
+    local count = 0
+    local maxCount = MobCounts[mobName] or 5
+    for i = 1, maxCount do
         local npc = npcsFolder:FindFirstChild(mobName .. i)
         if isNPCAlive(npc) then
-            return true
+            count = count + 1
         end
     end
-    return false
+    return count
 end
 
 local function getNextIndex(current, maxCount)
@@ -137,20 +155,7 @@ local function getNextMobIndex()
 end
 
 local function getQuestForMob(mobName)
-    local quest = QuestConfig[mobName]
-    if quest then
-        lastValidQuest = quest
-        return quest
-    end
-    return nil
-end
-
-local function getMobConfig(mobName)
-    return {
-        npc = mobName,
-        quest = getQuestForMob(mobName),
-        count = 5
-    }
+    return QuestConfig[mobName]
 end
 
 local function equipWeapon()
@@ -250,23 +255,39 @@ local function acceptQuest()
     end)
 end
 
-local function switchToNextMob()
-    currentMobIndex = getNextMobIndex()
-    currentNPCIndex = 1
-    killCount = 0
-    waitingForSpawn = false
-    -- NÃO resetar lastPortaledMob aqui! Ele vai detectar mudança pelo currentMobName ~= lastPortaledMob
-    cancelTween()
+local function usePortal(mobName)
+    local portalName = MobPortals[mobName]
+    if not portalName then return false end
+    
+    local timeSinceLastPortal = tick() - lastPortalUse
+    if timeSinceLastPortal < PORTAL_COOLDOWN then
+        task.wait(PORTAL_COOLDOWN - timeSinceLastPortal)
+    end
+    
+    local success = pcall(function()
+        local args = { [1] = portalName }
+        ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
+    end)
+    
+    if success then
+        lastPortalUse = tick()
+        currentMobInPortal = mobName
+        currentState = FarmState.WAITING_SPAWN
+        spawnWaitStart = tick()
+        currentNPCIndex = 1
+        killCount = 0
+        cancelTween()
+    end
+    
+    return success
 end
 
 local function resetFarmState()
     currentMobIndex = 1
     currentNPCIndex = 1
     killCount = 0
-    lastTargetName = nil
-    lastPortaledMob = nil  -- Reset completo
-    waitingForSpawn = false
-    spawnWaitStart = 0
+    currentState = FarmState.NEED_PORTAL
+    currentMobInPortal = nil
     cancelTween()
 end
 
@@ -280,7 +301,7 @@ local function startQuestLoop()
     task.spawn(function()
         while isQuesting do 
             acceptQuest()
-            task.wait(0.2)
+            task.wait(0.3)
         end
     end)
 end
@@ -323,103 +344,112 @@ local function doFarmLogic()
         if not humanoid or humanoid.Health <= 0 then return end
     end
     
+    -- Se estiver atacando boss, pausa tudo
     if _G.SlowHub.IsAttackingBoss then
-        wasAttackingBoss = true
         cancelTween()
         return
     end
-    if wasAttackingBoss then
-        lastPortaledMob = nil  -- Força re-teleporte após boss
-        wasAttackingBoss = false
-    end
 
-    local currentMobName = selectedMobs[currentMobIndex]
-    if not currentMobName then
+    -- Verifica mob atual selecionado
+    local targetMobName = selectedMobs[currentMobIndex]
+    if not targetMobName then
+        -- Tenta ir para o primeiro ou para
         currentMobIndex = 1
-        currentMobName = selectedMobs[1]
-        if not currentMobName then
+        targetMobName = selectedMobs[1]
+        if not targetMobName then
             stopAutoFarm()
             _G.SlowHub.AutoFarmSelectedMob = false
             return
         end
     end
 
-    -- Sincronização: Se mudou de mob, garante que vai usar o portal do novo
-    if currentMobName ~= lastTargetName then
-        lastTargetName = currentMobName
-        lastPortaledMob = nil  -- Força teleporte para o novo mob
-        waitingForSpawn = false
-        currentNPCIndex = 1
-        killCount = 0
-        cancelTween()
-    end
-
-    local config = getMobConfig(currentMobName)
-
-    -- CORREÇÃO: Só pode farmar se já usou o portal deste mob específico
-    if lastPortaledMob ~= currentMobName then
-        local portalName = MobPortals[currentMobName]
-        if portalName then
-            pcall(function()
-                local args = { [1] = portalName }
-                ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
-            end)
-            task.wait(0.5) -- Aumentado para garantir o teleporte
-        end
-        lastPortaledMob = currentMobName  -- Marca que tentou usar portal deste mob
-        waitingForSpawn = true
-        spawnWaitStart = tick()
-        return -- Sai e espera spawn na próxima iteração
-    end
-
-    -- Se está esperando spawn, verifica se NPCs apareceram
-    if waitingForSpawn then
-        local elapsed = tick() - spawnWaitStart
-        
-        -- Verifica se algum NPC deste mob específico está vivo
-        local anyAlive = isAnyNPCAlive(config.npc, config.count)
-        
-        if anyAlive then
-            -- NPCs spawnaram! Pode começar a farmar
-            waitingForSpawn = false
-            currentNPCIndex = 1 -- Começa do primeiro
-        elseif elapsed > MAX_SPAWN_WAIT then
-            -- Timeout: força re-teleporte
-            lastPortaledMob = nil  -- Isso vai forçar teleporte novamente na próxima iteração
-            waitingForSpawn = false
-            task.wait(0.5)
-        else
-            -- Ainda esperando, fica parado
-            cancelTween()
-        end
-        return -- Sai da função até confirmar spawn ou timeout
-    end
-
-    -- Só chega aqui se: já usou o portal deste mob E os NPCs já spawnaram
-    local currentHeight = _G.SlowHub.FarmHeight or 4
-    local currentDist = _G.SlowHub.FarmDistance or 8
+    local maxCount = MobCounts[targetMobName] or 5
     
-    local npc = getNPC(config.npc, currentNPCIndex)
-    local isAlive = isNPCAlive(npc)
-
-    if not isAlive then
-        -- NPC morto, conta kill e tenta próximo
-        killCount = killCount + 1
-        
-        if killCount >= config.count then
-            -- Completou 5 kills, troca de mob
-            -- Isso vai mudar currentMobIndex, e na próxima iteração 
-            -- currentMobName será diferente, forçando teleporte
-            switchToNextMob()
+    -- ESTADO 1: PRECISA USAR PORTAL (mudou de mob ou primeira vez)
+    if currentState == FarmState.NEED_PORTAL then
+        -- Só usa portal se não estiver no portal correto
+        if currentMobInPortal ~= targetMobName then
+            usePortal(targetMobName)
+            task.wait(0.5) -- Aguarda teleporte iniciar
             return
         else
-            -- Próximo NPC do mesmo mob
-            currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
+            -- Já está no portal correto, vai para farmar
+            currentState = FarmState.FARMING
         end
-    else
-        -- NPC vivo, vai farmar
-        local npcRoot = getNPCRootPart(npc)
-        if npcRoot then
+    end
+    
+    -- ESTADO 2: AGUARDANDO SPAWN APÓS PORTAL
+    if currentState == FarmState.WAITING_SPAWN then
+        -- Verifica se algum NPC do mob alvo está vivo
+        local aliveCount = countAliveNPCs(targetMobName)
+        
+        if aliveCount > 0 then
+            -- NPCs spawnaram! Começar farm
+            currentState = FarmState.FARMING
+            currentNPCIndex = 1
+            killCount = 0
+        else
+            -- Ainda esperando
+            local elapsed = tick() - spawnWaitStart
+            if elapsed > MAX_SPAWN_WAIT then
+                -- Timeout, força novo portal
+                currentState = FarmState.NEED_PORTAL
+                currentMobInPortal = nil
+            end
+            -- Fica parado esperando
+            cancelTween()
+        end
+        return
+    end
+    
+    -- ESTADO 3: FARMANDO
+    if currentState == FarmState.FARMING then
+        -- Verifica se ainda estamos no portal correto (segurança)
+        if currentMobInPortal ~= targetMobName then
+            currentState = FarmState.NEED_PORTAL
+            return
+        end
+        
+        -- Verifica quantos NPCs estão vivos
+        local aliveCount = countAliveNPCs(targetMobName)
+        
+        -- Se nenhum vivo, espera (não muda de mob automaticamente)
+        if aliveCount == 0 then
+            -- Verifica se já matamos algum (killCount > 0) - se sim, talvez estejam respawnando
+            if killCount > 0 then
+                -- Espera respawn no mesmo lugar
+                currentState = FarmState.WAITING_SPAWN
+                spawnWaitStart = tick()
+            else
+                -- Nunca viu NPCs vivos, algo errado, força portal
+                currentState = FarmState.NEED_PORTAL
+            end
+            cancelTween()
+            return
+        end
+        
+        -- Procura o próximo NPC vivo na sequência
+        local npc = nil
+        local npcRoot = nil
+        local attempts = 0
+        
+        while attempts < maxCount do
+            local tempNpc = getNPC(targetMobName, currentNPCIndex)
+            if isNPCAlive(tempNpc) then
+                npc = tempNpc
+                npcRoot = getNPCRootPart(npc)
+                break
+            end
+            -- Próximo índice
+            currentNPCIndex = getNextIndex(currentNPCIndex, maxCount)
+            attempts = attempts + 1
+        end
+        
+        if npc and npcRoot then
+            -- Farmar este NPC
+            local currentHeight = _G.SlowHub.FarmHeight or 4
+            local currentDist = _G.SlowHub.FarmDistance or 8
+            
             local offset = CFrame.new(0, currentHeight, currentDist)
             local targetCFrame = npcRoot.CFrame * offset
             
@@ -428,7 +458,19 @@ local function doFarmLogic()
             if hasArrived then
                 equipWeapon()
                 performAttack()
+                
+                -- Verifica se matou
+                if not isNPCAlive(npc) then
+                    killCount = killCount + 1
+                    -- Próximo índice para próximo frame
+                    currentNPCIndex = getNextIndex(currentNPCIndex, maxCount)
+                end
             end
+        else
+            -- Não encontrou NPC vivo apesar de count > 0 (inconsistência)
+            -- Volta a esperar
+            currentState = FarmState.WAITING_SPAWN
+            spawnWaitStart = tick()
         end
     end
 end
@@ -496,6 +538,7 @@ local function updateSelectedMobs(options)
     end
 end
 
+-- UI Elements
 Tab:Section({Title = "Mob Selection"})
 
 Tab:Dropdown({
@@ -600,6 +643,25 @@ Tab:Slider({
     end
 })
 
+-- Adicionar botão para trocar manualmente de mob (opcional)
+Tab:Button({
+    Title = "Next Mob (Manual)",
+    Callback = function()
+        if #selectedMobs > 1 then
+            currentMobIndex = getNextMobIndex()
+            currentState = FarmState.NEED_PORTAL
+            if _G.WindUI and _G.WindUI.Notify then
+                _G.WindUI:Notify({
+                    Title = "Switched",
+                    Content = "Now targeting: " .. selectedMobs[currentMobIndex],
+                    Duration = 2,
+                })
+            end
+        end
+    end
+})
+
+-- Inicialização
 task.spawn(function()
     task.wait(2)
     if _G.SlowHub.SelectedMobs then
