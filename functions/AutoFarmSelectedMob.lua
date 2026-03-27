@@ -28,11 +28,11 @@ local MobPortals = {
     ["Monkey"] = "Jungle", 
     ["DesertBandit"] = "Desert",
     ["FrostRogue"] = "Snow",
-    ["Sorcerer"] = "Magic",
+    ["Sorcerer"] = "Shibuya",
     ["Hollow"] = "Hueco",
-    ["StrongSorcerer"] = "Magic2",
-    ["Curse"] = "Cursed",
-    ["Slime"] = "SlimeForest",
+    ["StrongSorcerer"] = "Shinjuku",
+    ["Curse"] = "Shinjuku",
+    ["Slime"] = "Slime",
     ["AcademyTeacher"] = "Academy"
 }
 
