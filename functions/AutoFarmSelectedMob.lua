@@ -56,7 +56,7 @@ local npcsFolder = nil
 local currentTween = nil
 local lastTweenTarget = nil
 
--- Sistema de controle de portal por mob específico
+-- NOVO: Sistema de controle de portal por mob específico
 local lastPortaledMob = nil  -- Nome do último mob que usou portal
 local waitingForSpawn = false
 local spawnWaitStart = 0
@@ -85,31 +85,6 @@ workspace.ChildAdded:Connect(function(child)
         npcsFolder = child
     end
 end)
-
--- NOVO: Controle do flutuar (BodyVelocity)
-local function disableFloat()
-    if humanoidRootPart then
-        local bv = humanoidRootPart:FindFirstChild("SlowHubVelocity")
-        if bv then
-            bv:Destroy()
-        end
-        humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-        humanoidRootPart.Anchored = false
-    end
-end
-
-local function enableFloat()
-    if humanoidRootPart and isFarming then
-        local existing = humanoidRootPart:FindFirstChild("SlowHubVelocity")
-        if existing then existing:Destroy() end
-        
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "SlowHubVelocity"
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Parent = humanoidRootPart
-    end
-end
 
 local function getNPC(npcName, index)
     if not npcsFolder then return nil end
@@ -266,9 +241,10 @@ end
 
 local function switchToNextMob()
     currentMobIndex = getNextMobIndex()
-    currentNPCIndex =  = 1
+    currentNPCIndex = 1
     killCount = 0
     waitingForSpawn = false
+    -- NÃO resetar lastPortaledMob aqui! Ele vai detectar mudança pelo currentMobName ~= lastPortaledMob
     cancelTween()
 end
 
@@ -369,19 +345,15 @@ local function doFarmLogic()
 
     local config = getMobConfig(currentMobName)
 
-    -- Só pode farmar se já usou o portal deste mob específico
+    -- CORREÇÃO: Só pode farmar se já usou o portal deste mob específico
     if lastPortaledMob ~= currentMobName then
         local portalName = MobPortals[currentMobName]
         if portalName then
-            -- CORREÇÃO: Desativa flutuar antes do teleporte
-            disableFloat()
-            
             pcall(function()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            
-            task.wait(0.6) -- Aumentado para garantir o teleporte completo
+            task.wait(0.5) -- Aumentado para garantir o teleporte
         end
         lastPortaledMob = currentMobName  -- Marca que tentou usar portal deste mob
         waitingForSpawn = true
@@ -397,8 +369,7 @@ local function doFarmLogic()
         local anyAlive = isAnyNPCAlive(config.npc, config.count)
         
         if anyAlive then
-            -- NPCs spawnaram! Reativa flutuar e pode começar a farmar
-            enableFloat()
+            -- NPCs spawnaram! Pode começar a farmar
             waitingForSpawn = false
             currentNPCIndex = 1 -- Começa do primeiro
         elseif elapsed > MAX_SPAWN_WAIT then
@@ -407,7 +378,7 @@ local function doFarmLogic()
             waitingForSpawn = false
             task.wait(0.5)
         else
-            -- Ainda esperando, fica parado sem flutuar (evita bugs de física)
+            -- Ainda esperando, fica parado
             cancelTween()
         end
         return -- Sai da função até confirmar spawn ou timeout
@@ -426,8 +397,8 @@ local function doFarmLogic()
         
         if killCount >= config.count then
             -- Completou 5 kills, troca de mob
-            -- Desativa flutuar antes de trocar (preparação para teleporte)
-            disableFloat()
+            -- Isso vai mudar currentMobIndex, e na próxima iteração 
+            -- currentMobName será diferente, forçando teleporte
             switchToNextMob()
             return
         else
@@ -467,10 +438,13 @@ local function startAutoFarm()
         startQuestLoop()
     end
     
-    -- Cria BodyVelocity inicial
     if humanoidRootPart then
         humanoidRootPart.Anchored = false
-        enableFloat()
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "SlowHubVelocity"
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Parent = humanoidRootPart
     end
 
     if not noclipConnection then
