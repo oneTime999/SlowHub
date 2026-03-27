@@ -1,19 +1,22 @@
 local Tab = _G.BossesTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService") -- NOVO
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local bossList = {
     "AnosBoss", "GilgameshBoss", "RimuruBoss", "StrongestofTodayBoss", "StrongestinHistoryBoss",
     "IchigoBoss", "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss",
-    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss"
+    "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss",
+    -- NOVOS BOSSES ADICIONADOS:
+    "AtomicBoss", "TrueAizenBoss", "SaberAlterBoss", "BlessedMaidenBoss", 
+    "YamatoBoss", "StrongestShinobiBoss"
 }
 
 local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
 
--- NOVO: Portais para cada boss (ajuste os nomes conforme seu jogo)
+-- Portais para cada boss (AJUSTE OS NOMES conforme seu jogo)
 local BossPortals = {
     ["AnosBoss"] = "Academy",
     ["GilgameshBoss"] = "Boss",
@@ -29,6 +32,13 @@ local BossPortals = {
     ["GojoBoss"] = "Shibuya",
     ["SaberBoss"] = "Boss",
     ["YujiBoss"] = "Shibuya",
+    -- NOVOS BOSSES - AJUSTE OS PORTAIS:
+    ["AtomicBoss"] = "Atomic",           -- Ajuste conforme o nome real do portal
+    ["TrueAizenBoss"] = "TrueAizen",     -- Ajuste conforme o nome real do portal
+    ["SaberAlterBoss"] = "SaberAlter",   -- Ajuste conforme o nome real do portal
+    ["BlessedMaidenBoss"] = "Maiden",    -- Ajuste conforme o nome real do portal
+    ["YamatoBoss"] = "Yamato",           -- Ajuste conforme o nome real do portal
+    ["StrongestShinobiBoss"] = "Shinobi",-- Ajuste conforme o nome real do portal
 }
 
 -- Propagar portais para todas as dificuldades
@@ -40,13 +50,13 @@ for _, bossBaseName in ipairs(bossList) do
     end
 end
 
--- NOVO: Variáveis de controle de estado (igual ao primeiro código)
+-- Variáveis de controle de estado
 local currentTween = nil
 local lastTweenTarget = nil
 local lastPortaledBoss = nil
 local waitingForSpawn = false
 local spawnWaitStart = 0
-local MAX_SPAWN_WAIT = 15 -- Bosses demoram mais para spawnar
+local MAX_SPAWN_WAIT = 15
 
 local farmConnection = nil
 local isRunning = false
@@ -54,7 +64,7 @@ local currentBoss = nil
 local lastTarget = nil
 local wasAttackingBoss = false
 local lastHitTime = 0
-local killCount = 0 -- NOVO: Contador de kills (útil para bosses que respawnam rápido)
+local killCount = 0
 local character = nil
 local humanoidRootPart = nil
 local npcsFolder = nil
@@ -204,7 +214,6 @@ local function equipWeapon()
     end)
 end
 
--- NOVO: Sistema de Cancelar Tween (igual ao primeiro código)
 local function cancelTween()
     if currentTween then
         currentTween:Cancel()
@@ -212,7 +221,6 @@ local function cancelTween()
     end
 end
 
--- NOVO: Sistema de Movimentação com Tween (igual ao primeiro código)
 local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
@@ -221,20 +229,18 @@ local function moveToTarget(targetCFrame)
 
     local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
 
-    -- Se já está perto, teleporta direto
     if distance <= currentFarmDist + 2 then
         cancelTween()
         humanoidRootPart.CFrame = targetCFrame
         return true
     end
 
-    -- Se o alvo mudou, cancela tween anterior
     if lastTweenTarget then
         local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
         if posDiff > 1 then
             cancelTween()
         elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
-            return false -- Já está em movimento para o mesmo alvo
+            return false
         end
     end
 
@@ -264,7 +270,6 @@ local function performAttack()
     end)
 end
 
--- NOVO: Reset completo do estado (igual ao primeiro código)
 local function resetState()
     currentBoss = nil
     lastTarget = nil
@@ -279,7 +284,7 @@ end
 local function stopAutoFarm()
     if not isRunning then return end
     isRunning = false
-    cancelTween() -- NOVO
+    cancelTween()
     if farmConnection then
         farmConnection:Disconnect()
         farmConnection = nil
@@ -287,7 +292,6 @@ local function stopAutoFarm()
     resetState()
 end
 
--- NOVO: Função principal de farm adaptada do primeiro código
 local function farmLoop()
     if not _G.SlowHub.AutoFarmBosses or not isRunning then
         stopAutoFarm()
@@ -299,9 +303,8 @@ local function farmLoop()
         if not humanoidRootPart then return end
     end
     
-    -- Verifica se precisa trocar de boss (morreu, não está selecionado, ou mudou prioridade de pity)
     if currentBoss and shouldSwitchBoss(currentBoss) then
-        killCount = killCount + 1 -- NOVO: Conta kill quando boss morre
+        killCount = killCount + 1
         currentBoss = nil
         lastTarget = nil
         waitingForSpawn = false
@@ -310,14 +313,12 @@ local function farmLoop()
         return
     end
     
-    -- Procura novo boss válido
     if not currentBoss then
         currentBoss = findValidBoss()
         if not currentBoss then
             _G.SlowHub.IsAttackingBoss = false
             return
         end
-        -- NOVO: Reset de estado quando muda de boss
         lastPortaledBoss = nil
         waitingForSpawn = false
         killCount = 0
@@ -328,7 +329,6 @@ local function farmLoop()
     local bossBaseName = getBossBaseName(boss.Name)
     _G.SlowHub.IsAttackingBoss = true
     
-    -- NOVO: Sincronização - Se mudou de boss, força novo teleporte
     if boss ~= lastTarget then
         lastTarget = boss
         lastPortaledBoss = nil
@@ -336,7 +336,6 @@ local function farmLoop()
         cancelTween()
     end
     
-    -- CORREÇÃO: Só pode farmar se já usou o portal deste boss específico
     if lastPortaledBoss ~= bossBaseName then
         local portalName = BossPortals[bossBaseName]
         if portalName then
@@ -344,41 +343,34 @@ local function farmLoop()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.5) -- Garante o teleporte
+            task.wait(0.5)
         end
-        lastPortaledBoss = bossBaseName -- Marca que tentou usar portal deste boss
+        lastPortaledBoss = bossBaseName
         waitingForSpawn = true
         spawnWaitStart = tick()
-        return -- Sai e espera spawn na próxima iteração
+        return
     end
     
-    -- Se está esperando spawn, verifica se boss apareceu
     if waitingForSpawn then
         local elapsed = tick() - spawnWaitStart
         
-        -- Verifica se boss está vivo (spawnou)
         if isAlive(boss) then
-            -- Boss spawnou! Pode começar a farmar
             waitingForSpawn = false
         elseif elapsed > MAX_SPAWN_WAIT then
-            -- Timeout: força re-teleporte
-            lastPortaledBoss = nil -- Isso vai forçar teleporte novamente na próxima iteração
+            lastPortaledBoss = nil
             waitingForSpawn = false
             task.wait(0.5)
         else
-            -- Ainda esperando, fica parado
             cancelTween()
         end
-        return -- Sai da função até confirmar spawn ou timeout
+        return
     end
     
-    -- Só chega aqui se: já usou o portal deste boss E o boss já spawnou
     local currentHeight = _G.SlowHub.BossFarmHeight or 5
     local currentDist = _G.SlowHub.BossFarmDistance or 8
     
     local bossRoot = boss:FindFirstChild("HumanoidRootPart")
     if not bossRoot then
-        -- Boss sem HumanoidRootPart, tenta reencontrar
         currentBoss = nil
         return
     end
@@ -501,7 +493,6 @@ Tab:Toggle({
     end,
 })
 
--- NOVO: Slider de Tween Speed (igual ao primeiro código)
 Tab:Slider({
     Title = "Tween Speed",
     Flag = "BossTweenSpeed",
