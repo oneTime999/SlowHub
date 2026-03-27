@@ -9,14 +9,15 @@ local bossList = {
     "AnosBoss", "GilgameshBoss", "RimuruBoss", "StrongestofTodayBoss", "StrongestinHistoryBoss",
     "IchigoBoss", "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss",
     "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss",
-    -- NOVOS BOSSES ADICIONADOS:
     "AtomicBoss", "TrueAizenBoss", "SaberAlterBoss", "BlessedMaidenBoss", 
     "YamatoBoss", "StrongestShinobiBoss"
 }
 
+-- ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z)
+table.sort(bossList)
+
 local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
 
--- Portais para cada boss (AJUSTE OS NOMES conforme seu jogo)
 local BossPortals = {
     ["AnosBoss"] = "Academy",
     ["GilgameshBoss"] = "Boss",
@@ -32,16 +33,14 @@ local BossPortals = {
     ["GojoBoss"] = "Shibuya",
     ["SaberBoss"] = "Boss",
     ["YujiBoss"] = "Shibuya",
-    -- NOVOS BOSSES - AJUSTE OS PORTAIS:
-    ["AtomicBoss"] = "Lawless",           -- Ajuste conforme o nome real do portal
-    ["TrueAizenBoss"] = "SoulDominion",     -- Ajuste conforme o nome real do portal
-    ["SaberAlterBoss"] = "Boss",   -- Ajuste conforme o nome real do portal
-    ["BlessedMaidenBoss"] = "Boss",    -- Ajuste conforme o nome real do portal
-    ["YamatoBoss"] = "Judgment",           -- Ajuste conforme o nome real do portal
-    ["StrongestShinobiBoss"] = "Ninja",-- Ajuste conforme o nome real do portal
+    ["AtomicBoss"] = "Lawless",
+    ["TrueAizenBoss"] = "SoulDominion",
+    ["SaberAlterBoss"] = "Boss",
+    ["BlessedMaidenBoss"] = "Boss",
+    ["YamatoBoss"] = "Judgment",
+    ["StrongestShinobiBoss"] = "Ninja",
 }
 
--- Propagar portais para todas as dificuldades
 for _, bossBaseName in ipairs(bossList) do
     if BossPortals[bossBaseName] then
         for _, diff in ipairs(difficulties) do
@@ -50,7 +49,6 @@ for _, bossBaseName in ipairs(bossList) do
     end
 end
 
--- Variáveis de controle de estado
 local currentTween = nil
 local lastTweenTarget = nil
 local lastPortaledBoss = nil
@@ -63,7 +61,7 @@ local isRunning = false
 local currentBoss = nil
 local lastTarget = nil
 local wasAttackingBoss = false
-local lastHitTime = 0
+-- REMOVIDO: lastHitTime - não precisa mais
 local killCount = 0
 local character = nil
 local humanoidRootPart = nil
@@ -256,10 +254,8 @@ local function moveToTarget(targetCFrame)
     return false
 end
 
+-- REMOVIDO: Verificação de cooldown - ataque na velocidade máxima
 local function performAttack()
-    local currentTime = tick()
-    if currentTime - lastHitTime < (_G.SlowHub.BossFarmCooldown or 0.15) then return end
-    lastHitTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
@@ -382,7 +378,7 @@ local function farmLoop()
     
     if hasArrived then
         equipWeapon()
-        performAttack()
+        performAttack() -- Ataca imediatamente sem delay
     end
 end
 
@@ -401,10 +397,11 @@ end
 
 Tab:Section({Title = "Boss Selection"})
 
+-- ORDEM ALFABÉTICA: AinosBoss -> AtomicBoss -> BlessedMaidenBoss -> GilgameshBoss -> GojoBoss -> IchigoBoss -> JinwooBoss -> QinShiBoss -> RimuruBoss -> SaberAlterBoss -> SaberBoss -> StrongestinHistoryBoss -> StrongestofTodayBoss -> StrongestShinobiBoss -> SukunaBoss -> TrueAizenBoss -> YamatoBoss -> YujiBoss
 Tab:Dropdown({
     Title = "Select Bosses to Farm",
     Flag = "SelectedBosses",
-    Values = bossList,
+    Values = bossList, -- Já ordenado alfabeticamente
     Multi = true,
     Value = (function()
         local selected = {}
@@ -547,22 +544,7 @@ Tab:Slider({
     end,
 })
 
-Tab:Slider({
-    Title = "Attack Cooldown",
-    Flag = "BossFarmCooldown",
-    Step = 0.05,
-    Value = {
-        Min = 0.05,
-        Max = 0.5,
-        Default = _G.SlowHub.BossFarmCooldown or 0.15,
-    },
-    Callback = function(Value)
-        _G.SlowHub.BossFarmCooldown = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end,
-})
+-- REMOVIDO: Slider de Attack Cooldown
 
 if _G.SlowHub.AutoFarmBosses then
     task.wait(2)
