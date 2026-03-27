@@ -15,7 +15,12 @@ local LevelConfig = {
     {minLevel = 6000, maxLevel = 6999, quest = "QuestNPC12", npc = "StrongSorcerer", count = 5},
     {minLevel = 7000, maxLevel = 7999, quest = "QuestNPC13", npc = "Curse", count = 5},
     {minLevel = 8000, maxLevel = 8999, quest = "QuestNPC14", npc = "Slime", count = 5},
-    {minLevel = 9000, maxLevel = 99999, quest = "QuestNPC15", npc = "AcademyTeacher", count = 5},
+    {minLevel = 9000, maxLevel = 9999, quest = "QuestNPC15", npc = "AcademyTeacher", count = 5},
+    -- Novos NPCs adicionados abaixo:
+    {minLevel = 10000, maxLevel = 10749, quest = "QuestNPC16", npc = "Swordsman", count = 5},
+    {minLevel = 10750, maxLevel = 11499, quest = "QuestNPC17", npc = "Quincy", count = 5},
+    {minLevel = 11500, maxLevel = 11999, quest = "QuestNPC18", npc = "Ninja", count = 5},
+    {minLevel = 12000, maxLevel = 99999, quest = "QuestNPC19", npc = "Arena Fighter", count = 5},
 }
 
 -- NOVO: Portais para cada área (mesmo do primeiro código)
@@ -29,9 +34,12 @@ local MobPortals = {
     ["StrongSorcerer"] = "Shinjuku",
     ["Curse"] = "Shinjuku",
     ["Slime"] = "Slime",
-    ["AcademyTeacher"] = "Academy"
+    ["AcademyTeacher"] = "Academy",
+    ["Swordsman"] = "Judgement",
+    ["Quincy"] = "SoulDominion",
+    ["Ninja"] = "Ninja",
+    ["Arena Fighter"] = "Lawless"
 }
-
 -- NOVO: Variáveis de controle de estado (igual ao primeiro código)
 local currentTween = nil
 local lastTweenTarget = nil
