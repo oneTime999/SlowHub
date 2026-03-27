@@ -22,9 +22,10 @@ local bossConfigs = {
     ["TrueAizenBoss"] = {Method="TrueAizenSpecific", InternalName="TrueAizenBoss"},
 }
 
+-- ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z)
 local bossList = {}
 for name in pairs(bossConfigs) do table.insert(bossList, name) end
-table.sort(bossList)
+table.sort(bossList) -- Isso organiza automaticamente em ordem alfabética
 
 local difficultyList = {"Normal","Medium","Hard","Extreme"}
 
@@ -176,6 +177,7 @@ local function stopAutoSummon()
     _G.SlowHub.AutoSummonBoss = false
 end
 
+-- REMOVIDO: Intervalo de summon - agora summon na velocidade máxima
 local function startAutoSummon()
     if isSummoning then stopAutoSummon(); task.wait(0.2) end
     isSummoning = true
@@ -187,19 +189,20 @@ local function startAutoSummon()
             for _, bossName in ipairs(bossesToSummon) do
                 if not isSummoning then break end
                 processBossSummon(bossName)
-                task.wait(0.1)
+                -- REMOVIDO: task.wait(0.1) - summon instantâneo
             end
-            task.wait(_G.SlowHub.SummonInterval or 0.5)
+            -- REMOVIDO: task.wait(_G.SlowHub.SummonInterval or 0.5) - loop rápido
         end
     end)
 end
 
 Tab:Section({Title = "Summon Settings"})
 
+-- ORDEM ALFABÉTICA: A -> Anos -> AtomicBoss -> BlessedMaidenBoss -> GilgameshBoss -> IchigoBoss -> QinShiBoss -> RimuruBoss -> SaberBoss -> SaberAlterBoss -> StrongestinHistoryBoss -> StrongestofTodayBoss -> TrueAizenBoss
 Tab:Dropdown({
     Title = "Select Bosses to Summon",
     Flag = "SelectBossSummon",
-    Values = bossList,
+    Values = bossList, -- Já ordenado alfabeticamente via table.sort
     Multi = true,
     Default = _G.SlowHub.SelectBossSummon or {},
     Callback = function(value)
@@ -231,22 +234,7 @@ Tab:Dropdown({
     end,
 })
 
-Tab:Slider({
-    Title = "Summon Interval",
-    Flag = "SummonInterval",
-    Step = 0.1,
-    Value = {
-        Min = 0.1,
-        Max = 5.0,
-        Default = _G.SlowHub.SummonInterval or 1.0,
-    },
-    Callback = function(Value)
-        _G.SlowHub.SummonInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end,
-})
+-- REMOVIDO: Slider de Summon Interval
 
 Tab:Toggle({
     Title = "Auto Summon Boss",
