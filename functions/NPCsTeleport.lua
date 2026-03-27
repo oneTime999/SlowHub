@@ -197,9 +197,9 @@ Tab:Slider({
     Flag = "TeleportTweenSpeed",
     Step = 10,
     Value = {
-        Min = 150,
-        Max = 1000,
-        Default = _G.SlowHub.TeleportTweenSpeed or 500,
+        Min = 10,
+        Max = 150,
+        Default = _G.SlowHub.TeleportTweenSpeed or 150,
     },
     Callback = function(Value)
         _G.SlowHub.TeleportTweenSpeed = Value
