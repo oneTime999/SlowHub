@@ -276,6 +276,8 @@ local function stopAutoFarm()
     pcall(function()
         if humanoidRootPart then
             humanoidRootPart.Anchored = false
+            local velocityFix = humanoidRootPart:FindFirstChild("SlowHubVelocity")
+            if velocityFix then velocityFix:Destroy() end
             humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
         end
     end)
@@ -377,12 +379,18 @@ local function startAutoFarm()
         startQuestLoop()
     end
     
+    if humanoidRootPart then
+        humanoidRootPart.Anchored = false
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "SlowHubVelocity"
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Parent = humanoidRootPart
+    end
+
     if not noclipConnection then
         noclipConnection = RunService.Stepped:Connect(function()
             if not isFarming then return end
-            if humanoidRootPart then
-                humanoidRootPart.Anchored = true
-            end
             if character then
                 for _, part in pairs(character:GetDescendants()) do
                     if part:IsA("BasePart") and part.CanCollide then
