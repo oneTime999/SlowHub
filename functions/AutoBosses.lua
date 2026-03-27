@@ -33,12 +33,12 @@ local BossPortals = {
     ["SaberBoss"] = "Boss",
     ["YujiBoss"] = "Shibuya",
     -- NOVOS BOSSES - AJUSTE OS PORTAIS:
-    ["AtomicBoss"] = "Atomic",           -- Ajuste conforme o nome real do portal
-    ["TrueAizenBoss"] = "TrueAizen",     -- Ajuste conforme o nome real do portal
-    ["SaberAlterBoss"] = "SaberAlter",   -- Ajuste conforme o nome real do portal
-    ["BlessedMaidenBoss"] = "Maiden",    -- Ajuste conforme o nome real do portal
-    ["YamatoBoss"] = "Yamato",           -- Ajuste conforme o nome real do portal
-    ["StrongestShinobiBoss"] = "Shinobi",-- Ajuste conforme o nome real do portal
+    ["AtomicBoss"] = "Lawless",           -- Ajuste conforme o nome real do portal
+    ["TrueAizenBoss"] = "SoulDominion",     -- Ajuste conforme o nome real do portal
+    ["SaberAlterBoss"] = "Boss",   -- Ajuste conforme o nome real do portal
+    ["BlessedMaidenBoss"] = "Boss",    -- Ajuste conforme o nome real do portal
+    ["YamatoBoss"] = "Judgment",           -- Ajuste conforme o nome real do portal
+    ["StrongestShinobiBoss"] = "Ninja",-- Ajuste conforme o nome real do portal
 }
 
 -- Propagar portais para todas as dificuldades
