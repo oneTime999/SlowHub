@@ -1,11 +1,10 @@
 local Tab = _G.DungeonsTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService") -- NOVO
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- NOVO: Variáveis de controle do Tween
 local currentTween = nil
 local lastTweenTarget = nil
 
@@ -15,7 +14,6 @@ local replayLoop = nil
 local isFarming = false
 local isVoting = false
 local isReplaying = false
-local lastAttackTime = 0
 local character = nil
 local humanoidRootPart = nil
 local humanoid = nil
@@ -80,7 +78,6 @@ local function getClosestEnemy()
     return closestEnemy
 end
 
--- NOVO: Sistema de Cancelar Tween
 local function cancelTween()
     if currentTween then
         currentTween:Cancel()
@@ -88,7 +85,6 @@ local function cancelTween()
     end
 end
 
--- NOVO: Sistema de Movimentação com Tween
 local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
@@ -97,20 +93,18 @@ local function moveToTarget(targetCFrame)
 
     local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
 
-    -- Se já está perto, teleporta direto (precisão final)
     if distance <= currentFarmDist + 2 then
         cancelTween()
         humanoidRootPart.CFrame = targetCFrame
         return true
     end
 
-    -- Se o alvo mudou significativamente, cancela tween anterior
     if lastTweenTarget then
         local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
         if posDiff > 1 then
             cancelTween()
         elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
-            return false -- Já está em movimento para o mesmo alvo
+            return false
         end
     end
 
@@ -126,10 +120,8 @@ local function moveToTarget(targetCFrame)
     return false
 end
 
+-- REMOVIDO: Verificação de cooldown - ataca na velocidade máxima
 local function performAttack()
-    local currentTime = tick()
-    if currentTime - lastAttackTime < (_G.SlowHub.DungeonFarmCooldown or 0.1) then return end
-    lastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
         if not combatSystem then return end
@@ -198,7 +190,7 @@ end
 local function stopDungeonFarm()
     if not isFarming then return end
     isFarming = false
-    cancelTween() -- NOVO: Cancela tween ao parar
+    cancelTween()
     if farmConnection then
         farmConnection:Disconnect()
         farmConnection = nil
@@ -234,16 +226,14 @@ local function farmLoop()
             local offset = CFrame.new(0, currentHeight, currentDist)
             local targetCFrame = enemyRoot.CFrame * offset
             
-            -- NOVO: Usa Tween em vez de teleporte direto
             local hasArrived = moveToTarget(targetCFrame)
             
             if hasArrived then
                 equipWeapon()
-                performAttack()
+                performAttack() -- Ataca imediatamente sem delay
             end
         end
     else
-        -- Sem inimigos, cancela movimento
         cancelTween()
         if humanoidRootPart then
             humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
@@ -258,7 +248,6 @@ local function startDungeonFarm()
     end
     initialize()
     isFarming = true
-    lastAttackTime = 0
     farmConnection = RunService.Heartbeat:Connect(farmLoop)
 end
 
@@ -279,7 +268,6 @@ Tab:Toggle({
     end,
 })
 
--- NOVO: Slider de Tween Speed
 Tab:Slider({
     Title = "Tween Speed",
     Flag = "DungeonTweenSpeed",
@@ -325,21 +313,6 @@ Tab:Slider({
         _G.SlowHub.DungeonFarmHeight = Value
         if _G.SaveConfig then _G.SaveConfig() end
         cancelTween()
-    end,
-})
-
-Tab:Slider({
-    Title = "Attack Cooldown",
-    Flag = "DungeonFarmCooldown",
-    Step = 0.05,
-    Value = {
-        Min = 0.05,
-        Max = 0.5,
-        Default = _G.SlowHub.DungeonFarmCooldown or 0.1,
-    },
-    Callback = function(Value)
-        _G.SlowHub.DungeonFarmCooldown = Value
-        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
