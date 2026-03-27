@@ -46,7 +46,6 @@ local currentMobIndex = 1
 local currentNPCIndex = 1
 local killCount = 0
 local lastTargetName = nil
-local hasUsedPortal = false
 local wasAttackingBoss = false
 local lastValidQuest = nil
 local character = nil
@@ -57,10 +56,11 @@ local npcsFolder = nil
 local currentTween = nil
 local lastTweenTarget = nil
 
--- NOVO: Flag para controlar espera de spawn
+-- NOVO: Sistema de controle de portal por mob específico
+local lastPortaledMob = nil  -- Nome do último mob que usou portal
 local waitingForSpawn = false
 local spawnWaitStart = 0
-local MAX_SPAWN_WAIT = 10 -- máximo 10 segundos esperando spawn
+local MAX_SPAWN_WAIT = 10
 
 local function initialize()
     character = Player.Character
@@ -102,7 +102,6 @@ local function isNPCAlive(npc)
     return hum and hum.Health > 0
 end
 
--- NOVO: Verifica se algum NPC do mob atual está vivo
 local function isAnyNPCAlive(mobName, count)
     if not npcsFolder then return false end
     for i = 1, count do
@@ -168,11 +167,9 @@ local function cancelTween()
     end
 end
 
--- CORREÇÃO 2: Sempre ler configurações atualizadas em tempo real
 local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
-    -- LER VALORES FRESH A CADA CHAMADA
     local currentFarmDist = _G.SlowHub.FarmDistance or 8
     local currentSpeed = _G.SlowHub.TweenSpeed or 500
 
@@ -184,10 +181,8 @@ local function moveToTarget(targetCFrame)
         return true
     end
 
-    -- Cancela tween se target mudou significativamente (incluindo height/distance)
     if lastTweenTarget then
         local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
-        -- Se mudou mais de 1 unidade (inclui mudança de height/distance), cancela
         if posDiff > 1 then
             cancelTween()
         elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
@@ -248,8 +243,8 @@ local function switchToNextMob()
     currentMobIndex = getNextMobIndex()
     currentNPCIndex = 1
     killCount = 0
-    hasUsedPortal = false
-    waitingForSpawn = false -- Reset do estado de espera
+    waitingForSpawn = false
+    -- NÃO resetar lastPortaledMob aqui! Ele vai detectar mudança pelo currentMobName ~= lastPortaledMob
     cancelTween()
 end
 
@@ -258,8 +253,7 @@ local function resetFarmState()
     currentNPCIndex = 1
     killCount = 0
     lastTargetName = nil
-    hasUsedPortal = false
-    lastValidQuest = nil
+    lastPortaledMob = nil  -- Reset completo
     waitingForSpawn = false
     spawnWaitStart = 0
     cancelTween()
@@ -324,7 +318,7 @@ local function doFarmLogic()
         return
     end
     if wasAttackingBoss then
-        hasUsedPortal = false
+        lastPortaledMob = nil  -- Força re-teleporte após boss
         wasAttackingBoss = false
     end
 
@@ -339,10 +333,10 @@ local function doFarmLogic()
         end
     end
 
-    -- Sincronização de área ao trocar de Mob
+    -- Sincronização: Se mudou de mob, garante que vai usar o portal do novo
     if currentMobName ~= lastTargetName then
         lastTargetName = currentMobName
-        hasUsedPortal = false
+        lastPortaledMob = nil  -- Força teleporte para o novo mob
         waitingForSpawn = false
         currentNPCIndex = 1
         killCount = 0
@@ -351,44 +345,46 @@ local function doFarmLogic()
 
     local config = getMobConfig(currentMobName)
 
-    -- CORREÇÃO 1: Sistema de teleporte com verificação de spawn
-    if not hasUsedPortal then
+    -- CORREÇÃO: Só pode farmar se já usou o portal deste mob específico
+    if lastPortaledMob ~= currentMobName then
         local portalName = MobPortals[currentMobName]
         if portalName then
             pcall(function()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.4)
+            task.wait(0.5) -- Aumentado para garantir o teleporte
         end
-        hasUsedPortal = true
+        lastPortaledMob = currentMobName  -- Marca que tentou usar portal deste mob
         waitingForSpawn = true
         spawnWaitStart = tick()
-        return -- Sai para esperar o spawn na próxima iteração
+        return -- Sai e espera spawn na próxima iteração
     end
 
-    -- Se está esperando spawn, verifica se algum NPC apareceu
+    -- Se está esperando spawn, verifica se NPCs apareceram
     if waitingForSpawn then
         local elapsed = tick() - spawnWaitStart
+        
+        -- Verifica se algum NPC deste mob específico está vivo
         local anyAlive = isAnyNPCAlive(config.npc, config.count)
         
         if anyAlive then
-            -- NPC spawnou! Pode continuar
+            -- NPCs spawnaram! Pode começar a farmar
             waitingForSpawn = false
-            currentNPCIndex = 1 -- Reset para começar do primeiro
+            currentNPCIndex = 1 -- Começa do primeiro
         elseif elapsed > MAX_SPAWN_WAIT then
-            -- Timeout: tenta teleportar novamente
-            hasUsedPortal = false
+            -- Timeout: força re-teleporte
+            lastPortaledMob = nil  -- Isso vai forçar teleporte novamente na próxima iteração
             waitingForSpawn = false
-            return
+            task.wait(0.5)
         else
             -- Ainda esperando, fica parado
             cancelTween()
-            return
         end
+        return -- Sai da função até confirmar spawn ou timeout
     end
 
-    -- CORREÇÃO 2: Recalcula offset com valores atualizados em tempo real
+    -- Só chega aqui se: já usou o portal deste mob E os NPCs já spawnaram
     local currentHeight = _G.SlowHub.FarmHeight or 4
     local currentDist = _G.SlowHub.FarmDistance or 8
     
@@ -396,17 +392,23 @@ local function doFarmLogic()
     local isAlive = isNPCAlive(npc)
 
     if not isAlive then
+        -- NPC morto, conta kill e tenta próximo
         killCount = killCount + 1
+        
         if killCount >= config.count then
+            -- Completou 5 kills, troca de mob
+            -- Isso vai mudar currentMobIndex, e na próxima iteração 
+            -- currentMobName será diferente, forçando teleporte
             switchToNextMob()
             return
         else
+            -- Próximo NPC do mesmo mob
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     else
+        -- NPC vivo, vai farmar
         local npcRoot = getNPCRootPart(npc)
         if npcRoot then
-            -- Recalcula offset com valores atuais (pode ter mudado no slider)
             local offset = CFrame.new(0, currentHeight, currentDist)
             local targetCFrame = npcRoot.CFrame * offset
             
@@ -436,7 +438,6 @@ local function startAutoFarm()
         startQuestLoop()
     end
     
-    -- Método BodyVelocity para permitir dano enquanto voa
     if humanoidRootPart then
         humanoidRootPart.Anchored = false
         local bv = Instance.new("BodyVelocity")
@@ -552,7 +553,6 @@ Tab:Slider({
     Callback = function(Value)
         _G.SlowHub.TweenSpeed = Value
         if _G.SaveConfig then _G.SaveConfig() end
-        -- CORREÇÃO 2: Cancela tween atual para forçar recálculo com nova velocidade
         cancelTween()
     end
 })
@@ -569,7 +569,6 @@ Tab:Slider({
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
         if _G.SaveConfig then _G.SaveConfig() end
-        -- CORREÇÃO 2: Cancela tween para forçar recálculo de posição
         cancelTween()
     end
 })
@@ -586,7 +585,6 @@ Tab:Slider({
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
         if _G.SaveConfig then _G.SaveConfig() end
-        -- CORREÇÃO 2: Cancela tween para forçar recálculo de posição
         cancelTween()
     end
 })
