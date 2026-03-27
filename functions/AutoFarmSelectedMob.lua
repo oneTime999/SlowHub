@@ -220,16 +220,11 @@ local function acceptQuest()
 end
 
 local function switchToNextMob()
-    local oldTarget = selectedMobs[currentMobIndex]
     currentMobIndex = getNextMobIndex()
-    local newTarget = selectedMobs[currentMobIndex]
-    
     currentNPCIndex = 1
     killCount = 0
-    
-    if oldTarget ~= newTarget then
-        hasUsedPortal = false
-    end
+    hasUsedPortal = false -- Reset para forçar teleporte na próxima área
+    cancelTween()
 end
 
 local function resetFarmState()
@@ -316,9 +311,13 @@ local function doFarmLogic()
         end
     end
 
+    -- Correção: Sincronização de área ao trocar de Mob
     if currentMobName ~= lastTargetName then
         lastTargetName = currentMobName
         hasUsedPortal = false
+        currentNPCIndex = 1
+        killCount = 0
+        cancelTween()
     end
 
     local config = getMobConfig(currentMobName)
@@ -330,7 +329,7 @@ local function doFarmLogic()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.2)
+            task.wait(0.4) -- Espera para garantir o carregamento da área
         end
         hasUsedPortal = true
         return
@@ -379,6 +378,7 @@ local function startAutoFarm()
         startQuestLoop()
     end
     
+    -- Método BodyVelocity para permitir dano enquanto voa
     if humanoidRootPart then
         humanoidRootPart.Anchored = false
         local bv = Instance.new("BodyVelocity")
