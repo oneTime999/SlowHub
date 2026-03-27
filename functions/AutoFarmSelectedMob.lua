@@ -2,19 +2,12 @@ local Tab = _G.MainTab
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 local MobList = {
-    "Thief", 
-    "Monkey", 
-    "DesertBandit", 
-    "FrostRogue", 
-    "Sorcerer", 
-    "Hollow", 
-    "StrongSorcerer", 
-    "Curse",
-    "Slime",
-    "AcademyTeacher"
+    "Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", 
+    "Hollow", "StrongSorcerer", "Curse", "Slime", "AcademyTeacher"
 }
 
 local QuestConfig = {
@@ -30,7 +23,6 @@ local QuestConfig = {
     ["AcademyTeacher"] = "QuestNPC15"
 }
 
--- [!] IMPORTANTE: Altere os nomes das strings para os exatos nomes dos portais no jogo!
 local MobPortals = {
     ["Thief"] = "Starter",
     ["Monkey"] = "Jungle", 
@@ -45,6 +37,8 @@ local MobPortals = {
 }
 
 local questLoop = nil
+local farmLoop = nil
+local noclipConnection = nil
 local isFarming = false
 local isQuesting = false
 local selectedMobs = {}
@@ -61,7 +55,6 @@ local humanoidRootPart = nil
 local humanoid = nil
 local npcsFolder = nil
 
--- Variáveis para o Tween
 local currentTween = nil
 local lastTweenTarget = nil
 
@@ -112,7 +105,9 @@ local function getNextIndex(current, maxCount)
 end
 
 local function getNextMobIndex()
-    return getNextIndex(currentMobIndex, #selectedMobs)
+    local nextIndex = currentMobIndex + 1
+    if nextIndex > #selectedMobs then return 1 end
+    return nextIndex
 end
 
 local function getQuestForMob(mobName)
@@ -163,14 +158,12 @@ local function moveToTarget(targetCFrame)
     local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
     local farmDist = _G.SlowHub.FarmDistance or 8
 
-    -- Se estiver perto o suficiente (dentro do range de ataque + margem), apenas ajusta CFrame
     if distance <= farmDist + 2 then
         cancelTween()
         humanoidRootPart.CFrame = targetCFrame
         return true
     end
 
-    -- Evita recriar o Tween a cada loop se o alvo não se moveu muito (evita engasgos)
     if lastTweenTarget and (lastTweenTarget.Position - targetCFrame.Position).Magnitude < 5 then
         if currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
             return false
@@ -178,7 +171,8 @@ local function moveToTarget(targetCFrame)
     end
 
     lastTweenTarget = targetCFrame
-    local speed = _G.SlowHub.TweenSpeed or 40 -- Velocidade padrão de andar é 16, 40 é mais que o dobro
+    local speed = _G.SlowHub.TweenSpeed or 40
+    if speed <= 0 then speed = 40 end
     local timeToReach = distance / speed
     local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
 
@@ -228,8 +222,6 @@ local function switchToNextMob()
     currentNPCIndex = 1
     killCount = 0
     
-    -- Só reseta o teleporte se realmente formos para um Mob diferente.
-    -- Se você selecionou só 1 mob, ele não vai teleportar de novo pra mesma área.
     if oldTarget ~= newTarget then
         hasUsedPortal = false
     end
@@ -253,21 +245,30 @@ end
 local function startQuestLoop()
     if isQuesting then return end
     isQuesting = true
-    questLoop = task.spawn(function()
-        while isQuesting and _G.SlowHub.AutoQuestSelectedMob do 
+    task.spawn(function()
+        while isQuesting do 
             acceptQuest()
             task.wait(_G.SlowHub.AutoQuestInterval or 2)
         end
-        isQuesting = false
     end)
 end
 
 local function stopAutoFarm()
-    if not isFarming then return end
     isFarming = false
     cancelTween()
     stopQuestLoop()
     resetFarmState()
+    
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
+    
+    if farmLoop then
+        farmLoop:Disconnect()
+        farmLoop = nil
+    end
+
     pcall(function()
         if humanoidRootPart then
             humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
@@ -275,7 +276,8 @@ local function stopAutoFarm()
     end)
 end
 
-local function farmLoop()
+local function doFarmLogic()
+    if not isFarming then return end
     if not character or not character.Parent then return end
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
@@ -285,13 +287,14 @@ local function farmLoop()
         humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health <= 0 then return end
     end
+    
     if _G.SlowHub.IsAttackingBoss then
         wasAttackingBoss = true
         cancelTween()
         return
     end
     if wasAttackingBoss then
-        hasUsedPortal = false -- Força usar o portal novamente após matar o Boss
+        hasUsedPortal = false
         wasAttackingBoss = false
     end
 
@@ -301,6 +304,7 @@ local function farmLoop()
         currentMobName = selectedMobs[1]
         if not currentMobName then
             stopAutoFarm()
+            _G.SlowHub.AutoFarmSelectedMob = false
             return
         end
     end
@@ -312,7 +316,6 @@ local function farmLoop()
 
     local config = getMobConfig(currentMobName)
 
-    -- Lógica do Portal Integrada
     if not hasUsedPortal then
         local portalName = MobPortals[currentMobName]
         if portalName then
@@ -320,7 +323,7 @@ local function farmLoop()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(1.5) -- Pausa rápida para o mapa e o personagem carregarem pós-tp
+            task.wait(1)
         end
         hasUsedPortal = true
         return
@@ -343,7 +346,6 @@ local function farmLoop()
             local offset = CFrame.new(0, _G.SlowHub.FarmHeight or 4, _G.SlowHub.FarmDistance or 8)
             local targetCFrame = npcRoot.CFrame * offset
             
-            -- Move via Tween, e retorna "true" apenas quando já colou no NPC
             local hasArrived = moveToTarget(targetCFrame)
             
             if hasArrived then
@@ -357,7 +359,7 @@ end
 local function startAutoFarm()
     if isFarming then
         stopAutoFarm()
-        task.wait(0.2)
+        task.wait(0.1)
     end
     initialize()
     if #selectedMobs == 0 then return false end
@@ -370,14 +372,26 @@ local function startAutoFarm()
         startQuestLoop()
     end
     
-    -- Agora usamos um while loop em vez de Heartbeat. 
-    -- É muito mais estável para evitar conflitos com o TweenService.
-    task.spawn(function()
-        while isFarming and _G.SlowHub.AutoFarmSelectedMob do
-            farmLoop()
-            task.wait(0.1) -- Delay pequeno para evitar crash e verificar movimento de forma suave
-        end
-    end)
+    if not noclipConnection then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if not isFarming then return end
+            if character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+            if humanoidRootPart then
+                humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end
+        end)
+    end
+
+    if not farmLoop then
+        farmLoop = RunService.Heartbeat:Connect(doFarmLogic)
+    end
+    
     return true
 end
 
@@ -395,12 +409,9 @@ local function updateSelectedMobs(options)
         startAutoFarm()
     elseif #selectedMobs == 0 then
         stopAutoFarm()
+        _G.SlowHub.AutoFarmSelectedMob = false
     end
 end
-
--- =====================================
--- UI (Menus)
--- =====================================
 
 Tab:Section({Title = "Mob Selection"})
 
@@ -423,16 +434,16 @@ Tab:Toggle({
     Title = "Auto Farm Selected Mobs",
     Value = _G.SlowHub.AutoFarmSelectedMob or false,
     Callback = function(Value)
+        _G.SlowHub.AutoFarmSelectedMob = Value
         if Value then
-            if not _G.SlowHub.SelectedWeapon then
+            if not _G.SlowHub.SelectedWeapon or #selectedMobs == 0 then
+                _G.SlowHub.AutoFarmSelectedMob = false
                 if _G.WindUI and _G.WindUI.Notify then
-                    _G.WindUI:Notify({ Title = "Error", Content = "Please select a weapon first!", Duration = 3 })
-                end
-                return
-            end
-            if #selectedMobs == 0 then
-                if _G.WindUI and _G.WindUI.Notify then
-                    _G.WindUI:Notify({ Title = "Error", Content = "Please select at least one mob!", Duration = 3 })
+                    _G.WindUI:Notify({
+                        Title = "Error",
+                        Content = "Check weapon and mobs!",
+                        Duration = 3,
+                    })
                 end
                 return
             end
@@ -440,7 +451,6 @@ Tab:Toggle({
         else
             stopAutoFarm()
         end
-        _G.SlowHub.AutoFarmSelectedMob = Value
         if _G.SaveConfig then _G.SaveConfig() end
     end
 })
@@ -451,7 +461,7 @@ Tab:Toggle({
     Callback = function(Value)
         _G.SlowHub.AutoQuestSelectedMob = Value
         if _G.SaveConfig then _G.SaveConfig() end
-        if Value then
+        if Value and _G.SlowHub.AutoFarmSelectedMob then
             startQuestLoop()
         else
             stopQuestLoop()
@@ -464,9 +474,9 @@ Tab:Slider({
     Flag = "TweenSpeed",
     Step = 1,
     Value = {
-        Min = 16, -- Velocidade padrão de andar no Roblox
-        Max = 150,
-        Default = _G.SlowHub.TweenSpeed or 40, -- Cerca de 2x mais rápido que o padrão
+        Min = 16,
+        Max = 500,
+        Default = _G.SlowHub.TweenSpeed or 40,
     },
     Callback = function(Value)
         _G.SlowHub.TweenSpeed = Value
@@ -542,7 +552,7 @@ task.spawn(function()
     if _G.SlowHub.AutoFarmSelectedMob then
         startAutoFarm()
     end
-    if _G.SlowHub.AutoQuestSelectedMob then
+    if _G.SlowHub.AutoQuestSelectedMob and _G.SlowHub.AutoFarmSelectedMob then
         startQuestLoop()
     end
 end)
