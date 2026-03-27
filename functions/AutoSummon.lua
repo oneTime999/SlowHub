@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local bossConfigs = {
+    ["BlessedMaidenBoss"] = {Method="Gilgamesh", InternalName="BlessedMaidenBoss"},
+    ["SaberAlterBoss"] = {Method="Gilgamesh", InternalName="SaberAlterBoss"},
     ["Anos"] = {Method="AnosSpecific", InternalName="Anos"},
     ["RimuruBoss"] = {Method="RimuruSpecific", InternalName="Rimuru"},
     ["GilgameshBoss"] = {Method="Gilgamesh", InternalName="GilgameshBoss"},
@@ -36,7 +38,6 @@ local function isBossAlive(bossName)
     return found
 end
 
--- CORREÇÃO: Sintaxe errada ==.PriorityPityEnabled ==
 local function isPitySystemEnabled()
     return _G.SlowHub and _G.SlowHub.PriorityPityEnabled == true
 end
@@ -89,6 +90,7 @@ local function summonBoss(currentBossName, config)
                 remotes.RequestSpawnRimuru:FireServer(selectedDifficulty)
             end
         elseif config.Method == "Gilgamesh" then
+            -- Funciona para BlessedMaidenBoss e SaberAlterBoss também
             local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remotes and remotes:FindFirstChild("RequestSummonBoss") then
                 remotes.RequestSummonBoss:FireServer(config.InternalName, selectedDifficulty)
@@ -117,6 +119,7 @@ local function processBossSummon(currentBossName)
     if not config then return end
     
     local namesToCheck = {}
+    -- Verifica se o boss já está vivo (com ou sem sufixo de dificuldade)
     if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" or config.Method == "AnosSpecific" then
         table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
         table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
@@ -141,20 +144,18 @@ local function stopAutoSummon()
     _G.SlowHub.AutoSummonBoss = false
 end
 
--- CORREÇÃO: Loop melhorado com task.spawn para não bloquear e intervalo correto
 local function startAutoSummon()
     if isSummoning then stopAutoSummon(); task.wait(0.2) end
     isSummoning = true
     _G.SlowHub.AutoSummonBoss = true
     
-    -- Usar task.spawn em vez de RunService.Heartbeat para ter controle do intervalo
     task.spawn(function()
         while isSummoning and _G.SlowHub.AutoSummonBoss do
             local bossesToSummon = getFilteredBossesToSummon()
             for _, bossName in ipairs(bossesToSummon) do
                 if not isSummoning then break end
                 processBossSummon(bossName)
-                task.wait(0.1) -- Pequeno delay entre summons individuais
+                task.wait(0.1)
             end
             task.wait(_G.SlowHub.SummonInterval or 0.5)
         end
@@ -231,7 +232,6 @@ Tab:Toggle({
     end,
 })
 
--- Auto-start se estiver ativo
 if _G.SlowHub.AutoSummonBoss then
     task.wait(2)
     startAutoSummon()
