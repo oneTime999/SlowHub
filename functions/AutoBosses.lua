@@ -15,20 +15,20 @@ local difficulties = {"_Normal", "_Medium", "_Hard", "_Extreme"}
 
 -- NOVO: Portais para cada boss (ajuste os nomes conforme seu jogo)
 local BossPortals = {
-    ["AnosBoss"] = "AnosPortal",
-    ["GilgameshBoss"] = "GilgameshPortal",
-    ["RimuruBoss"] = "RimuruPortal",
-    ["StrongestofTodayBoss"] = "TodayPortal",
-    ["StrongestinHistoryBoss"] = "HistoryPortal",
-    ["IchigoBoss"] = "IchigoPortal",
-    ["AizenBoss"] = "AizenPortal",
-    ["AlucardBoss"] = "AlucardPortal",
-    ["QinShiBoss"] = "QinShiPortal",
-    ["JinwooBoss"] = "JinwooPortal",
-    ["SukunaBoss"] = "SukunaPortal",
-    ["GojoBoss"] = "GojoPortal",
-    ["SaberBoss"] = "SaberPortal",
-    ["YujiBoss"] = "YujiPortal",
+    ["AnosBoss"] = "Academy",
+    ["GilgameshBoss"] = "Boss",
+    ["RimuruBoss"] = "Slime",
+    ["StrongestofTodayBoss"] = "Shinjuku",
+    ["StrongestinHistoryBoss"] = "Shinjuku",
+    ["IchigoBoss"] = "Boss",
+    ["AizenBoss"] = "Hueco",
+    ["AlucardBoss"] = "Sailor",
+    ["QinShiBoss"] = "Boss",
+    ["JinwooBoss"] = "Sailor",
+    ["SukunaBoss"] = "Shibuya",
+    ["GojoBoss"] = "Shibuya",
+    ["SaberBoss"] = "Boss",
+    ["YujiBoss"] = "Shibuya",
 }
 
 -- Propagar portais para todas as dificuldades
