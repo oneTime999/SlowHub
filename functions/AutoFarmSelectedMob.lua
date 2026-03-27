@@ -5,6 +5,9 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
+-- Fixando a velocidade globalmente
+_G.SlowHub.TweenSpeed = 500
+
 local MobList = {
     "Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", 
     "Hollow", "StrongSorcerer", "Curse", "Slime", "AcademyTeacher"
@@ -56,8 +59,7 @@ local npcsFolder = nil
 local currentTween = nil
 local lastTweenTarget = nil
 
--- NOVO: Sistema de controle de portal por mob específico
-local lastPortaledMob = nil  -- Nome do último mob que usou portal
+local lastPortaledMob = nil 
 local waitingForSpawn = false
 local spawnWaitStart = 0
 local MAX_SPAWN_WAIT = 10
@@ -171,7 +173,7 @@ local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
     local currentFarmDist = _G.SlowHub.FarmDistance or 8
-    local currentSpeed = _G.SlowHub.TweenSpeed or 500
+    local currentSpeed = 500 -- VELOCIDADE FIXA EM 500
 
     local distance = (humanoidRootPart.Position - targetCFrame.Position).Magnitude
 
@@ -191,7 +193,6 @@ local function moveToTarget(targetCFrame)
     end
 
     lastTweenTarget = targetCFrame
-    if currentSpeed <= 0 then currentSpeed = 500 end
     local timeToReach = distance / currentSpeed
     local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
 
@@ -244,7 +245,6 @@ local function switchToNextMob()
     currentNPCIndex = 1
     killCount = 0
     waitingForSpawn = false
-    -- NÃO resetar lastPortaledMob aqui! Ele vai detectar mudança pelo currentMobName ~= lastPortaledMob
     cancelTween()
 end
 
@@ -253,7 +253,7 @@ local function resetFarmState()
     currentNPCIndex = 1
     killCount = 0
     lastTargetName = nil
-    lastPortaledMob = nil  -- Reset completo
+    lastPortaledMob = nil  
     waitingForSpawn = false
     spawnWaitStart = 0
     cancelTween()
@@ -318,7 +318,7 @@ local function doFarmLogic()
         return
     end
     if wasAttackingBoss then
-        lastPortaledMob = nil  -- Força re-teleporte após boss
+        lastPortaledMob = nil  
         wasAttackingBoss = false
     end
 
@@ -333,10 +333,9 @@ local function doFarmLogic()
         end
     end
 
-    -- Sincronização: Se mudou de mob, garante que vai usar o portal do novo
     if currentMobName ~= lastTargetName then
         lastTargetName = currentMobName
-        lastPortaledMob = nil  -- Força teleporte para o novo mob
+        lastPortaledMob = nil  
         waitingForSpawn = false
         currentNPCIndex = 1
         killCount = 0
@@ -345,7 +344,6 @@ local function doFarmLogic()
 
     local config = getMobConfig(currentMobName)
 
-    -- CORREÇÃO: Só pode farmar se já usou o portal deste mob específico
     if lastPortaledMob ~= currentMobName then
         local portalName = MobPortals[currentMobName]
         if portalName then
@@ -353,38 +351,31 @@ local function doFarmLogic()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.5) -- Aumentado para garantir o teleporte
+            task.wait(0.5) 
         end
-        lastPortaledMob = currentMobName  -- Marca que tentou usar portal deste mob
+        lastPortaledMob = currentMobName  
         waitingForSpawn = true
         spawnWaitStart = tick()
-        return -- Sai e espera spawn na próxima iteração
+        return 
     end
 
-    -- Se está esperando spawn, verifica se NPCs apareceram
     if waitingForSpawn then
         local elapsed = tick() - spawnWaitStart
-        
-        -- Verifica se algum NPC deste mob específico está vivo
         local anyAlive = isAnyNPCAlive(config.npc, config.count)
         
         if anyAlive then
-            -- NPCs spawnaram! Pode começar a farmar
             waitingForSpawn = false
-            currentNPCIndex = 1 -- Começa do primeiro
+            currentNPCIndex = 1 
         elseif elapsed > MAX_SPAWN_WAIT then
-            -- Timeout: força re-teleporte
-            lastPortaledMob = nil  -- Isso vai forçar teleporte novamente na próxima iteração
+            lastPortaledMob = nil  
             waitingForSpawn = false
             task.wait(0.5)
         else
-            -- Ainda esperando, fica parado
             cancelTween()
         end
-        return -- Sai da função até confirmar spawn ou timeout
+        return 
     end
 
-    -- Só chega aqui se: já usou o portal deste mob E os NPCs já spawnaram
     local currentHeight = _G.SlowHub.FarmHeight or 4
     local currentDist = _G.SlowHub.FarmDistance or 8
     
@@ -392,26 +383,18 @@ local function doFarmLogic()
     local isAlive = isNPCAlive(npc)
 
     if not isAlive then
-        -- NPC morto, conta kill e tenta próximo
         killCount = killCount + 1
-        
         if killCount >= config.count then
-            -- Completou 5 kills, troca de mob
-            -- Isso vai mudar currentMobIndex, e na próxima iteração 
-            -- currentMobName será diferente, forçando teleporte
             switchToNextMob()
             return
         else
-            -- Próximo NPC do mesmo mob
             currentNPCIndex = getNextIndex(currentNPCIndex, config.count)
         end
     else
-        -- NPC vivo, vai farmar
         local npcRoot = getNPCRootPart(npc)
         if npcRoot then
             local offset = CFrame.new(0, currentHeight, currentDist)
             local targetCFrame = npcRoot.CFrame * offset
-            
             local hasArrived = moveToTarget(targetCFrame)
             
             if hasArrived then
@@ -541,21 +524,7 @@ Tab:Toggle({
     end
 })
 
-Tab:Slider({
-    Title = "Tween Speed",
-    Flag = "TweenSpeed",
-    Step = 10,
-    Value = {
-        Min = 16,
-        Max = 1000,
-        Default = _G.SlowHub.TweenSpeed or 500,
-    },
-    Callback = function(Value)
-        _G.SlowHub.TweenSpeed = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-        cancelTween()
-    end
-})
+-- SLIDER DE TWEEN SPEED REMOVIDO DAQUI
 
 Tab:Slider({
     Title = "Farm Distance",
