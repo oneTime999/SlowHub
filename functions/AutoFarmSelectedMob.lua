@@ -149,6 +149,7 @@ local function cancelTween()
         currentTween:Cancel()
         currentTween = nil
     end
+    lastTweenTarget = nil -- ✅ FIX 2: sempre limpa o alvo ao cancelar
 end
 
 local function moveToTarget(targetCFrame)
@@ -176,6 +177,7 @@ local function moveToTarget(targetCFrame)
     local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
 
     cancelTween()
+    lastTweenTarget = targetCFrame -- reatribuir após cancelTween limpar
     currentTween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetCFrame})
     currentTween:Play()
 
@@ -223,7 +225,7 @@ local function switchToNextMob()
     currentMobIndex = getNextMobIndex()
     currentNPCIndex = 1
     killCount = 0
-    hasUsedPortal = false -- Reset para forçar teleporte na próxima área
+    hasUsedPortal = false
     cancelTween()
 end
 
@@ -311,7 +313,6 @@ local function doFarmLogic()
         end
     end
 
-    -- Correção: Sincronização de área ao trocar de Mob
     if currentMobName ~= lastTargetName then
         lastTargetName = currentMobName
         hasUsedPortal = false
@@ -322,6 +323,7 @@ local function doFarmLogic()
 
     local config = getMobConfig(currentMobName)
 
+    -- ✅ FIX 1: Teleportar para o portal da área
     if not hasUsedPortal then
         local portalName = MobPortals[currentMobName]
         if portalName then
@@ -329,16 +331,24 @@ local function doFarmLogic()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.4) -- Espera para garantir o carregamento da área
+            task.wait(0.4)
         end
         hasUsedPortal = true
         return
     end
 
+    -- ✅ FIX 1: Se o NPC ainda não spawnou (nil), fica parado esperando
     local npc = getNPC(config.npc, currentNPCIndex)
+    if npc == nil then
+        -- NPC não existe ainda, aguarda sem fazer nada
+        return
+    end
+
+    -- NPC existe, verificar se está vivo
     local isAlive = isNPCAlive(npc)
 
     if not isAlive then
+        -- NPC existia mas morreu — contar como kill
         killCount = killCount + 1
         if killCount >= config.count then
             switchToNextMob()
@@ -378,7 +388,6 @@ local function startAutoFarm()
         startQuestLoop()
     end
     
-    -- Método BodyVelocity para permitir dano enquanto voa
     if humanoidRootPart then
         humanoidRootPart.Anchored = false
         local bv = Instance.new("BodyVelocity")
@@ -493,6 +502,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.TweenSpeed = Value
+        cancelTween() -- ✅ FIX 2: força recálculo imediato
         if _G.SaveConfig then _G.SaveConfig() end
     end
 })
@@ -508,6 +518,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.FarmDistance = Value
+        cancelTween() -- ✅ FIX 2: força recálculo imediato
         if _G.SaveConfig then _G.SaveConfig() end
     end
 })
@@ -523,6 +534,7 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
+        cancelTween() -- ✅ FIX 2: força recálculo imediato
         if _G.SaveConfig then _G.SaveConfig() end
     end
 })
