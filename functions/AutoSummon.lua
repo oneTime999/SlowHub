@@ -36,8 +36,9 @@ local function isBossAlive(bossName)
     return found
 end
 
+-- CORREÇÃO: Sintaxe errada ==.PriorityPityEnabled ==
 local function isPitySystemEnabled()
-    return _G.SlowHub and _G.SlowHub.PriorityPityEnabled ==.PriorityPityEnabled == true
+    return _G.SlowHub and _G.SlowHub.PriorityPityEnabled == true
 end
 
 local function getPityTargetBoss()
@@ -56,13 +57,19 @@ local function getFilteredBossesToSummon()
     local pityEnabled = isPitySystemEnabled()
     local pityTargetTime = isPityTargetTime()
     local pityTarget = getPityTargetBoss()
+    
     for _, selectedBoss in ipairs(selectedBosses) do
         if not bossConfigs[selectedBoss] then continue end
-        if pityEnabled then
+        
+        if pityEnabled and pityTarget ~= "" then
             if selectedBoss == pityTarget then
-                if pityTargetTime then table.insert(bossesToSummon, selectedBoss) end
+                if pityTargetTime then 
+                    table.insert(bossesToSummon, selectedBoss) 
+                end
             else
-                if not pityTargetTime then table.insert(bossesToSummon, selectedBoss) end
+                if not pityTargetTime then 
+                    table.insert(bossesToSummon, selectedBoss) 
+                end
             end
         else
             table.insert(bossesToSummon, selectedBoss)
@@ -108,6 +115,7 @@ end
 local function processBossSummon(currentBossName)
     local config = bossConfigs[currentBossName]
     if not config then return end
+    
     local namesToCheck = {}
     if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" or config.Method == "AnosSpecific" then
         table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
@@ -116,9 +124,11 @@ local function processBossSummon(currentBossName)
         table.insert(namesToCheck, currentBossName)
         table.insert(namesToCheck, config.InternalName)
     end
+    
     for _, name in ipairs(namesToCheck) do
         if isBossAlive(name) then return end
     end
+    
     summonBoss(currentBossName, config)
 end
 
@@ -131,17 +141,23 @@ local function stopAutoSummon()
     _G.SlowHub.AutoSummonBoss = false
 end
 
+-- CORREÇÃO: Loop melhorado com task.spawn para não bloquear e intervalo correto
 local function startAutoSummon()
     if isSummoning then stopAutoSummon(); task.wait(0.2) end
     isSummoning = true
     _G.SlowHub.AutoSummonBoss = true
-    summonConnection = RunService.Heartbeat:Connect(function()
-        if not _G.SlowHub.AutoSummonBoss then stopAutoSummon(); return end
-        local bossesToSummon = getFilteredBossesToSummon()
-        for _, bossName in ipairs(bossesToSummon) do
-            processBossSummon(bossName)
+    
+    -- Usar task.spawn em vez de RunService.Heartbeat para ter controle do intervalo
+    task.spawn(function()
+        while isSummoning and _G.SlowHub.AutoSummonBoss do
+            local bossesToSummon = getFilteredBossesToSummon()
+            for _, bossName in ipairs(bossesToSummon) do
+                if not isSummoning then break end
+                processBossSummon(bossName)
+                task.wait(0.1) -- Pequeno delay entre summons individuais
+            end
+            task.wait(_G.SlowHub.SummonInterval or 0.5)
         end
-        task.wait(_G.SlowHub.SummonInterval or 0.5)
     end)
 end
 
@@ -156,7 +172,9 @@ Tab:Dropdown({
     Callback = function(value)
         selectedBosses = {}
         if type(value) == "table" then
-            for _, boss in ipairs(value) do table.insert(selectedBosses, boss) end
+            for _, boss in ipairs(value) do 
+                table.insert(selectedBosses, boss) 
+            end
         end
         _G.SlowHub.SelectBossSummon = selectedBosses
         if _G.SaveConfig then
@@ -186,8 +204,8 @@ Tab:Slider({
     Step = 0.1,
     Value = {
         Min = 0.1,
-        Max = 2,
-        Default = _G.SlowHub.SummonInterval or 0.5,
+        Max = 5.0,
+        Default = _G.SlowHub.SummonInterval or 1.0,
     },
     Callback = function(Value)
         _G.SlowHub.SummonInterval = Value
@@ -212,3 +230,9 @@ Tab:Toggle({
         end
     end,
 })
+
+-- Auto-start se estiver ativo
+if _G.SlowHub.AutoSummonBoss then
+    task.wait(2)
+    startAutoSummon()
+end
