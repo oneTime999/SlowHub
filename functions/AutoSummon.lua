@@ -3,16 +3,23 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local bossConfigs = {
-    ["BlessedMaidenBoss"] = {Method="Gilgamesh", InternalName="BlessedMaidenBoss"},
-    ["SaberAlterBoss"] = {Method="Gilgamesh", InternalName="SaberAlterBoss"},
+    -- SEM DIFICULDADE (só o nome)
+    ["IchigoBoss"] = {Method="Old", InternalName="IchigoBoss"},
+    ["QinShiBoss"] = {Method="Old", InternalName="QinShiBoss"},
+    ["SaberBoss"] = {Method="Old", InternalName="SaberBoss"},
+    
+    -- COM DIFICULDADE (Nome + Dificuldade)
     ["Anos"] = {Method="AnosSpecific", InternalName="Anos"},
     ["RimuruBoss"] = {Method="RimuruSpecific", InternalName="Rimuru"},
     ["GilgameshBoss"] = {Method="Gilgamesh", InternalName="GilgameshBoss"},
     ["StrongestofTodayBoss"] = {Method="New", InternalName="StrongestToday"},
     ["StrongestinHistoryBoss"] = {Method="New", InternalName="StrongestHistory"},
-    ["IchigoBoss"] = {Method="Old", InternalName="IchigoBoss"},
-    ["QinShiBoss"] = {Method="Old", InternalName="QinShiBoss"},
-    ["SaberBoss"] = {Method="Old", InternalName="SaberBoss"},
+    ["BlessedMaidenBoss"] = {Method="Gilgamesh", InternalName="BlessedMaidenBoss"},
+    ["SaberAlterBoss"] = {Method="Gilgamesh", InternalName="SaberAlterBoss"},
+    
+    -- NOVOS BOSSES com RemoteEvents específicos
+    ["AtomicBoss"] = {Method="AtomicSpecific", InternalName="AtomicBoss"},
+    ["TrueAizenBoss"] = {Method="TrueAizenSpecific", InternalName="TrueAizenBoss"},
 }
 
 local bossList = {}
@@ -81,7 +88,21 @@ end
 
 local function summonBoss(currentBossName, config)
     pcall(function()
-        if config.Method == "RimuruSpecific" then
+        -- Bosses SEM dificuldade (Ichigo, QinShi, Saber)
+        if config.Method == "Old" then
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
+                remotes.RequestSummonBoss:FireServer(currentBossName)
+            end
+            
+        -- Bosses COM dificuldade (Gilgamesh, BlessedMaiden, SaberAlter, etc)
+        elseif config.Method == "Gilgamesh" then
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
+                remotes.RequestSummonBoss:FireServer(config.InternalName, selectedDifficulty)
+            end
+            
+        elseif config.Method == "RimuruSpecific" then
             local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
             local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnRimuru") then
@@ -89,26 +110,31 @@ local function summonBoss(currentBossName, config)
             elseif remotes and remotes:FindFirstChild("RequestSpawnRimuru") then
                 remotes.RequestSpawnRimuru:FireServer(selectedDifficulty)
             end
-        elseif config.Method == "Gilgamesh" then
-            -- Funciona para BlessedMaidenBoss e SaberAlterBoss também
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
-                remotes.RequestSummonBoss:FireServer(config.InternalName, selectedDifficulty)
-            end
+            
         elseif config.Method == "New" then
             local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remotes and remotes:FindFirstChild("RequestSpawnStrongestBoss") then
                 remotes.RequestSpawnStrongestBoss:FireServer(config.InternalName, selectedDifficulty)
             end
+            
         elseif config.Method == "AnosSpecific" then
             local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remotes and remotes:FindFirstChild("RequestSpawnAnosBoss") then
                 remotes.RequestSpawnAnosBoss:FireServer(config.InternalName, selectedDifficulty)
             end
-        else
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
-                remotes.RequestSummonBoss:FireServer(currentBossName)
+            
+        -- NOVOS: AtomicBoss (RequestSpawnAtomic)
+        elseif config.Method == "AtomicSpecific" then
+            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+            if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnAtomic") then
+                remoteEvents.RequestSpawnAtomic:FireServer(selectedDifficulty)
+            end
+            
+        -- NOVOS: TrueAizenBoss (RequestSpawnTrueAizen)
+        elseif config.Method == "TrueAizenSpecific" then
+            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+            if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnTrueAizen") then
+                remoteEvents.RequestSpawnTrueAizen:FireServer(selectedDifficulty)
             end
         end
     end)
@@ -119,13 +145,19 @@ local function processBossSummon(currentBossName)
     if not config then return end
     
     local namesToCheck = {}
-    -- Verifica se o boss já está vivo (com ou sem sufixo de dificuldade)
-    if config.Method == "New" or config.Method == "RimuruSpecific" or config.Method == "Gilgamesh" or config.Method == "AnosSpecific" then
-        table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
-        table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
-    else
+    
+    -- Verifica nomes possíveis baseado no método
+    if config.Method == "Old" then
+        -- Sem dificuldade: só o nome exato
         table.insert(namesToCheck, currentBossName)
         table.insert(namesToCheck, config.InternalName)
+    else
+        -- Com dificuldade: Nome_Dificuldade ou só o nome base
+        table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
+        table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
+        -- Também verifica sem dificuldade (caso o jogo não use sufixo para alguns)
+        table.insert(namesToCheck, config.InternalName)
+        table.insert(namesToCheck, currentBossName)
     end
     
     for _, name in ipairs(namesToCheck) do
