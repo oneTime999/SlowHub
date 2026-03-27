@@ -1,10 +1,22 @@
 local Tab = _G.ShopTab
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z)
 local merchantItemsList = {
-    "Rush Key","Clan Reroll","Race Reroll","Trait Reroll","Boss Key","Boss Ticket",
-    "Dungeon Key","Haki Color Reroll","Common Chest","Rare Chest","Epic Chest",
-    "Legendary Chest","Mythical Chest","Secret Chest",
+    "Boss Key",
+    "Boss Ticket",
+    "Clan Reroll",
+    "Common Chest",
+    "Dungeon Key",
+    "Epic Chest",
+    "Haki Color Reroll",
+    "Legendary Chest",
+    "Mythical Chest",
+    "Race Reroll",
+    "Rare Chest",
+    "Rush Key",
+    "Secret Chest",
+    "Trait Reroll",
 }
 
 local loopConnection = nil
@@ -54,10 +66,11 @@ end
 
 Tab:Section({Title = "Merchant"})
 
+-- ORDEM ALFABÉTICA: Boss Key -> Boss Ticket -> Clan Reroll -> Common Chest -> Dungeon Key -> Epic Chest -> Haki Color Reroll -> Legendary Chest -> Mythical Chest -> Race Reroll -> Rare Chest -> Rush Key -> Secret Chest -> Trait Reroll
 Tab:Dropdown({
     Title = "Select Merchant Items to Buy",
     Flag = "SelectMerchantItems",
-    Values = merchantItemsList,
+    Values = merchantItemsList, -- Já ordenado alfabeticamente
     Multi = true,
     Value = _G.SlowHub.SelectedMerchantItems or {},
     Callback = function(value)
