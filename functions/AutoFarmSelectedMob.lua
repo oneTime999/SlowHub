@@ -7,7 +7,8 @@ local Player = Players.LocalPlayer
 
 local MobList = {
     "Thief", "Monkey", "DesertBandit", "FrostRogue", "Sorcerer", 
-    "Hollow", "StrongSorcerer", "Curse", "Slime", "AcademyTeacher"
+    "Hollow", "StrongSorcerer", "Curse", "Slime", "AcademyTeacher",
+    "Swordsman", "Quincy", "Ninja", "ArenaFighter"
 }
 
 local QuestConfig = {
@@ -20,7 +21,12 @@ local QuestConfig = {
     ["StrongSorcerer"] = "QuestNPC12",
     ["Curse"] = "QuestNPC13",
     ["Slime"] = "SlimeNPC14",
-    ["AcademyTeacher"] = "QuestNPC15"
+    ["AcademyTeacher"] = "QuestNPC15",
+    -- Novas Quests
+    ["Swordsman"] = "QuestNPC16",
+    ["Quincy"] = "QuestNPC17",
+    ["Ninja"] = "QuestNPC18",
+    ["ArenaFighter"] = "QuestNPC19"
 }
 
 local MobPortals = {
@@ -33,7 +39,12 @@ local MobPortals = {
     ["StrongSorcerer"] = "Shinjuku",
     ["Curse"] = "Shinjuku",
     ["Slime"] = "Slime",
-    ["AcademyTeacher"] = "Academy"
+    ["AcademyTeacher"] = "Academy",
+    -- Novos Portais
+    ["Swordsman"] = "Judgement",
+    ["Quincy"] = "SoulDominion",
+    ["Ninja"] = "Ninja",
+    ["ArenaFighter"] = "Lawless"
 }
 
 local questLoop = nil
