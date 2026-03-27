@@ -7,16 +7,6 @@ if weaponScript and weaponScript ~= "" then
     if func then pcall(func) end
 end
 
-task.wait(0.1)
-
-local levelScript = game:HttpGet(githubBase .. "AutoLevel.lua")
-if levelScript and levelScript ~= "" then
-    local func = loadstring(levelScript)
-    if func then
-        task.spawn(function() pcall(func) end)
-    end
-end
-
 task.wait(0.2)
 
 local mobScript = game:HttpGet(githubBase .. "AutoFarmSelectedMob.lua")
