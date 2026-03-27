@@ -37,7 +37,7 @@ local BossPortals = {
     ["TrueAizenBoss"] = "SoulDominion",
     ["SaberAlterBoss"] = "Boss",
     ["BlessedMaidenBoss"] = "Boss",
-    ["YamatoBoss"] = "Judgment",
+    ["YamatoBoss"] = "Judgement",
     ["StrongestShinobiBoss"] = "Ninja",
 }
 
