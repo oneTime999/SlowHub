@@ -37,13 +37,17 @@ local function startMerchantLoop()
     _G.SlowHub.AutoBuyMerchant = true
     loopConnection = task.spawn(function()
         while isRunning and _G.SlowHub.AutoBuyMerchant do
-            if not _G.SlowHub.SelectedMerchantItems or #_G.SlowHub.SelectedMerchantItems == 0 then stopMerchantLoop(); break end
+            if not _G.SlowHub.SelectedMerchantItems or #_G.SlowHub.SelectedMerchantItems == 0 then 
+                stopMerchantLoop(); 
+                break 
+            end
+            -- Compra todos os itens selecionados na velocidade máxima (sem delay)
             for _, itemName in ipairs(_G.SlowHub.SelectedMerchantItems) do
                 if not _G.SlowHub.AutoBuyMerchant then break end
                 purchaseItem(itemName)
-                task.wait(_G.SlowHub.MerchantBuyInterval or 0.5)
+                -- REMOVIDO: task.wait() - compra instantânea
             end
-            task.wait(_G.SlowHub.MerchantCycleInterval or 1)
+            -- REMOVIDO: task.wait() entre ciclos - loop infinito rápido
         end
     end)
 end
@@ -67,39 +71,8 @@ Tab:Dropdown({
     end,
 })
 
-Tab:Slider({
-    Title = "Buy Interval",
-    Flag = "MerchantBuyInterval",
-    Step = 0.1,
-    Value = {
-        Min = 0.1,
-        Max = 2,
-        Default = _G.SlowHub.MerchantBuyInterval or 0.5,
-    },
-    Callback = function(Value)
-        _G.SlowHub.MerchantBuyInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end,
-})
-
-Tab:Slider({
-    Title = "Cycle Interval",
-    Flag = "MerchantCycleInterval",
-    Step = 0.5,
-    Value = {
-        Min = 0.5,
-        Max = 5,
-        Default = _G.SlowHub.MerchantCycleInterval or 1,
-    },
-    Callback = function(Value)
-        _G.SlowHub.MerchantCycleInterval = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
-    end,
-})
+-- REMOVIDO: Slider de Buy Interval
+-- REMOVIDO: Slider de Cycle Interval
 
 Tab:Toggle({
     Title = "Auto Buy Selected Items",
