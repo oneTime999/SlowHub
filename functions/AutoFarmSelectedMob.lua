@@ -6,6 +6,19 @@ local TweenService = game:GetService("TweenService")
 local Player = Players.LocalPlayer
 
 -- ============================================================
+-- VERIFICAÇÃO DE DEPENDÊNCIAS
+-- ============================================================
+
+if not Tab then
+    warn("SlowHub: MainTab não encontrado!")
+    return
+end
+
+if not _G.SlowHub then
+    _G.SlowHub = {}
+end
+
+-- ============================================================
 -- CONFIGURAÇÕES DE MOBS
 -- ============================================================
 
@@ -27,8 +40,6 @@ local QuestConfig = {
     ["AcademyTeacher"] = "QuestNPC15"
 }
 
--- Argumento passado ao TeleportToPortal para cada mob
--- Ajuste os valores conforme os portais reais do jogo
 local MobPortalArgs = {
     ["Thief"]          = "Starter",
     ["Monkey"]         = "Jungle",
@@ -42,15 +53,14 @@ local MobPortalArgs = {
     ["AcademyTeacher"] = "Academy"
 }
 
-
 -- ============================================================
 -- CONSTANTES
 -- ============================================================
 
-local TWEEN_SPEED    = 32   -- studs/s (~2x caminhada normal de 16)
-local MIN_TWEEN_DIST = 3    -- distância mínima para iniciar um tween
-local KILLS_PER_MOB  = 5    -- kills por mob antes de passar ao próximo
-local PORTAL_WAIT    = 1.5  -- segundos aguardados após o remote de portal
+local TWEEN_SPEED    = 32
+local MIN_TWEEN_DIST = 3
+local KILLS_PER_MOB  = 5
+local PORTAL_WAIT    = 1.5
 
 -- ============================================================
 -- ESTADO INTERNO
@@ -135,8 +145,6 @@ end
 
 -- ============================================================
 -- TWEEN DE MOVIMENTO
--- Desloca o personagem suavemente até o destino.
--- Velocidade = TWEEN_SPEED studs/s (~2x o normal).
 -- ============================================================
 
 local function tweenTo(targetCFrame, callback)
@@ -156,7 +164,7 @@ local function tweenTo(targetCFrame, callback)
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
 
     isTweening  = true
-    local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetCFrame})
+    local tween = TweenService:Create(humanoidRootPart, tweenInfo, {C {CFrame = targetCFrame})
     activeTween = tween
 
     tween.Completed:Connect(function(state)
@@ -170,9 +178,6 @@ end
 
 -- ============================================================
 -- PORTAL DO JOGO
--- Dispara TeleportToPortal UMA VEZ por mob:
---   1 mob selecionado  → dispara 1x, nunca mais repete
---   2+ mobs            → dispara 1x ao entrar em cada mob
 -- ============================================================
 
 local function firePortalRemote(mobName)
@@ -261,10 +266,10 @@ end
 -- ============================================================
 
 local function switchToNextMob()
-    currentMobIndex = getNextMobIndex()
+    currentMobIndex = getNextNextMobIndex()
     currentNPCIndex = 1
     killCount       = 0
-    hasPortalFired  = false   -- novo mob → dispara portal de novo
+    hasPortalFired  = false
     isTweening      = false
     if activeTween then activeTween:Cancel() end
 end
@@ -296,16 +301,14 @@ local function stopAutoFarm()
 end
 
 -- ============================================================
--- FARM LOOP  (roda em Heartbeat)
+-- FARM LOOP
 -- ============================================================
 
 local function farmLoop()
     if not _G.SlowHub.AutoFarmSelectedMob then stopAutoFarm() return end
 
-    -- Aguarda o Tween terminar antes de agir
     if isTweening then return end
 
-    -- Valida personagem
     if not character or not character.Parent then return end
     if not humanoidRootPart then
         humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
@@ -314,8 +317,7 @@ local function farmLoop()
     if not humanoid then humanoid = character:FindFirstChildOfClass("Humanoid") end
     if not humanoid or humanoid.Health <= 0 then return end
 
-    -- Pausa durante boss fight
-    if _G.SlowHub.IsAttackingBoss then wasAttackingBoss = true return end
+    if _G.SlowHub.IsAttackingBoss then wasAttackingackingBoss = true return end
     if wasAttackingBoss then hasPortalFired = false wasAttackingBoss = false end
 
     if #selectedMobs == 0 then stopAutoFarm() return end
@@ -327,11 +329,7 @@ local function farmLoop()
         if not currentMobName then stopAutoFarm() return end
     end
 
-    -- ── ETAPA 1: TeleportToPortal (1x por mob) ──────────────────────────
-    --
-    --   1 mob  → dispara 1 única vez, nunca repete
-    --   2+ mobs → dispara ao entrar em cada mob, reinicia ao ciclar
-    --
+    -- ETAPA 1: TeleportToPortal
     if currentMobName ~= lastTargetName then
         lastTargetName = currentMobName
         hasPortalFired = false
@@ -339,15 +337,12 @@ local function farmLoop()
 
     if not hasPortalFired then
         hasPortalFired = true
-
-        firePortalRemote(currentMobName)      -- portal do jogo
-        task.wait(PORTAL_WAIT)                -- aguarda o servidor processar
-
+        firePortalRemote(currentMobName)
+        task.wait(PORTAL_WAIT)
         return
     end
 
-    -- ── ETAPA 2: Persegue e ataca o NPC via Tween ───────────────────────
-
+    -- ETAPA 2: Persegue e ataca o NPC
     local npc = getNPC(currentMobName, currentNPCIndex)
 
     if not isNPCAlive(npc) then
@@ -372,12 +367,10 @@ local function farmLoop()
     local dist     = (humanoidRootPart.Position - targetCF.Position).Magnitude
 
     if dist > MIN_TWEEN_DIST then
-        -- Longe: Tween até o NPC e ataca ao chegar
         tweenTo(targetCF, function(ok)
             if ok then equipWeapon() performAttack() end
         end)
     else
-        -- Próximo: ataca diretamente
         equipWeapon()
         performAttack()
     end
@@ -387,7 +380,7 @@ local function startAutoFarm()
     if isFarming then stopAutoFarm() task.wait(0.2) end
     initialize()
     if #selectedMobs == 0 then return false end
-    if not npcsFolder then return false end
+    if not npcsFolder then return then return false end
     isFarming = true
     resetFarmState()
     if _G.SlowHub.AutoQuestSelectedMob then startQuestLoop() end
@@ -413,85 +406,93 @@ local function updateSelectedMobs(options)
 end
 
 -- ============================================================
--- UI
+-- UI COM PCALL DE PROTEÇÃO
 -- ============================================================
 
-Tab:Section({Title = "Mob Selection"})
+local success, err = pcall(function()
 
-Tab:Dropdown({
-    Title    = "Select Mobs (Multi Select)",
-    Flag     = "SelectedMobs",
-    Values   = MobList,
-    Multi    = true,
-    Value    = _G.SlowHub.SelectedMobs or {},
-    Callback = function(Option)
-        updateSelectedMobs(Option)
-        _G.SlowHub.SelectedMobs = selectedMobs
-        if _G.SaveConfig then _G.SaveConfig() end
-    end
-})
+    Tab:Section({Title = "Mob Selection"})
 
-Tab:Section({Title = "Farm Control"})
-
-Tab:Toggle({
-    Title    = "Auto Farm Selected Mobs",
-    Value    = _G.SlowHub.AutoFarmSelectedMob or false,
-    Callback = function(Value)
-        if Value then
-            if not _G.SlowHub.SelectedWeapon then
-                if _G.WindUI and _G.WindUI.Notify then
-                    _G.WindUI:Notify({Title = "Error", Content = "Please select a weapon first!", Duration = 3})
-                end
-                return
-            end
-            if #selectedMobs == 0 then
-                if _G.WindUI and _G.WindUI.Notify then
-                    _G.WindUI:Notify({Title = "Error", Content = "Please select at least one mob!", Duration = 3})
-                end
-                return
-            end
-            startAutoFarm()
-        else
-            stopAutoFarm()
+    Tab:Dropdown({
+        Title    = "Select Mobs (Multi Select)",
+        Flag     = "SelectedMobs",
+        Values   = MobList,
+        Multi    = true,
+        Value    = _G.SlowHub.SelectedMobs or {},
+        Callback = function(Option)
+            updateSelectedMobs(Option)
+            _G.SlowHub.SelectedMobs = selectedMobs
+            if _G.SaveConfig then _G.SaveConfig() end
         end
-        _G.SlowHub.AutoFarmSelectedMob = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end
-})
+    })
 
-Tab:Toggle({
-    Title    = "Auto Quest",
-    Value    = _G.SlowHub.AutoQuestSelectedMob or false,
-    Callback = function(Value)
-        _G.SlowHub.AutoQuestSelectedMob = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-        if Value then startQuestLoop() else stopQuestLoop() end
-    end
-})
+    Tab:Section({Title = "Farm Control"})
 
-Tab:Slider({
-    Title = "Farm Distance",  Flag = "FarmDistance",  Step = 1,
-    Value = {Min = 1, Max = 10, Default = _G.SlowHub.FarmDistance or 8},
-    Callback = function(Value) _G.SlowHub.FarmDistance = Value if _G.SaveConfig then _G.SaveConfig() end end
-})
+    Tab:Toggle({
+        Title    = "Auto Farm Selected Mobs",
+        Value    = _G.SlowHub.AutoFarmSelectedMob or false,
+        Callback = function(Value)
+            if Value then
+                if not _G.SlowHub.SelectedWeapon then
+                    if _G.WindUI and _G.WindUI.Notify then
+                        _G.WindUI:Notify({Title = "Error", Content = "Please select a weapon first!", Duration = 3})
+                    end
+                    return
+                end
+                if #selectedMobs == 0 then
+                    if _G.WindUI and _G.WindUI.Notify then
+                        _G.WindUI:Notify({Title = "Error", Content = "Please select at least one mob!", Duration = 3})
+                    end
+                    return
+                end
+                startAutoFarm()
+            else
+                stopAutoFarm()
+            end
+            _G.SlowHub.AutoFarmSelectedMob = Value
+            if _G.SaveConfig then _G.SaveConfig() end
+        end
+    })
 
-Tab:Slider({
-    Title = "Farm Height",  Flag = "FarmHeight",  Step = 1,
-    Value = {Min = 1, Max = 10, Default = _G.SlowHub.FarmHeight or 4},
-    Callback = function(Value) _G.SlowHub.FarmHeight = Value if _G.SaveConfig then _G.SaveConfig() end end
-})
+    Tab:Toggle({
+        Title    = "Auto Quest",
+        Value    = _G.SlowHub.AutoQuestSelectedMob or false,
+        Callback = function(Value)
+            _G.SlowHub.AutoQuestSelectedMob = Value
+            if _G.SaveConfig then _G.SaveConfig() end
+            if Value then startQuestLoop() else stopQuestLoop() end
+        end
+    })
 
-Tab:Slider({
-    Title = "Attack Cooldown",  Flag = "FarmCooldown",  Step = 0.05,
-    Value = {Min = 0.05, Max = 0.5, Default = _G.SlowHub.FarmCooldown or 0.15},
-    Callback = function(Value) _G.SlowHub.FarmCooldown = Value if _G.SaveConfig then _G.SaveConfig() end end
-})
+    Tab:Slider({
+        Title = "Farm Distance",  Flag = "FarmDistance",  Step = 1,
+        Value = {Min = 1, Max = 10, Default = _G.SlowHub.FarmDistance or 8},
+        Callback = function(Value) _G.SlowHub.FarmDistance = Value if _G.SaveConfig then _G.SaveConfig() end end
+    })
 
-Tab:Slider({
-    Title = "Quest Interval",  Flag = "AutoQuestInterval",  Step = 0.5,
-    Value = {Min = 1, Max = 5, Default = _G.SlowHub.AutoQuestInterval or 2},
-    Callback = function(Value) _G.SlowHub.AutoQuestInterval = Value if _G.SaveConfig then _G.SaveConfig() end end
-})
+    Tab:Slider({
+        Title = "Farm Height",  Flag = "FarmHeight",  Step = 1,
+        Value = {Min = 1, Max = 10, Default = _G.SlowHub.FarmHeight or 4},
+        Callback = function(Value) _G.SlowHub.FarmHeight = Value if _G.SaveConfig then _G.SaveConfig() end end
+    })
+
+    Tab:Slider({
+        Title = "Attack Cooldown",  Flag = "FarmCooldown",  Step = 0.05,
+        Value = {Min = 0.05, Max = 0.5, Default = _G.SlowHub.FarmCooldown or 0.15},
+        Callback = function(Value) _G.SlowHub.FarmCooldown = Value if _G.SaveConfig then _G.SaveConfig() end end
+    })
+
+    Tab:Slider({
+        Title = "Quest Interval",  Flag = "AutoQuestInterval",  Step = 0.5,
+        Value = {Min = 1, Max = 5, Default = _G.SlowHub.AutoQuestInterval or 2},
+        Callback = function(Value) _G.SlowHub.AutoQuestInterval = Value if _G.SaveConfig then _G.SaveConfig() end end
+    })
+
+end)
+
+if not success then
+    warn("SlowHub Farm: Erro ao criar UI - " .. tostring(err))
+end
 
 -- ============================================================
 -- RESTAURA ESTADO SALVO
@@ -503,3 +504,6 @@ task.spawn(function()
     if _G.SlowHub.AutoFarmSelectedMob then startAutoFarm() end
     if _G.SlowHub.AutoQuestSelectedMob then startQuestLoop() end
 end)
+
+print("SlowHub Farm Module carregado com sucesso!")
+    
