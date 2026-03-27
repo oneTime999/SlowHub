@@ -49,7 +49,6 @@ local lastTargetName = nil
 local hasUsedPortal = false
 local wasAttackingBoss = false
 local lastValidQuest = nil
-local lastAttackTime = 0
 local character = nil
 local humanoidRootPart = nil
 local humanoid = nil
@@ -184,17 +183,23 @@ local function moveToTarget(targetCFrame)
 end
 
 local function performAttack()
-    local currentTime = tick()
-    local cooldown = _G.SlowHub.FarmCooldown or 0
-    if currentTime - lastAttackTime < cooldown then return end
-    lastAttackTime = currentTime
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
-        if not combatSystem then return end
-        local remotes = combatSystem:FindFirstChild("Remotes")
-        if not remotes then return end
-        local requestHit = remotes:FindFirstChild("RequestHit")
-        if requestHit then requestHit:FireServer() end
+        if combatSystem then
+            local remotes = combatSystem:FindFirstChild("Remotes")
+            if remotes then
+                local requestHit = remotes:FindFirstChild("RequestHit")
+                if requestHit then 
+                    requestHit:FireServer() 
+                end
+            end
+        end
+        if character then
+            local tool = character:FindFirstChildOfClass("Tool")
+            if tool then
+                tool:Activate()
+            end
+        end
     end)
 end
 
@@ -234,7 +239,6 @@ local function resetFarmState()
     lastTargetName = nil
     hasUsedPortal = false
     lastValidQuest = nil
-    lastAttackTime = 0
     cancelTween()
 end
 
@@ -248,7 +252,7 @@ local function startQuestLoop()
     task.spawn(function()
         while isQuesting do 
             acceptQuest()
-            task.wait(_G.SlowHub.AutoQuestInterval or 1)
+            task.wait(0.2)
         end
     end)
 end
@@ -511,36 +515,6 @@ Tab:Slider({
     },
     Callback = function(Value)
         _G.SlowHub.FarmHeight = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end
-})
-
-Tab:Slider({
-    Title = "Attack Cooldown",
-    Flag = "FarmCooldown",
-    Step = 0.01,
-    Value = {
-        Min = 0,
-        Max = 0.5,
-        Default = _G.SlowHub.FarmCooldown or 0,
-    },
-    Callback = function(Value)
-        _G.SlowHub.FarmCooldown = Value
-        if _G.SaveConfig then _G.SaveConfig() end
-    end
-})
-
-Tab:Slider({
-    Title = "Quest Interval",
-    Flag = "AutoQuestInterval",
-    Step = 0.5,
-    Value = {
-        Min = 0.5,
-        Max = 5,
-        Default = _G.SlowHub.AutoQuestInterval or 1,
-    },
-    Callback = function(Value)
-        _G.SlowHub.AutoQuestInterval = Value
         if _G.SaveConfig then _G.SaveConfig() end
     end
 })
