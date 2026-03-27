@@ -643,24 +643,6 @@ Tab:Slider({
     end
 })
 
--- Adicionar botão para trocar manualmente de mob (opcional)
-Tab:Button({
-    Title = "Next Mob (Manual)",
-    Callback = function()
-        if #selectedMobs > 1 then
-            currentMobIndex = getNextMobIndex()
-            currentState = FarmState.NEED_PORTAL
-            if _G.WindUI and _G.WindUI.Notify then
-                _G.WindUI:Notify({
-                    Title = "Switched",
-                    Content = "Now targeting: " .. selectedMobs[currentMobIndex],
-                    Duration = 2,
-                })
-            end
-        end
-    end
-})
-
 -- Inicialização
 task.spawn(function()
     task.wait(2)
