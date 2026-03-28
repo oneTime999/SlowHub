@@ -559,7 +559,7 @@ Tab:Slider({
     Value = {
         Min = 150,
         Max = 500,
-        Default = _G.SlowHub.TweenSpeed or 500,
+        Default = _G.SlowHub.TweenSpeed or 250,
     },
     Callback = function(Value)
         _G.SlowHub.TweenSpeed = Value
