@@ -33,6 +33,7 @@ local summonConnection = nil
 local isSummoning = false
 local selectedBosses = {}
 local selectedDifficulty = "Normal"
+local lastSummonTime = {} -- NOVO: Rastreia último summon de cada boss
 
 local function isBossAlive(bossName)
     local found = false
@@ -175,23 +176,41 @@ local function stopAutoSummon()
         summonConnection = nil
     end
     _G.SlowHub.AutoSummonBoss = false
+    lastSummonTime = {} -- Limpa o cache ao parar
 end
 
--- REMOVIDO: Intervalo de summon - agora summon na velocidade máxima
+-- CORRIGIDO: Adicionado delays para evitar crash/congelamento
 local function startAutoSummon()
     if isSummoning then stopAutoSummon(); task.wait(0.2) end
     isSummoning = true
     _G.SlowHub.AutoSummonBoss = true
+    lastSummonTime = {} -- Reseta o cache ao iniciar
     
     task.spawn(function()
         while isSummoning and _G.SlowHub.AutoSummonBoss do
             local bossesToSummon = getFilteredBossesToSummon()
+            local currentTime = tick()
+            
+            -- Se não houver bosses selecionados, espera para não crashar
+            if #bossesToSummon == 0 then
+                task.wait(1)
+                continue
+            end
+            
             for _, bossName in ipairs(bossesToSummon) do
                 if not isSummoning then break end
-                processBossSummon(bossName)
-                -- REMOVIDO: task.wait(0.1) - summon instantâneo
+                
+                -- Só sumona se passou 2 segundos desde o último summon deste boss
+                -- (evita spam do mesmo boss repetidamente)
+                if not lastSummonTime[bossName] or (currentTime - lastSummonTime[bossName]) > 2 then
+                    processBossSummon(bossName)
+                    lastSummonTime[bossName] = currentTime
+                    task.wait(0.2) -- Delay entre cada summon (evita spam de RemoteEvents)
+                end
             end
-            -- REMOVIDO: task.wait(_G.SlowHub.SummonInterval or 0.5) - loop rápido
+            
+            -- Delay do loop principal: verifica novamente a cada 0.5 segundos
+            task.wait(0.5)
         end
     end)
 end
@@ -233,8 +252,6 @@ Tab:Dropdown({
         end
     end,
 })
-
--- REMOVIDO: Slider de Summon Interval
 
 Tab:Toggle({
     Title = "Auto Summon Boss",
