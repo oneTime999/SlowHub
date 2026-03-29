@@ -61,7 +61,6 @@ local isRunning = false
 local currentBoss = nil
 local lastTarget = nil
 local wasAttackingBoss = false
--- REMOVIDO: lastHitTime - não precisa mais
 local killCount = 0
 local character = nil
 local humanoidRootPart = nil
@@ -219,7 +218,6 @@ local function cancelTween()
     end
 end
 
--- CORRIGIDO: tween não trava mais o boneco após completar
 local function moveToTarget(targetCFrame)
     if not humanoidRootPart then return false end
 
@@ -234,22 +232,13 @@ local function moveToTarget(targetCFrame)
         return true
     end
 
-    -- Se tem tween ativo, verifica se ainda está rodando
-    if currentTween then
-        local state = currentTween.PlaybackState
-        if state == Enum.PlaybackState.Playing or state == Enum.PlaybackState.Begin then
-            -- Verifica se o alvo mudou muito (boss se moveu)
-            if lastTweenTarget then
-                local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
-                if posDiff <= 1 then
-                    return false -- Tween ainda válido, aguarda terminar
-                end
-            else
-                return false
-            end
+    if lastTweenTarget then
+        local posDiff = (lastTweenTarget.Position - targetCFrame.Position).Magnitude
+        if posDiff > 1 then
+            cancelTween()
+        elseif currentTween and currentTween.PlaybackState == Enum.PlaybackState.Playing then
+            return false
         end
-        -- Tween terminou (Completed/Cancelled) → limpa e cria novo
-        cancelTween()
     end
 
     lastTweenTarget = targetCFrame
@@ -257,19 +246,13 @@ local function moveToTarget(targetCFrame)
     local timeToReach = distance / currentSpeed
     local tweenInfo = TweenInfo.new(timeToReach, Enum.EasingStyle.Linear)
 
+    cancelTween()
     currentTween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetCFrame})
-
-    -- Limpa automaticamente ao terminar para evitar o loop de freeze
-    currentTween.Completed:Connect(function()
-        currentTween = nil
-        lastTweenTarget = nil
-    end)
-
     currentTween:Play()
+
     return false
 end
 
--- REMOVIDO: Verificação de cooldown - ataque na velocidade máxima
 local function performAttack()
     pcall(function()
         local combatSystem = ReplicatedStorage:FindFirstChild("CombatSystem")
@@ -320,7 +303,6 @@ local function farmLoop()
         lastTarget = nil
         waitingForSpawn = false
         cancelTween()
-        task.wait(0.1)
         return
     end
     
@@ -349,16 +331,18 @@ local function farmLoop()
     
     if lastPortaledBoss ~= bossBaseName then
         local portalName = BossPortals[bossBaseName]
+        
+        -- ATUALIZA O ESTADO PRIMEIRO PARA EVITAR SPAM DE REMOTES
+        lastPortaledBoss = bossBaseName
+        waitingForSpawn = true
+        spawnWaitStart = tick()
+
         if portalName then
             pcall(function()
                 local args = { [1] = portalName }
                 ReplicatedStorage.Remotes.TeleportToPortal:FireServer(unpack(args))
             end)
-            task.wait(0.5)
         end
-        lastPortaledBoss = bossBaseName
-        waitingForSpawn = true
-        spawnWaitStart = tick()
         return
     end
     
@@ -370,7 +354,6 @@ local function farmLoop()
         elseif elapsed > MAX_SPAWN_WAIT then
             lastPortaledBoss = nil
             waitingForSpawn = false
-            task.wait(0.5)
         else
             cancelTween()
         end
@@ -392,8 +375,11 @@ local function farmLoop()
     local hasArrived = moveToTarget(targetCFrame)
     
     if hasArrived then
+        -- Zera a inércia da física do Roblox para evitar travamento visual do boneco
+        humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        
         equipWeapon()
-        performAttack() -- Ataca imediatamente sem delay
+        performAttack()
     end
 end
 
@@ -412,11 +398,10 @@ end
 
 Tab:Section({Title = "Boss Selection"})
 
--- ORDEM ALFABÉTICA: AinosBoss -> AtomicBoss -> BlessedMaidenBoss -> GilgameshBoss -> GojoBoss -> IchigoBoss -> JinwooBoss -> QinShiBoss -> RimuruBoss -> SaberAlterBoss -> SaberBoss -> StrongestinHistoryBoss -> StrongestofTodayBoss -> StrongestShinobiBoss -> SukunaBoss -> TrueAizenBoss -> YamatoBoss -> YujiBoss
 Tab:Dropdown({
     Title = "Select Bosses to Farm",
     Flag = "SelectedBosses",
-    Values = bossList, -- Já ordenado alfabeticamente
+    Values = bossList, 
     Multi = true,
     Value = (function()
         local selected = {}
@@ -558,8 +543,6 @@ Tab:Slider({
         cancelTween()
     end,
 })
-
--- REMOVIDO: Slider de Attack Cooldown
 
 if _G.SlowHub.AutoFarmBosses then
     task.wait(2)
