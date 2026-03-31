@@ -17,15 +17,16 @@ local bossConfigs = {
     ["BlessedMaidenBoss"] = {Method="Gilgamesh", InternalName="BlessedMaidenBoss"},
     ["SaberAlterBoss"] = {Method="Gilgamesh", InternalName="SaberAlterBoss"},
     
-    -- NOVOS BOSSES com RemoteEvents específicos
+    -- NOVOS BOSSES
     ["AtomicBoss"] = {Method="AtomicSpecific", InternalName="AtomicBoss"},
     ["TrueAizenBoss"] = {Method="TrueAizenSpecific", InternalName="TrueAizenBoss"},
+    ["MoonSlayerBoss"] = {Method="MoonSlayerSpecific", InternalName="MoonSlayerBoss"},
 }
 
 -- ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z)
 local bossList = {}
 for name in pairs(bossConfigs) do table.insert(bossList, name) end
-table.sort(bossList) -- Isso organiza automaticamente em ordem alfabética
+table.sort(bossList)
 
 local difficultyList = {"Normal","Medium","Hard","Extreme"}
 
@@ -33,13 +34,14 @@ local summonConnection = nil
 local isSummoning = false
 local selectedBosses = {}
 local selectedDifficulty = "Normal"
-local lastSummonTime = {} -- NOVO: Rastreia último summon de cada boss
+local lastSummonTime = {}
 
 local function isBossAlive(bossName)
     local found = false
     pcall(function()
         if not workspace:FindFirstChild("NPCs") then return end
-        local boss = workspace.NPCs:FindFirstChild(bossName)
+        -- Verifica o nome exato ou com sufixo de dificuldade (Ex: MoonSlayerBoss_Normal)
+        local boss = workspace.NPCs:FindFirstChild(bossName) or workspace.NPCs:FindFirstChild(bossName .. "_" .. selectedDifficulty)
         if not boss then return end
         local humanoid = boss:FindFirstChildOfClass("Humanoid")
         if humanoid and humanoid.Health > 0 then found = true end
@@ -73,13 +75,9 @@ local function getFilteredBossesToSummon()
         
         if pityEnabled and pityTarget ~= "" then
             if selectedBoss == pityTarget then
-                if pityTargetTime then 
-                    table.insert(bossesToSummon, selectedBoss) 
-                end
+                if pityTargetTime then table.insert(bossesToSummon, selectedBoss) end
             else
-                if not pityTargetTime then 
-                    table.insert(bossesToSummon, selectedBoss) 
-                end
+                if not pityTargetTime then table.insert(bossesToSummon, selectedBoss) end
             end
         else
             table.insert(bossesToSummon, selectedBoss)
@@ -90,23 +88,25 @@ end
 
 local function summonBoss(currentBossName, config)
     pcall(function()
-        -- Bosses SEM dificuldade (Ichigo, QinShi, Saber)
-        if config.Method == "Old" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+
+        if config.Method == "MoonSlayerSpecific" then
+            if remotes and remotes:FindFirstChild("RequestSummonBoss") then
+                remotes.RequestSummonBoss:FireServer("MoonSlayerBoss", selectedDifficulty)
+            end
+
+        elseif config.Method == "Old" then
             if remotes and remotes:FindFirstChild("RequestSummonBoss") then
                 remotes.RequestSummonBoss:FireServer(currentBossName)
             end
             
-        -- Bosses COM dificuldade (Gilgamesh, BlessedMaiden, SaberAlter, etc)
         elseif config.Method == "Gilgamesh" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remotes and remotes:FindFirstChild("RequestSummonBoss") then
                 remotes.RequestSummonBoss:FireServer(config.InternalName, selectedDifficulty)
             end
             
         elseif config.Method == "RimuruSpecific" then
-            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnRimuru") then
                 remoteEvents.RequestSpawnRimuru:FireServer(selectedDifficulty)
             elseif remotes and remotes:FindFirstChild("RequestSpawnRimuru") then
@@ -114,27 +114,21 @@ local function summonBoss(currentBossName, config)
             end
             
         elseif config.Method == "New" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remotes and remotes:FindFirstChild("RequestSpawnStrongestBoss") then
                 remotes.RequestSpawnStrongestBoss:FireServer(config.InternalName, selectedDifficulty)
             end
             
         elseif config.Method == "AnosSpecific" then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             if remotes and remotes:FindFirstChild("RequestSpawnAnosBoss") then
                 remotes.RequestSpawnAnosBoss:FireServer(config.InternalName, selectedDifficulty)
             end
             
-        -- NOVOS: AtomicBoss (RequestSpawnAtomic)
         elseif config.Method == "AtomicSpecific" then
-            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
             if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnAtomic") then
                 remoteEvents.RequestSpawnAtomic:FireServer(selectedDifficulty)
             end
             
-        -- NOVOS: TrueAizenBoss (RequestSpawnTrueAizen)
         elseif config.Method == "TrueAizenSpecific" then
-            local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
             if remoteEvents and remoteEvents:FindFirstChild("RequestSpawnTrueAizen") then
                 remoteEvents.RequestSpawnTrueAizen:FireServer(selectedDifficulty)
             end
@@ -146,25 +140,7 @@ local function processBossSummon(currentBossName)
     local config = bossConfigs[currentBossName]
     if not config then return end
     
-    local namesToCheck = {}
-    
-    -- Verifica nomes possíveis baseado no método
-    if config.Method == "Old" then
-        -- Sem dificuldade: só o nome exato
-        table.insert(namesToCheck, currentBossName)
-        table.insert(namesToCheck, config.InternalName)
-    else
-        -- Com dificuldade: Nome_Dificuldade ou só o nome base
-        table.insert(namesToCheck, config.InternalName .. "_" .. selectedDifficulty)
-        table.insert(namesToCheck, currentBossName .. "_" .. selectedDifficulty)
-        -- Também verifica sem dificuldade (caso o jogo não use sufixo para alguns)
-        table.insert(namesToCheck, config.InternalName)
-        table.insert(namesToCheck, currentBossName)
-    end
-    
-    for _, name in ipairs(namesToCheck) do
-        if isBossAlive(name) then return end
-    end
+    if isBossAlive(config.InternalName) then return end
     
     summonBoss(currentBossName, config)
 end
@@ -176,22 +152,20 @@ local function stopAutoSummon()
         summonConnection = nil
     end
     _G.SlowHub.AutoSummonBoss = false
-    lastSummonTime = {} -- Limpa o cache ao parar
+    lastSummonTime = {}
 end
 
--- CORRIGIDO: Adicionado delays para evitar crash/congelamento
 local function startAutoSummon()
     if isSummoning then stopAutoSummon(); task.wait(0.2) end
     isSummoning = true
     _G.SlowHub.AutoSummonBoss = true
-    lastSummonTime = {} -- Reseta o cache ao iniciar
+    lastSummonTime = {}
     
     task.spawn(function()
         while isSummoning and _G.SlowHub.AutoSummonBoss do
             local bossesToSummon = getFilteredBossesToSummon()
             local currentTime = tick()
             
-            -- Se não houver bosses selecionados, espera para não crashar
             if #bossesToSummon == 0 then
                 task.wait(1)
                 continue
@@ -200,16 +174,12 @@ local function startAutoSummon()
             for _, bossName in ipairs(bossesToSummon) do
                 if not isSummoning then break end
                 
-                -- Só sumona se passou 2 segundos desde o último summon deste boss
-                -- (evita spam do mesmo boss repetidamente)
-                if not lastSummonTime[bossName] or (currentTime - lastSummonTime[bossName]) > 2 then
+                if not lastSummonTime[bossName] or (currentTime - lastSummonTime[bossName]) > 3 then
                     processBossSummon(bossName)
                     lastSummonTime[bossName] = currentTime
-                    task.wait(0.2) -- Delay entre cada summon (evita spam de RemoteEvents)
+                    task.wait(0.5) 
                 end
             end
-            
-            -- Delay do loop principal: verifica novamente a cada 0.5 segundos
             task.wait(0.5)
         end
     end)
@@ -217,11 +187,10 @@ end
 
 Tab:Section({Title = "Summon Settings"})
 
--- ORDEM ALFABÉTICA: A -> Anos -> AtomicBoss -> BlessedMaidenBoss -> GilgameshBoss -> IchigoBoss -> QinShiBoss -> RimuruBoss -> SaberBoss -> SaberAlterBoss -> StrongestinHistoryBoss -> StrongestofTodayBoss -> TrueAizenBoss
 Tab:Dropdown({
     Title = "Select Bosses to Summon",
     Flag = "SelectBossSummon",
-    Values = bossList, -- Já ordenado alfabeticamente via table.sort
+    Values = bossList,
     Multi = true,
     Default = _G.SlowHub.SelectBossSummon or {},
     Callback = function(value)
@@ -232,9 +201,7 @@ Tab:Dropdown({
             end
         end
         _G.SlowHub.SelectBossSummon = selectedBosses
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -247,9 +214,7 @@ Tab:Dropdown({
     Callback = function(value)
         selectedDifficulty = type(value) == "table" and value[1] or value
         _G.SlowHub.SelectBossDifficulty = selectedDifficulty
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
     end,
 })
 
@@ -258,9 +223,7 @@ Tab:Toggle({
     Default = _G.SlowHub.AutoSummonBoss or false,
     Callback = function(Value)
         _G.SlowHub.AutoSummonBoss = Value
-        if _G.SaveConfig then
-            _G.SaveConfig()
-        end
+        if _G.SaveConfig then _G.SaveConfig() end
         if Value then
             startAutoSummon()
         else
