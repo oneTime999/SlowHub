@@ -401,7 +401,7 @@ Tab:Slider({
     Flag = "TweenSpeed",
     Step = 10,
     Value = {
-        Min = 150,
+        Min = 0,
         Max = 500,
         Default = _G.SlowHub.TweenSpeed or 250,
     },
