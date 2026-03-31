@@ -10,7 +10,7 @@ local bossList = {
     "IchigoBoss", "AizenBoss", "AlucardBoss", "QinShiBoss", "JinwooBoss",
     "SukunaBoss", "GojoBoss", "SaberBoss", "YujiBoss",
     "AtomicBoss", "TrueAizenBoss", "SaberAlterBoss", "BlessedMaidenBoss", 
-    "YamatoBoss", "StrongestShinobiBoss"
+    "YamatoBoss", "StrongestShinobiBoss", "MoonSlayerBoss"
 }
 
 -- ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z)
@@ -39,6 +39,7 @@ local BossPortals = {
     ["BlessedMaidenBoss"] = "Boss",
     ["YamatoBoss"] = "Judgement",
     ["StrongestShinobiBoss"] = "Ninja",
+    ["MoonSlayerBoss"] = "Boss",
 }
 
 for _, bossBaseName in ipairs(bossList) do
@@ -397,11 +398,11 @@ end
 
 Tab:Section({Title = "Boss Selection"})
 
--- ORDEM ALFABÉTICA: AinosBoss -> AtomicBoss -> BlessedMaidenBoss -> GilgameshBoss -> GojoBoss -> IchigoBoss -> JinwooBoss -> QinShiBoss -> RimuruBoss -> SaberAlterBoss -> SaberBoss -> StrongestinHistoryBoss -> StrongestofTodayBoss -> StrongestShinobiBoss -> SukunaBoss -> TrueAizenBoss -> YamatoBoss -> YujiBoss
+-- ORDEM ALFABÉTICA AUTOMÁTICA GRAÇAS AO table.sort
 Tab:Dropdown({
     Title = "Select Bosses to Farm",
     Flag = "SelectedBosses",
-    Values = bossList, -- Já ordenado alfabeticamente
+    Values = bossList,
     Multi = true,
     Value = (function()
         local selected = {}
